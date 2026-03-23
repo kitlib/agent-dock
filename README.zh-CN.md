@@ -1,6 +1,6 @@
 <div align="center">
 
-# Tauri App Template
+# AgentDock
 
 [English](./README.md) | 简体中文
 
@@ -9,7 +9,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?logo=typescript)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/License-MIT-green)](./LICENSE)
 
-基于 Tauri v2 + React 19 + TypeScript + shadcn/ui 的桌面应用模板。
+基于 Tauri v2 + React 19 + TypeScript + shadcn/ui 的现代桌面应用。
 
 </div>
 
@@ -189,4 +189,4 @@ MIT
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=kitlib/tauri-app-template&type=Date)](https://star-history.com/#kitlib/tauri-app-template&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=kitlib/agent-dock&type=Date)](https://star-history.com/#kitlib/agent-dock&Date)

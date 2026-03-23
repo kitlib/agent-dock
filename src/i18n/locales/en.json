@@ -1,8 +1,8 @@
 {
   "app": {
-    "title": "Tauri App Template",
-    "welcome": "Welcome to Tauri + React",
-    "description": "Modern desktop application template with Tauri v2, React 19, and shadcn/ui"
+    "title": "AgentDock",
+    "welcome": "Welcome to AgentDock",
+    "description": "AgentDock is a modern desktop application built with Tauri v2, React 19, and shadcn/ui"
   },
   "greet": {
     "title": "Greet from Rust",
@@ -13,9 +13,9 @@
   "about": {
     "title": "About",
     "button": "About",
-    "appName": "Tauri App Template",
+    "appName": "AgentDock",
     "version": "Version",
-    "description": "A modern desktop application template built with Tauri v2, React 19, and shadcn/ui.",
+    "description": "AgentDock is a modern desktop application built with Tauri v2, React 19, and shadcn/ui.",
     "features": "Features",
     "feature1": "Tauri v2 - Lightweight desktop app framework",
     "feature2": "React 19 - Latest React version",

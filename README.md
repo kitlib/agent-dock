@@ -1,6 +1,6 @@
 <div align="center">
 
-# Tauri App Template
+# AgentDock
 
 English | [简体中文](./README.zh-CN.md)
 
@@ -9,7 +9,7 @@ English | [简体中文](./README.zh-CN.md)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?logo=typescript)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/License-MIT-green)](./LICENSE)
 
-A modern desktop application template built with Tauri v2 + React 19 + TypeScript + shadcn/ui.
+A modern desktop application built with Tauri v2 + React 19 + TypeScript + shadcn/ui.
 
 </div>
 
@@ -185,7 +185,7 @@ To enable macOS and Linux builds, uncomment the corresponding platform configura
 
 ## Star History
 
-[![Star History Chart](https://api.star-history.com/svg?repos=kitlib/tauri-app-template&type=Date)](https://star-history.com/#kitlib/tauri-app-template&Date)
+[![Star History Chart](https://api.star-history.com/svg?repos=kitlib/agent-dock&type=Date)](https://star-history.com/#kitlib/agent-dock&Date)
 
 ## License
 

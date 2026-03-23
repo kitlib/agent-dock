@@ -1,8 +1,8 @@
 {
   "app": {
-    "title": "Tauri 应用模板",
-    "welcome": "欢迎使用 Tauri + React",
-    "description": "基于 Tauri v2、React 19 和 shadcn/ui 的现代桌面应用模板"
+    "title": "AgentDock",
+    "welcome": "欢迎使用 AgentDock",
+    "description": "AgentDock 是一款基于 Tauri v2、React 19 和 shadcn/ui 构建的现代桌面应用"
   },
   "greet": {
     "title": "来自 Rust 的问候",
@@ -13,9 +13,9 @@
   "about": {
     "title": "关于",
     "button": "关于",
-    "appName": "Tauri 应用模板",
+    "appName": "AgentDock",
     "version": "版本",
-    "description": "基于 Tauri v2、React 19 和 shadcn/ui 构建的现代桌面应用模板。",
+    "description": "AgentDock 是一款基于 Tauri v2、React 19 和 shadcn/ui 构建的现代桌面应用。",
     "features": "特性",
     "feature1": "Tauri v2 - 轻量级桌面应用框架",
     "feature2": "React 19 - 最新的 React 版本",
