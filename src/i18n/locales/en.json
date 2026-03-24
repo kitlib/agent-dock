@@ -55,8 +55,7 @@
   },
   "prototype": {
     "agents": {
-      "agents": "Agents",
-      "discovery": "Discovery"
+      "agents": "Agents"
     },
     "badges": {
       "local": "Local",

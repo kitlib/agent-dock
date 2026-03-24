@@ -55,8 +55,7 @@
   },
   "prototype": {
     "agents": {
-      "agents": "Agent 列表",
-      "discovery": "资源发现"
+      "agents": "Agent 列表"
     },
     "badges": {
       "local": "本地",

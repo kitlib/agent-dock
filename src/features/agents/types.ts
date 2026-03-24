@@ -3,6 +3,8 @@ export type DiscoveryOrigin = "local" | "marketplace";
 export type InstallStateLabel = "enabled" | "installed" | "update" | "available";
 export type MarketplaceInstallStateLabel = Exclude<InstallStateLabel, "enabled">;
 
+export type AgentProvider = "cursor" | "claude" | "codex" | "antigravity";
+
 export type AgentGroup = {
   id: string;
   name: string;
@@ -12,6 +14,8 @@ export type AgentGroup = {
 export type AgentSummary = {
   id: string;
   name: string;
+  provider: AgentProvider;
+  directory: string;
   role: string;
   status: "online" | "idle" | "busy";
   groupId: string;

@@ -17,6 +17,8 @@ export const agents: AgentSummary[] = [
   {
     id: "agent-cursor",
     name: "Cursor",
+    provider: "cursor",
+    directory: ".cursor/",
     role: "AI coding assistant",
     status: "online",
     groupId: "assistant",
@@ -28,6 +30,8 @@ export const agents: AgentSummary[] = [
   {
     id: "agent-claude-code",
     name: "Claude Code",
+    provider: "claude",
+    directory: ".claude/",
     role: "CLI coding assistant",
     status: "busy",
     groupId: "assistant",
@@ -40,6 +44,8 @@ export const agents: AgentSummary[] = [
   {
     id: "agent-codex-cli",
     name: "Codex CLI",
+    provider: "codex",
+    directory: ".codex/",
     role: "Terminal coding assistant",
     status: "idle",
     groupId: "assistant",
@@ -51,6 +57,8 @@ export const agents: AgentSummary[] = [
   {
     id: "agent-antigravity",
     name: "Antigravity",
+    provider: "antigravity",
+    directory: ".agent/",
     role: "Workflow automation assistant",
     status: "online",
     groupId: "assistant",

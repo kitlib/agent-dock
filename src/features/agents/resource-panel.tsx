@@ -79,9 +79,6 @@ export function AgentResourcePanel({
               placeholder={t("prototype.actions.searchPlaceholder")}
             />
           </div>
-          <Button variant="outline" size="sm">
-            {t("prototype.agents.discovery")}
-          </Button>
         </div>
       </div>
 

@@ -1,7 +1,8 @@
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { agentRailGroupIcon, agentStatusClassName } from "./constants";
+import { AgentProviderIcon } from "./provider-icon";
+import { agentRailGroupIcon } from "./constants";
 import type { AgentGroup, AgentSummary } from "./types";
 
 type AgentRailProps = {
@@ -53,6 +54,7 @@ export function AgentRail({
               onClick={() => setSelectedGroupId(group.id)}
               className={cn(
                 "flex w-full items-center rounded-lg px-2 py-2 text-left text-sm transition-colors",
+                isCollapsed && "mx-auto h-9 w-9 justify-center p-0",
                 selectedGroupId === group.id
                   ? "bg-accent text-accent-foreground"
                   : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
@@ -78,22 +80,20 @@ export function AgentRail({
                 onClick={() => setSelectedAgentId(agent.id)}
                 className={cn(
                   "flex w-full items-center rounded-lg px-2 py-2 text-left text-sm transition-colors",
+                  isCollapsed && "mx-auto h-9 w-9 justify-center p-0",
                   selectedAgentId === agent.id
                     ? "bg-primary/10 text-foreground"
                     : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
                 )}
                 title={agent.name}
               >
-                <span
-                  className={cn(
-                    "mr-2 h-2.5 w-2.5 rounded-full",
-                    agentStatusClassName[agent.status]
-                  )}
-                />
+                <div className={cn("mr-2 flex items-center gap-2", isCollapsed && "mr-0")}>
+                  <AgentProviderIcon provider={agent.provider} className="shrink-0" size={16} />
+                </div>
                 {!isCollapsed ? (
                   <div className="min-w-0 flex-1">
                     <div className="truncate font-medium">{agent.name}</div>
-                    <div className="text-muted-foreground truncate text-xs">{agent.role}</div>
+                    <div className="text-muted-foreground truncate text-xs">{agent.directory}</div>
                   </div>
                 ) : null}
               </button>
