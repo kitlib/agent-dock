@@ -1,6 +1,7 @@
 export type ResourceKind = "skill" | "mcp" | "subagent";
 export type DiscoveryOrigin = "local" | "marketplace";
 export type InstallStateLabel = "enabled" | "installed" | "update" | "available";
+export type MarketplaceInstallStateLabel = Exclude<InstallStateLabel, "enabled">;
 
 export type AgentGroup = {
   id: string;
@@ -63,7 +64,7 @@ export type AgentResource = SkillResource | McpResource | SubagentResource;
 
 export type MarketplaceDiscoveryFields = {
   origin: "marketplace";
-  installState: Exclude<InstallStateLabel, "enabled">;
+  installState: MarketplaceInstallStateLabel;
   sourceLabel: string;
   version: string;
   author: string;
@@ -85,12 +86,14 @@ export type LocalDiscoveryFields = {
   usageLabel: number;
 };
 
-export type AgentDiscoveryItem =
-  | (AgentResource & LocalDiscoveryFields)
-  | ({
-      id: string;
-      kind: ResourceKind;
-      name: string;
-      summary: string;
-      updatedAt: string;
-    } & MarketplaceDiscoveryFields);
+export type MarketplaceDiscoveryItem = {
+  id: string;
+  kind: ResourceKind;
+  name: string;
+  summary: string;
+  updatedAt: string;
+} & MarketplaceDiscoveryFields;
+
+export type LocalDiscoveryItem = AgentResource & LocalDiscoveryFields;
+
+export type AgentDiscoveryItem = LocalDiscoveryItem | MarketplaceDiscoveryItem;

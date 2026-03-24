@@ -1,436 +1,131 @@
-# AgentDock 功能实现方案
+# AgentDock 开发计划
 
-## 1. 目标
-围绕 `docs/FEATURE_DESIGN.md` 中定义的功能，分阶段实现一个以多 Agent 为核心的本地资源管理系统，支持：
+## 结论
+- 基于 `src/pages/home.tsx` 继续开发
+- 不拆独立业务页面
+- 先收敛首页结构，再接 Tauri 真实数据
+- Marketplace 作为首页内能力接入
+- provider 使用 `skills.sh`
 
-- 多 Agent 管理
-- 本地资源池管理
-- Agent 资源绑定
-- 分组与拖拽编排
-- 批量操作
-- Marketplace 辅助导入
-- 市场源配置
+## 阶段
+1. **首页收敛**：拆分 `home.tsx`，抽离 rail、列表、详情、筛选和选择逻辑
+2. **数据层收敛**：统一前端类型、展示模型和 mock 数据入口
+3. **Tauri 接入**：补 commands 和 Rust 数据结构，用 `invoke()` 替换 mock
+4. **编排能力**：补分组、拖拽、批量启停、批量移动、批量解绑
+5. **Marketplace**：接入 `skills.sh`，支持导入到本地资源池并绑定 Agent
+6. **持续增强**：优化首页布局、视图切换和导入流
 
-本方案聚焦实现路径与模块拆分，不展开过多设计背景。
+## 优先修改文件
+- `src/pages/home.tsx`
+- `src/hooks/use-app-translation.ts`
+- `src/lib/shortcut.ts`
+- `src/lib/window.ts`
+- `src-tauri/src/lib.rs`
 
----
-
-## 2. 实现原则
-
-- 以本地资源管理为主，Marketplace 为辅
-- 先做主流程，再补高级能力
-- 先打通数据结构和页面骨架，再接真实能力
-- 明确区分“资源本体”和“Agent 绑定关系”
-- 明确区分“删除绑定”和“删除资源”
-- 所有高风险删除操作都需要确认
-
----
-
-## 3. 实现范围
-
-### 首期实现
-- Agents 页面
-- Resources 页面
-- Marketplace 页面
-- Agent CRUD
-- 本地资源池展示
-- 资源绑定与解绑
-- 启用 / 禁用
-- 分组管理
-- 基础拖拽排序
-- 基础批量操作
-- skillhub 接入
-- source 配置管理
-
-### 后续实现
-- MCP 在线安装
-- Subagents 在线安装
-- 自动依赖安装
-- 多 provider 聚合搜索
-- 云端同步
-- 推荐与评分
-
----
-
-## 4. 模块拆分
-
-## 4.1 前端模块
-建议拆成以下模块：
-
+## 建议新增目录
 ```txt
-src/features/
-  agents/
-  resource-registry/
-  agent-bindings/
-  marketplace/
+src/features/agents/
+src/features/resource-registry/
+src/features/agent-bindings/
+src/features/marketplace/
 ```
 
-### `agents`
-负责：
-- Agent 列表
-- Agent 新增/删除/重命名
-- 当前 Agent 状态
-
-### `resource-registry`
-负责：
-- 本地资源池列表
-- 资源详情
-- 本地导入
-- 资源删除
-- 资源使用关系
-
-### `agent-bindings`
-负责：
-- Agent 绑定资源列表
-- 启用 / 禁用
-- 分组
-- 拖拽排序
-- 批量操作
-
-### `marketplace`
-负责：
-- 市场资源列表
-- source 配置
-- skillhub 接入
-- 安装到本地资源池
-- 安装后绑定到 Agent
-
----
-
-## 4.2 后端模块
-建议拆成以下模块：
-
-```txt
-src-tauri/src/
-  agents/
-  resources/
-  bindings/
-  marketplace/
-```
-
-### `agents`
-负责 Agent 配置读写。
-
-### `resources`
-负责本地资源扫描、导入、删除、状态读取。
-
-### `bindings`
-负责 Agent 与资源绑定关系、分组、排序和批量变更。
-
-### `marketplace`
-负责 source 配置、provider 接入和安装逻辑。
-
----
-
-## 5. 页面实现顺序
-
-## 5.1 Agents 页面
-优先实现，因为这是主工作台。
-
-首期页面内容：
-- 左侧 Agent 列表
-- 顶部筛选与批量操作栏
-- 中间资源编排区
-- 分组区与未分组区
-- 右侧详情区
-
-首批打通能力：
-- 切换 Agent
-- 查看绑定资源
-- 单项启用 / 停用
-- 新增绑定
-- 移除绑定
-
----
-
-## 5.2 Resources 页面
-第二优先级。
-
-首期页面内容：
-- 资源类型切换
-- 资源列表
-- 资源详情
-- 删除资源
-- 导入资源
-- 查看被哪些 Agent 使用
-
----
-
-## 5.3 Marketplace 页面
-第三优先级。
-
-首期页面内容：
-- 市场资源列表
-- 搜索
-- 详情面板
-- 安装按钮
-- source 设置入口
-
-首期只打通：
-- skillhub
-- Skills 资源安装到本地池
-- 安装后可绑定到 Agent
-
----
-
-## 6. 数据实现顺序
-
-建议优先定义以下本地数据结构：
-
-### 6.1 Agent
-- id
-- name
-- description
-- createdAt
-- updatedAt
-
-### 6.2 LocalResource
-- id
-- type
-- name
-- description
-- source
-- installed
-- version
-- path
-- metadata
-
-### 6.3 AgentResourceBinding
-- id
-- agentId
-- resourceId
-- resourceType
-- enabled
-- order
-- groupId
-- configOverride
-
-### 6.4 AgentResourceGroup
-- id
-- agentId
-- name
-- order
-- collapsed
-
-### 6.5 MarketplaceSourceConfig
-- id
-- name
-- provider
-- endpoint
-- enabled
-- resourceTypes
-- authType
-- healthStatus
-
----
-
-## 7. 分阶段实施方案
-
-## 阶段 1：基础数据与页面骨架
-目标：先把页面和本地数据结构搭起来。
-
-包含：
-- Agent 基础模型
-- LocalResource 基础模型
-- Binding / Group 基础模型
-- Agents 页面骨架
-- Resources 页面骨架
-- Marketplace 页面骨架
-
-完成后应能：
-- 看到页面
-- 使用 mock 数据切换 Agent
-- 展示资源列表和基础详情
-
----
-
-## 阶段 2：Agent 与资源池基础管理
-目标：先打通本地主流程。
-
-包含：
-- Agent CRUD
-- 本地资源池读取
-- 本地资源导入
-- 资源删除
-- Agent 添加资源
-- Agent 移除资源
-- 单项启用 / 禁用
-
-完成后应能：
-- 创建多个 Agent
-- 给 Agent 绑定本地资源
-- 启停单个资源
-- 删除绑定或删除资源
-
----
-
-## 阶段 3：分组与拖拽
-目标：打通编排能力。
-
-包含：
-- 分组 CRUD
-- 分组折叠 / 展开
-- 未分组区展示
-- 同组排序
-- 跨组移动
-- 分组与未分组区互移
-
-完成后应能：
-- 创建分组
-- 拖拽资源重新编排
-- 保存顺序与分组状态
-
----
-
-## 阶段 4：批量操作
-目标：提升管理效率。
-
-包含：
-- 多选模式
-- 批量启用
-- 批量停用
-- 批量移动到分组
-- 批量移出分组
-- 批量解除绑定
-- 可选批量删除资源
-
-完成后应能：
-- 对多条绑定执行统一操作
-- 保持反馈清晰
-
----
-
-## 阶段 5：Marketplace 接入
-目标：补齐辅助导入能力。
-
-包含：
-- source 配置管理
-- skillhub provider
-- 市场列表与搜索
-- 资源详情
-- 安装到本地资源池
-- 安装后绑定到 Agent
-
-完成后应能：
-- 从 Marketplace 安装 skill
-- 安装后加入本地资源池
-- 可选立即挂到某个 Agent
-
----
-
-## 阶段 6：收尾与优化
-目标：补齐体验与边界。
-
-包含：
-- i18n 文案补齐
-- 空状态与错误状态
-- 删除确认
-- MCP 敏感信息隐藏
-- 状态刷新与反馈优化
-
-完成后应能：
-- 主流程稳定可用
-- 删除边界清晰
-- 错误提示明确
-
----
-
-## 8. 文件级建议
-
-## 8.1 前端
-建议新增或扩展：
-
-```txt
-src/pages/
-  agents.tsx
-  resources.tsx
-  marketplace.tsx
-
-src/features/
-  agents/
-  resource-registry/
-  agent-bindings/
-  marketplace/
-```
-
-### 重点文件方向
-- `agents.tsx`：主工作台
-- `resources.tsx`：本地资源池
-- `marketplace.tsx`：市场导入页
-- `features/agents/*`：Agent 列表与 CRUD
-- `features/resource-registry/*`：本地资源池与资源详情
-- `features/agent-bindings/*`：绑定、分组、拖拽、批量操作
-- `features/marketplace/*`：source、provider、安装导入
-
----
-
-## 8.2 后端
-建议新增或扩展：
-
-```txt
-src-tauri/src/
-  agents/
-  resources/
-  bindings/
-  marketplace/
-```
-
-### 重点职责
-- `agents/`：Agent 配置持久化
-- `resources/`：资源扫描、导入、删除、状态读取
-- `bindings/`：绑定关系、分组、顺序管理
-- `marketplace/`：source、provider、安装逻辑
-
----
-
-## 9. 关键边界
-
-### 9.1 绑定与资源分离
-必须区分：
-- 从 Agent 中移除绑定
-- 删除本地资源本体
-
-### 9.2 Marketplace 与主工作台分离
-Marketplace 只负责导入：
-- 不承担主编排
-- 不承担分组拖拽主逻辑
-
-### 9.3 敏感信息保护
-MCP 相关配置默认不展示：
-- token
-- password
-- env value
-- header value
-
-### 9.4 高风险操作确认
-以下操作需要确认：
-- 删除 Agent
-- 删除资源
-- 批量删除资源
-- 删除分组
-- 删除 source
-
----
-
-## 10. 验收标准
-
-### 功能验收
-- 支持多个 Agent
-- 支持本地资源池管理
-- 支持为 Agent 添加/移除资源
-- 支持单项启停
-- 支持分组与拖拽
-- 支持批量启停和批量移动
-- 支持从 Marketplace 导入资源
-
-### 体验验收
-- 主操作集中在 Agents 页面
-- Resource 页面可快速查看全局资源
-- Marketplace 不喧宾夺主
-- 删除边界清晰
-- 状态反馈清楚
-
-### 安全验收
+## 边界
+- 区分本地资源、Marketplace 资源、Agent 绑定资源
+- 区分“移除绑定”和“删除资源”
+- Marketplace 只负责导入，不负责主编排
 - 敏感配置不明文展示
-- 删除操作有明确确认
-- 绑定删除与资源删除不会混淆
+- 删除类操作必须确认
+
+## Checklist
+
+### 1. 首页结构收敛
+- [x] 识别 `home.tsx` 中的三栏结构边界
+- [x] 抽离左侧 Agent rail 组件
+- [x] 抽离中间资源列表组件
+- [x] 抽离右侧详情面板组件
+- [x] 抽离资源卡片行组件
+- [x] 抽离 Marketplace 详情渲染组件
+- [x] 抽离本地资源详情渲染组件
+- [x] 保持现有 UI 布局和交互不回退
+
+### 2. 首页状态收敛
+- [x] 抽离搜索状态
+- [x] 抽离资源类型切换状态
+- [x] 抽离当前 Agent 选中状态
+- [x] 抽离当前资源选中状态
+- [x] 抽离勾选状态
+- [ ] 抽离批量操作状态
+- [x] 抽离 Marketplace 安装状态流转逻辑
+- [x] 让页面只负责组合，不直接承载大段状态逻辑
+
+### 3. 类型与 mock 数据整理
+- [x] 定义 Agent 前端类型
+- [x] 定义 ResourceKind 类型
+- [x] 定义 AgentDiscoveryItem 类型
+- [x] 整理本地资源展示字段
+- [x] 整理 Marketplace 资源展示字段
+- [x] 统一安装状态枚举
+- [x] 统一 mock 数据入口
+- [x] 避免组件内散落硬编码数据
+
+### 4. Tauri 数据接入
+- [ ] 在 `src-tauri/src/lib.rs` 中补充资源管理 commands
+- [ ] 定义 Agent Rust 数据结构
+- [ ] 定义 Resource Rust 数据结构
+- [ ] 定义 Binding Rust 数据结构
+- [ ] 定义 Group Rust 数据结构
+- [ ] 实现 Agent 配置读写
+- [ ] 实现本地资源扫描
+- [ ] 实现本地资源导入
+- [ ] 实现本地资源删除
+- [ ] 实现绑定关系持久化
+- [ ] 实现分组持久化
+- [ ] 前端用 `invoke()` 替换 mock 读取
+- [ ] 前端用 `invoke()` 替换 mock 更新
+
+### 5. 工作台能力补齐
+- [ ] 支持创建分组
+- [ ] 支持重命名分组
+- [ ] 支持删除分组
+- [ ] 支持分组折叠与展开
+- [ ] 支持组内拖拽排序
+- [ ] 支持跨组移动
+- [ ] 支持移入未分组区
+- [ ] 支持单项启用
+- [ ] 支持单项停用
+- [ ] 支持批量启用
+- [ ] 支持批量停用
+- [ ] 支持批量移动
+- [ ] 支持批量解绑
+
+### 6. Marketplace 接入
+- [ ] 支持配置 source
+- [ ] 接入 `skills.sh`
+- [ ] 拉取 Marketplace 列表
+- [ ] 支持 Marketplace 搜索
+- [ ] 展示 Marketplace 详情
+- [ ] 支持安装到本地资源池
+- [ ] 支持安装后立即绑定到 Agent
+- [ ] 支持安装状态反馈
+
+### 7. 边界与体验
+- [ ] 区分本地资源、Marketplace 资源、Agent 绑定资源
+- [ ] 区分“移除绑定”和“删除资源”
+- [ ] 为删除 Agent 增加确认
+- [ ] 为删除资源增加确认
+- [ ] 为删除分组增加确认
+- [ ] 为删除 source 增加确认
+- [ ] 敏感配置默认不明文展示
+- [ ] 保持单页工作台结构清晰
+
+### 8. 验收
+- [ ] `home.tsx` 不再承载过多实现细节
+- [ ] 首页已接入真实数据源
+- [ ] 支持多个 Agent
+- [ ] 支持本地资源池管理
+- [ ] 支持绑定、解绑、启停
+- [ ] 支持分组、拖拽、批量操作
+- [ ] 支持从 Marketplace 导入资源
+- [ ] 删除边界清晰
+- [ ] 敏感配置不明文展示

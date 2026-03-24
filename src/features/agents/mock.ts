@@ -3,6 +3,7 @@ import type {
   AgentResource,
   AgentSummary,
   McpResource,
+  ResourceKind,
   SkillResource,
   SubagentResource,
 } from "./types";
@@ -182,7 +183,7 @@ export const subagentResources: SubagentResource[] = [
   },
 ];
 
-export const resourcesByKind: Record<AgentResource["kind"], AgentResource[]> = {
+export const resourcesByKind: Record<ResourceKind, AgentResource[]> = {
   skill: skillResources,
   mcp: mcpResources,
   subagent: subagentResources,
