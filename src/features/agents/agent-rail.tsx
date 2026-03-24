@@ -30,8 +30,8 @@ export function AgentRail({
   const GroupIcon = agentRailGroupIcon;
 
   return (
-    <aside className="border-border flex h-full min-w-0 flex-col overflow-x-hidden border-r">
-      <div className="flex items-center justify-between gap-2 border-b p-3">
+    <div className="flex h-full min-w-0 flex-col overflow-x-hidden">
+      <div className="flex items-center justify-between gap-2 p-3">
         {!isCollapsed && (
           <span className="text-sm font-semibold">{t("prototype.agents.agents")}</span>
         )}
@@ -101,6 +101,6 @@ export function AgentRail({
           </div>
         </div>
       </div>
-    </aside>
+    </div>
   );
 }
