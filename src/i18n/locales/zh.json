@@ -1,36 +1,18 @@
 {
   "app": {
-    "title": "AgentDock",
-    "welcome": "欢迎使用 AgentDock",
-    "description": "AgentDock 是一款基于 Tauri v2、React 19 和 shadcn/ui 构建的现代桌面应用"
-  },
-  "greet": {
-    "title": "来自 Rust 的问候",
-    "description": "测试前端与 Tauri 后端的通信",
-    "placeholder": "输入你的名字...",
-    "button": "问候"
+    "title": "AgentDock"
   },
   "about": {
     "title": "关于",
     "button": "关于",
     "appName": "AgentDock",
-    "version": "版本",
-    "description": "AgentDock 是一款基于 Tauri v2、React 19 和 shadcn/ui 构建的现代桌面应用。",
-    "features": "特性",
-    "feature1": "Tauri v2 - 轻量级桌面应用框架",
-    "feature2": "React 19 - 最新的 React 版本",
-    "feature3": "TypeScript - 类型安全",
-    "feature4": "Tailwind CSS v4 - 现代 CSS 框架",
-    "feature5": "shadcn/ui - 精美的 UI 组件",
-    "close": "关闭"
+    "version": "版本"
   },
   "theme": {
     "toggle": "切换主题"
   },
   "language": {
-    "toggle": "切换语言",
-    "en": "English",
-    "zh": "中文"
+    "toggle": "切换语言"
   },
   "tray": {
     "show": "显示窗口",
@@ -52,7 +34,6 @@
   "settings": {
     "title": "设置",
     "button": "设置",
-    "close": "关闭",
     "appearance": {
       "title": "外观",
       "description": "自定义应用的外观和语言",
@@ -71,6 +52,52 @@
       "setSuccess": "已将快捷键设为 {{shortcut}}！",
       "cleared": "已取消快捷键！"
     }
+  },
+  "prototype": {
+    "agents": {
+      "agents": "Agent 列表",
+      "discovery": "资源发现"
+    },
+    "badges": {
+      "local": "本地",
+      "marketplace": "市场"
+    },
+    "tabs": {
+      "skill": "Skills",
+      "mcp": "MCP",
+      "subagent": "Subagents"
+    },
+    "actions": {
+      "searchPlaceholder": "搜索本地资源和市场内容",
+      "enable": "启用",
+      "disable": "停用",
+      "enabled": "已启用",
+      "installed": "已安装",
+      "available": "安装",
+      "update": "更新",
+      "collapse": "收起",
+      "expand": "展开",
+      "clear": "清空",
+      "batchSelected": "已选 {{count}} 项"
+    },
+    "detail": {
+      "title": "详情",
+      "preview": "预览",
+      "document": "文档",
+      "config": "配置",
+      "prompt": "提示词",
+      "capabilities": "能力",
+      "tags": "标签",
+      "source": "来源",
+      "version": "版本",
+      "author": "作者",
+      "downloads": "下载量",
+      "highlights": "亮点",
+      "usedBy": "被 {{count}} 个 Agent 使用"
+    },
+    "emptyList": "当前没有可显示的内容。",
+    "noResults": "没有匹配结果。",
+    "emptySelection": "请选择一项以查看详情。"
   },
   "releaseVersion": {
     "options": {

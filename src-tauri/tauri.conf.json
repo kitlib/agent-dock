@@ -28,6 +28,8 @@
         "title": "AgentDock",
         "width": 800,
         "height": 600,
+        "minWidth": 960,
+        "minHeight": 640,
         "decorations": false,
         "transparent": true,
         "center": true,

@@ -69,6 +69,8 @@ pnpm format         # Format code
 1. **Add Components**: `pnpm dlx shadcn@latest add <component>`
 2. **Path Alias**: Use `@/` prefix, e.g., `import { Button } from "@/components/ui/button"`
 3. **Tauri Commands**: Define in `src-tauri/src/lib.rs`, call with `invoke()`
+4. **shadcn/ui Components**: Do not modify files under `src/components/ui/`; adapt usage from feature/page code instead
+5. **shadcn Wrappers**: If a shadcn-generated wrapper under `src/components/ui/` does not match current library APIs, do not edit the wrapper directly. Fix compatibility in page/feature code or replace usage patterns outside `src/components/ui/`
 
 ### Example: Tauri Command
 
