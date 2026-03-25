@@ -1,0 +1,402 @@
+[
+  {
+    "platform": "AdaL",
+    "directory": ".adal/",
+    "rootFile": null,
+    "rules": null,
+    "commands": null,
+    "agents": null,
+    "skills": "skills/",
+    "mcp": "settings.json"
+  },
+  {
+    "platform": "Amp",
+    "directory": ".agents/",
+    "rootFile": null,
+    "rules": "checks/",
+    "commands": null,
+    "agents": null,
+    "skills": "skills/",
+    "mcp": ".amp/settings.json"
+  },
+  {
+    "platform": "Antigravity",
+    "directory": ".agent/",
+    "rootFile": null,
+    "rules": "rules/",
+    "commands": "workflows/",
+    "agents": null,
+    "skills": "skills/",
+    "mcp": null
+  },
+  {
+    "platform": "Augment Code",
+    "directory": ".augment/",
+    "rootFile": null,
+    "rules": "rules/",
+    "commands": "commands/",
+    "agents": null,
+    "skills": "skills/",
+    "mcp": null
+  },
+  {
+    "platform": "Claude Code",
+    "directory": ".claude/",
+    "rootFile": "CLAUDE.md",
+    "rules": "rules/",
+    "commands": "commands/",
+    "agents": "agents/",
+    "skills": "skills/",
+    "mcp": ".mcp.json (root)"
+  },
+  {
+    "platform": "Claude Code Plugin",
+    "directory": ".claude-plugin/",
+    "rootFile": null,
+    "rules": "rules/",
+    "commands": "commands/",
+    "agents": "agents/",
+    "skills": "skills/",
+    "mcp": ".mcp.json (root)"
+  },
+  {
+    "platform": "Cline",
+    "directory": ".cline/",
+    "rootFile": null,
+    "rules": null,
+    "commands": null,
+    "agents": null,
+    "skills": "skills/",
+    "mcp": "cline_mcp_settings.json"
+  },
+  {
+    "platform": "CodeBuddy",
+    "directory": ".codebuddy/",
+    "rootFile": null,
+    "rules": "rules/",
+    "commands": null,
+    "agents": null,
+    "skills": "skills/",
+    "mcp": null
+  },
+  {
+    "platform": "Codex CLI",
+    "directory": ".codex/",
+    "rootFile": null,
+    "rules": null,
+    "commands": "prompts/",
+    "agents": null,
+    "skills": "skills/",
+    "mcp": "config.toml"
+  },
+  {
+    "platform": "Command Code",
+    "directory": ".commandcode/",
+    "rootFile": null,
+    "rules": null,
+    "commands": "commands/",
+    "agents": "agents/",
+    "skills": "skills/",
+    "mcp": null
+  },
+  {
+    "platform": "Continue",
+    "directory": ".continue/",
+    "rootFile": null,
+    "rules": "rules/",
+    "commands": "prompts/",
+    "agents": null,
+    "skills": "skills/",
+    "mcp": null
+  },
+  {
+    "platform": "Crush",
+    "directory": ".config/crush/",
+    "rootFile": null,
+    "rules": null,
+    "commands": null,
+    "agents": null,
+    "skills": "skills/",
+    "mcp": "crush.json (root)"
+  },
+  {
+    "platform": "Cursor",
+    "directory": ".cursor/",
+    "rootFile": null,
+    "rules": "rules/",
+    "commands": "commands/",
+    "agents": "agents/",
+    "skills": "skills/",
+    "mcp": "mcp.json"
+  },
+  {
+    "platform": "Factory AI",
+    "directory": ".factory/",
+    "rootFile": null,
+    "rules": null,
+    "commands": "commands/",
+    "agents": "droids/",
+    "skills": "skills/",
+    "mcp": "settings/mcp.json"
+  },
+  {
+    "platform": "GitHub Copilot",
+    "directory": ".github/",
+    "rootFile": null,
+    "rules": null,
+    "commands": null,
+    "agents": "agents/",
+    "skills": "skills/",
+    "mcp": null
+  },
+  {
+    "platform": "Goose",
+    "directory": ".goose/",
+    "rootFile": null,
+    "rules": null,
+    "commands": null,
+    "agents": null,
+    "skills": "skills/",
+    "mcp": "config.yaml"
+  },
+  {
+    "platform": "iFlow CLI",
+    "directory": ".iflow/",
+    "rootFile": "IFLOW.md",
+    "rules": null,
+    "commands": "commands/",
+    "agents": "agents/",
+    "skills": "skills/",
+    "mcp": "settings.json"
+  },
+  {
+    "platform": "Junie",
+    "directory": ".junie/",
+    "rootFile": null,
+    "rules": null,
+    "commands": null,
+    "agents": null,
+    "skills": "skills/",
+    "mcp": null
+  },
+  {
+    "platform": "Kilo Code",
+    "directory": ".kilocode/",
+    "rootFile": null,
+    "rules": "rules/",
+    "commands": "workflows/",
+    "agents": null,
+    "skills": "skills/",
+    "mcp": "mcp.json"
+  },
+  {
+    "platform": "Kimi Code CLI",
+    "directory": ".agents/",
+    "rootFile": null,
+    "rules": null,
+    "commands": null,
+    "agents": null,
+    "skills": "skills/",
+    "mcp": ".kimi/mcp.json"
+  },
+  {
+    "platform": "Kiro",
+    "directory": ".kiro/",
+    "rootFile": null,
+    "rules": "steering/",
+    "commands": null,
+    "agents": null,
+    "skills": "skills/",
+    "mcp": "settings/mcp.json"
+  },
+  {
+    "platform": "Kode",
+    "directory": ".kode/",
+    "rootFile": null,
+    "rules": null,
+    "commands": null,
+    "agents": null,
+    "skills": "skills/",
+    "mcp": null
+  },
+  {
+    "platform": "MCPJam",
+    "directory": ".mcpjam/",
+    "rootFile": null,
+    "rules": null,
+    "commands": null,
+    "agents": null,
+    "skills": "skills/",
+    "mcp": null
+  },
+  {
+    "platform": "Mistral Vibe",
+    "directory": ".vibe/",
+    "rootFile": null,
+    "rules": null,
+    "commands": null,
+    "agents": null,
+    "skills": "skills/",
+    "mcp": null
+  },
+  {
+    "platform": "Mux",
+    "directory": ".mux/",
+    "rootFile": null,
+    "rules": null,
+    "commands": null,
+    "agents": null,
+    "skills": "skills/",
+    "mcp": null
+  },
+  {
+    "platform": "Neovate",
+    "directory": ".neovate/",
+    "rootFile": null,
+    "rules": null,
+    "commands": null,
+    "agents": null,
+    "skills": "skills/",
+    "mcp": "mcp.json"
+  },
+  {
+    "platform": "OpenClaw",
+    "directory": ".openclaw/",
+    "rootFile": null,
+    "rules": null,
+    "commands": null,
+    "agents": null,
+    "skills": "skills/",
+    "mcp": null
+  },
+  {
+    "platform": "OpenCode",
+    "directory": ".opencode/",
+    "rootFile": null,
+    "rules": null,
+    "commands": "commands/",
+    "agents": "agents/",
+    "skills": "skills/",
+    "mcp": "opencode.json"
+  },
+  {
+    "platform": "OpenHands",
+    "directory": ".openhands/",
+    "rootFile": null,
+    "rules": null,
+    "commands": null,
+    "agents": null,
+    "skills": "skills/",
+    "mcp": "mcp.json"
+  },
+  {
+    "platform": "Pi-Mono",
+    "directory": ".pi/",
+    "rootFile": null,
+    "rules": null,
+    "commands": "agent/prompts/",
+    "agents": null,
+    "skills": "agent/skills/",
+    "mcp": null
+  },
+  {
+    "platform": "Pochi",
+    "directory": ".pochi/",
+    "rootFile": null,
+    "rules": null,
+    "commands": null,
+    "agents": null,
+    "skills": "skills/",
+    "mcp": null
+  },
+  {
+    "platform": "Qoder",
+    "directory": ".qoder/",
+    "rootFile": null,
+    "rules": "rules/",
+    "commands": "commands/",
+    "agents": "agents/",
+    "skills": "skills/",
+    "mcp": null
+  },
+  {
+    "platform": "Qwen Code",
+    "directory": ".qwen/",
+    "rootFile": "QWEN.md",
+    "rules": null,
+    "commands": null,
+    "agents": "agents/",
+    "skills": "skills/",
+    "mcp": "settings.json"
+  },
+  {
+    "platform": "Replit",
+    "directory": ".agents/",
+    "rootFile": "replit.md",
+    "rules": null,
+    "commands": null,
+    "agents": null,
+    "skills": "skills/",
+    "mcp": null
+  },
+  {
+    "platform": "Roo Code",
+    "directory": ".roo/",
+    "rootFile": null,
+    "rules": null,
+    "commands": "commands/",
+    "agents": null,
+    "skills": "skills/",
+    "mcp": "mcp.json"
+  },
+  {
+    "platform": "Trae",
+    "directory": ".trae/",
+    "rootFile": null,
+    "rules": "rules/",
+    "commands": null,
+    "agents": null,
+    "skills": "skills/",
+    "mcp": null
+  },
+  {
+    "platform": "Trae CN",
+    "directory": ".trae-cn/",
+    "rootFile": null,
+    "rules": "rules/",
+    "commands": null,
+    "agents": null,
+    "skills": "skills/",
+    "mcp": null
+  },
+  {
+    "platform": "Warp",
+    "directory": ".warp/",
+    "rootFile": "WARP.md",
+    "rules": null,
+    "commands": null,
+    "agents": null,
+    "skills": null,
+    "mcp": null
+  },
+  {
+    "platform": "Windsurf",
+    "directory": ".windsurf/",
+    "rootFile": null,
+    "rules": "rules/",
+    "commands": null,
+    "agents": null,
+    "skills": "skills/",
+    "mcp": null
+  },
+  {
+    "platform": "Zencoder",
+    "directory": ".zencoder/",
+    "rootFile": null,
+    "rules": null,
+    "commands": null,
+    "agents": null,
+    "skills": "skills/",
+    "mcp": null
+  }
+]
