@@ -2,6 +2,7 @@ import type { MarketplaceItem } from "@/features/marketplace/types";
 import type {
   AgentDiscoveryItem,
   AgentResource,
+  AgentResourceView,
   MarketplaceDiscoveryItem,
   MarketplaceInstallStateLabel,
   ResourceKind,
@@ -11,7 +12,11 @@ function getInstallState(resource: AgentResource): "enabled" | "installed" {
   return resource.enabled ? "enabled" : "installed";
 }
 
-export function toLocalDiscoveryItem(resource: AgentResource): AgentDiscoveryItem {
+export function toLocalDiscoveryItem(
+  resource: AgentResource,
+  ownerAgentId: string | null,
+  managed: boolean
+): AgentResourceView {
   return {
     ...resource,
     origin: "local",
@@ -23,6 +28,10 @@ export function toLocalDiscoveryItem(resource: AgentResource): AgentDiscoveryIte
     description: resource.summary,
     highlights: [],
     usageLabel: resource.usageCount,
+    ownerAgentId,
+    managed,
+    configPath: undefined,
+    conflictState: undefined,
   };
 }
 
@@ -89,9 +98,13 @@ export function buildDiscoveryItems(
   kind: ResourceKind,
   localResources: Record<ResourceKind, AgentResource[]>,
   marketplaceItems: MarketplaceItem[],
-  marketplaceInstallStates: Record<string, MarketplaceInstallStateLabel>
+  marketplaceInstallStates: Record<string, MarketplaceInstallStateLabel>,
+  ownerAgentId: string | null,
+  managed: boolean
 ) {
-  const localItems = localResources[kind].map(toLocalDiscoveryItem);
+  const localItems = localResources[kind].map((resource) =>
+    toLocalDiscoveryItem(resource, ownerAgentId, managed)
+  );
   const marketplaceResults = marketplaceItems
     .filter((item) => item.kind === kind)
     .map((item) => {

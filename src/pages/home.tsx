@@ -11,6 +11,7 @@ import { toggleWindow } from "@/lib/window";
 import { useAppTranslation } from "@/hooks/use-app-translation";
 import { useAgentsPrototype } from "@/features/agents/hooks";
 import { AgentRail } from "@/features/agents/agent-rail";
+import { AgentImportPanel } from "@/features/agents/agent-import-panel";
 import { AgentResourcePanel } from "@/features/agents/resource-panel";
 import { AgentDetailPanel } from "@/features/agents/detail-panel";
 
@@ -19,10 +20,8 @@ const SHORTCUT_KEY = "global-shortcut-show-main";
 export default function HomePage() {
   const { t } = useAppTranslation();
   const {
-    agentGroups,
+    conflicts,
     filteredAgents,
-    selectedGroupId,
-    setSelectedGroupId,
     selectedAgent,
     selectedAgentId,
     setSelectedAgentId,
@@ -38,6 +37,15 @@ export default function HomePage() {
     toggleChecked,
     clearChecked,
     updateMarketplaceInstallState,
+    importAgent,
+    managedAgentsForView,
+    setAgentEnabled,
+    workspaceMode,
+    enterAddingMode,
+    onImportAgentsSuccess,
+    onCreateAgentSuccess,
+    onDeleteAgentSuccess,
+    onRemoveAgentSuccess,
   } = useAgentsPrototype();
 
   const [isRailCollapsed, setIsRailCollapsed] = useState(false);
@@ -110,56 +118,72 @@ export default function HomePage() {
           <ResizablePanel
             panelRef={leftPanelRef}
             defaultSize="18%"
-            minSize={220}
+            minSize={180}
             collapsedSize={leftPanelCollapsedSize}
             collapsible
             onResize={() => setIsRailCollapsed(leftPanelRef.current?.isCollapsed() ?? false)}
           >
             <AgentRail
-              agentGroups={agentGroups}
               filteredAgents={filteredAgents}
               isCollapsed={isRailCollapsed}
+              onAddAgent={enterAddingMode}
               onToggleCollapsed={toggleRailCollapsed}
               selectedAgentId={selectedAgentId}
-              selectedGroupId={selectedGroupId}
               setSelectedAgentId={setSelectedAgentId}
-              setSelectedGroupId={setSelectedGroupId}
               t={t}
             />
           </ResizablePanel>
 
           <ResizableHandle withHandle />
 
-          <ResizablePanel defaultSize="50%" minSize={420}>
-            <AgentResourcePanel
-              activeKind={activeKind}
-              checkedIds={checkedIds}
-              filteredResources={filteredResources}
-              isRailCollapsed={isRailCollapsed}
-              onClearChecked={clearChecked}
-              onDragStart={handleDragStart}
-              onSearchChange={setSearch}
-              onSelectKind={selectKind}
-              onSelectResource={selectResource}
-              onToggleChecked={toggleChecked}
-              onUpdateMarketplaceInstallState={updateMarketplaceInstallState}
-              search={search}
-              selectedAgentName={selectedAgent?.name}
-              selectedResourceId={selectedResourceId}
-              t={t}
-            />
-          </ResizablePanel>
+          {workspaceMode === "adding" ? (
+            <ResizablePanel defaultSize="82%" minSize={420}>
+              <AgentImportPanel
+                managedAgentsForView={managedAgentsForView}
+                onCreateSuccess={onCreateAgentSuccess}
+                onDeleteSuccess={onDeleteAgentSuccess}
+                onImportSuccess={onImportAgentsSuccess}
+                onRemoveSuccess={onRemoveAgentSuccess}
+                t={t}
+              />
+            </ResizablePanel>
+          ) : (
+            <>
+              <ResizablePanel defaultSize="50%" minSize={420}>
+                <AgentResourcePanel
+                  activeKind={activeKind}
+                  checkedIds={checkedIds}
+                  filteredResources={filteredResources}
+                  isRailCollapsed={isRailCollapsed}
+                  onClearChecked={clearChecked}
+                  onDragStart={handleDragStart}
+                  onSearchChange={setSearch}
+                  onSelectKind={selectKind}
+                  onSelectResource={selectResource}
+                  onToggleChecked={toggleChecked}
+                  onUpdateMarketplaceInstallState={updateMarketplaceInstallState}
+                  search={search}
+                  selectedAgentName={selectedAgent?.alias ?? selectedAgent?.name}
+                  selectedResourceId={selectedResourceId}
+                  t={t}
+                />
+              </ResizablePanel>
 
-          <ResizableHandle withHandle />
+              <ResizableHandle withHandle />
 
-          <ResizablePanel defaultSize="32%" minSize={200}>
-            <AgentDetailPanel
-              selectedAgent={selectedAgent}
-              selectedResource={selectedResource}
-              onUpdateMarketplaceInstallState={updateMarketplaceInstallState}
-              t={t}
-            />
-          </ResizablePanel>
+              <ResizablePanel defaultSize="32%" minSize={200}>
+                <AgentDetailPanel
+                  conflicts={conflicts}
+                  onImportAgent={importAgent}
+                  onSetAgentEnabled={setAgentEnabled}
+                  selectedAgent={selectedAgent}
+                  selectedResource={selectedResource}
+                  onUpdateMarketplaceInstallState={updateMarketplaceInstallState}
+                  t={t}
+                />
+              </ResizablePanel>
+            </>
+          )}
         </ResizablePanelGroup>
       </div>
     </WindowFrame>
