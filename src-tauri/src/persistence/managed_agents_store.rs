@@ -52,7 +52,6 @@ pub fn default_managed_agents() -> Vec<ManagedAgentDto> {
             source: "auto-imported".into(),
             provider: Some("cursor".into()),
             root_path: Some(".cursor".into()),
-            config_path: Some(".cursor/mcp.json".into()),
         },
         ManagedAgentDto {
             managed_agent_id: "managed-claude".into(),
@@ -64,7 +63,6 @@ pub fn default_managed_agents() -> Vec<ManagedAgentDto> {
             source: "manual-imported".into(),
             provider: Some("claude".into()),
             root_path: Some(".claude".into()),
-            config_path: Some(".claude/settings.json".into()),
         },
         ManagedAgentDto {
             managed_agent_id: "managed-antigravity".into(),
@@ -76,7 +74,6 @@ pub fn default_managed_agents() -> Vec<ManagedAgentDto> {
             source: "manual-imported".into(),
             provider: Some("antigravity".into()),
             root_path: Some(".agent".into()),
-            config_path: Some(".agent/config.json".into()),
         },
     ]
 }

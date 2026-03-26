@@ -6,7 +6,7 @@ import {
   filterDiscoveryItems,
   sortDiscoveryItems,
 } from "./discovery";
-import { resourcesByKind } from "./mock";
+import { resourcesByKind } from "./resource-catalog";
 import { useAgentDiscovery } from "./use-agent-discovery";
 import { useAgentManagement } from "./use-agent-management";
 import type {
@@ -17,9 +17,24 @@ import type {
   MarketplaceInstallStateLabel,
   RemoveAgentResult,
   ResourceKind,
+  ResolvedAgentView,
 } from "./types";
 
 type WorkspaceMode = "browse" | "adding";
+
+function buildManagedAgents(resolvedAgents: ResolvedAgentView[]) {
+  return resolvedAgents
+    .filter((agent) => agent.managed)
+    .map((agent) => ({
+      managedAgentId: agent.managedAgentId ?? `managed-${agent.id}`,
+      fingerprint: agent.fingerprint,
+      alias: agent.alias,
+      enabled: agent.enabled,
+      hidden: agent.hidden,
+      importedAt: agent.lastScannedAt,
+      source: "manual-imported" as const,
+    }));
+}
 
 export function useAgentWorkspace() {
   const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>("browse");
@@ -32,110 +47,55 @@ export function useAgentWorkspace() {
     Record<string, MarketplaceInstallStateLabel>
   >(() => createMarketplaceInstallStateMap(marketplaceItems));
 
-  const {
-    conflicts,
-    discoveredAgents,
-    discoveryState,
-    managedAgents,
-    resolvedAgents,
-    setConflicts,
-    setDiscoveryState,
-    setManagedAgents,
-    setResolvedAgents,
-  } = useAgentDiscovery();
+  const { discoveredAgents, discoveryState, managedAgents, resolvedAgents, setDiscoveryState, setManagedAgents, setResolvedAgents } =
+    useAgentDiscovery();
 
-  const { importAgent, setAgentEnabled } = useAgentManagement({
-    setConflicts,
+  const { refreshAgents } = useAgentManagement({
     setDiscoveryState,
     setManagedAgents,
     setResolvedAgents,
   });
 
-  const syncImportedAgents = ({ resolvedAgents }: ImportAgentsResult) => {
-    setResolvedAgents(resolvedAgents);
-    setManagedAgents(
-      resolvedAgents
-        .filter((agent) => agent.managed)
-        .map((agent) => ({
-          managedAgentId: agent.managedAgentId ?? `managed-${agent.id}`,
-          fingerprint: agent.fingerprint,
-          alias: agent.alias,
-          enabled: agent.enabled,
-          hidden: agent.hidden,
-          importedAt: agent.lastScannedAt,
-          source: "manual-imported" as const,
-        }))
-    );
+  const clearResourceSelection = () => {
     setSelectedResourceId("");
     setCheckedIds([]);
-    setWorkspaceMode("adding");
   };
 
-  const syncCreatedAgent = ({ agent, resolvedAgents }: CreateAgentResult) => {
+  const setMode = (mode: WorkspaceMode) => {
+    setWorkspaceMode(mode);
+    clearResourceSelection();
+  };
+
+  const resetWorkspaceSelection = () => {
+    setMode("adding");
+  };
+
+  const syncManagedState = (resolvedAgents: ResolvedAgentView[]) => {
     setResolvedAgents(resolvedAgents);
-    setManagedAgents(
-      resolvedAgents
-        .filter((entry) => entry.managed)
-        .map((entry) => ({
-          managedAgentId: entry.managedAgentId ?? `managed-${entry.id}`,
-          fingerprint: entry.fingerprint,
-          alias: entry.alias,
-          enabled: entry.enabled,
-          hidden: entry.hidden,
-          importedAt: entry.lastScannedAt,
-          source: "manual-imported" as const,
-        }))
-    );
-    setSelectedAgentId(agent.id);
-    setSelectedResourceId("");
-    setCheckedIds([]);
-    setWorkspaceMode("browse");
+    setManagedAgents(buildManagedAgents(resolvedAgents));
+    resetWorkspaceSelection();
+  };
+
+  const syncImportedAgents = ({ resolvedAgents }: ImportAgentsResult) => {
+    syncManagedState(resolvedAgents);
+  };
+
+  const syncCreatedAgent = ({ resolvedAgents }: CreateAgentResult) => {
+    syncManagedState(resolvedAgents);
   };
 
   const syncRemovedAgent = ({ removedAgentId, resolvedAgents }: RemoveAgentResult) => {
-    setResolvedAgents(resolvedAgents);
-    setManagedAgents(
-      resolvedAgents
-        .filter((entry) => entry.managed)
-        .map((entry) => ({
-          managedAgentId: entry.managedAgentId ?? `managed-${entry.id}`,
-          fingerprint: entry.fingerprint,
-          alias: entry.alias,
-          enabled: entry.enabled,
-          hidden: entry.hidden,
-          importedAt: entry.lastScannedAt,
-          source: "manual-imported" as const,
-        }))
-    );
+    syncManagedState(resolvedAgents);
     if (removedAgentId && selectedAgentId === removedAgentId) {
       setSelectedAgentId(resolvedAgents.find((entry) => entry.managed && !entry.hidden)?.id ?? "");
     }
-    setSelectedResourceId("");
-    setCheckedIds([]);
-    setWorkspaceMode("adding");
   };
 
   const syncDeletedAgent = ({ deletedAgentId, resolvedAgents }: DeleteAgentResult) => {
-    setResolvedAgents(resolvedAgents);
-    setManagedAgents(
-      resolvedAgents
-        .filter((entry) => entry.managed)
-        .map((entry) => ({
-          managedAgentId: entry.managedAgentId ?? `managed-${entry.id}`,
-          fingerprint: entry.fingerprint,
-          alias: entry.alias,
-          enabled: entry.enabled,
-          hidden: entry.hidden,
-          importedAt: entry.lastScannedAt,
-          source: "manual-imported" as const,
-        }))
-    );
+    syncManagedState(resolvedAgents);
     if (deletedAgentId && selectedAgentId === deletedAgentId) {
       setSelectedAgentId(resolvedAgents.find((entry) => entry.managed && !entry.hidden)?.id ?? "");
     }
-    setSelectedResourceId("");
-    setCheckedIds([]);
-    setWorkspaceMode("adding");
   };
 
   const normalizedSearch = search.trim().toLowerCase();
@@ -198,8 +158,7 @@ export function useAgentWorkspace() {
 
   const selectKind = (kind: ResourceKind) => {
     setActiveKind(kind);
-    setSelectedResourceId("");
-    setCheckedIds([]);
+    clearResourceSelection();
   };
 
   const selectResource = (resource: AgentDiscoveryItem | null) => {
@@ -215,34 +174,26 @@ export function useAgentWorkspace() {
   };
 
   const selectAgent = (id: string) => {
-    setWorkspaceMode("browse");
     setSelectedAgentId(id);
-    setSelectedResourceId("");
-    setCheckedIds([]);
+    setMode("browse");
   };
 
   const enterAddingMode = () => {
-    setWorkspaceMode("adding");
-    setSelectedResourceId("");
-    setCheckedIds([]);
+    setMode("adding");
   };
 
   const exitAddingMode = () => {
-    setWorkspaceMode("browse");
-    setSelectedResourceId("");
-    setCheckedIds([]);
+    setMode("browse");
   };
 
   return {
     activeKind,
     checkedIds,
     clearChecked,
-    conflicts,
     discoveredAgents,
     discoveryState,
     filteredAgents: managedAgentsForRail,
     filteredResources,
-    importAgent,
     managedAgents,
     managedAgentsForView: resolvedAgents,
     onCreateAgentSuccess: syncCreatedAgent,
@@ -250,13 +201,13 @@ export function useAgentWorkspace() {
     onImportAgentsSuccess: syncImportedAgents,
     onRemoveAgentSuccess: syncRemovedAgent,
     search,
+    refreshAgents,
     selectKind,
     selectResource,
     selectedAgent,
     selectedAgentId: selectedAgent?.id ?? selectedAgentId,
     selectedResource,
     selectedResourceId: selectedResource?.id ?? selectedResourceId,
-    setAgentEnabled,
     setSearch,
     setSelectedAgentId: selectAgent,
     toggleChecked,

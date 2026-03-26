@@ -20,7 +20,6 @@ const SHORTCUT_KEY = "global-shortcut-show-main";
 export default function HomePage() {
   const { t } = useAppTranslation();
   const {
-    conflicts,
     filteredAgents,
     selectedAgent,
     selectedAgentId,
@@ -37,15 +36,14 @@ export default function HomePage() {
     toggleChecked,
     clearChecked,
     updateMarketplaceInstallState,
-    importAgent,
     managedAgentsForView,
-    setAgentEnabled,
     workspaceMode,
     enterAddingMode,
     onImportAgentsSuccess,
     onCreateAgentSuccess,
     onDeleteAgentSuccess,
     onRemoveAgentSuccess,
+    refreshAgents,
   } = useAgentsPrototype();
 
   const [isRailCollapsed, setIsRailCollapsed] = useState(false);
@@ -173,9 +171,7 @@ export default function HomePage() {
 
               <ResizablePanel defaultSize="32%" minSize={200}>
                 <AgentDetailPanel
-                  conflicts={conflicts}
-                  onImportAgent={importAgent}
-                  onSetAgentEnabled={setAgentEnabled}
+                  onRefreshAgents={refreshAgents}
                   selectedAgent={selectedAgent}
                   selectedResource={selectedResource}
                   onUpdateMarketplaceInstallState={updateMarketplaceInstallState}

@@ -106,7 +106,7 @@
       "scannedAgents": "扫描结果",
       "readyToImport": "{{count}} 个可管理",
       "scanningAgents": "正在扫描本地 Agent 目录...",
-      "scanOrCreate": "扫描本地 Agent，或手动创建一个。",
+      "scanOrCreate": "",
       "rootPath": "根目录",
       "selectProvider": "提供方",
       "name": "名称",

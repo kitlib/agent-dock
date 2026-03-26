@@ -39,9 +39,7 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             greet,
             update_tray_menu,
-            commands::agents::list_discovered_agents,
             commands::agents::list_managed_agents,
-            commands::agents::list_agent_conflicts,
             commands::agents::list_resolved_agents,
             commands::agents::scan_agents,
             commands::agents::import_agents,

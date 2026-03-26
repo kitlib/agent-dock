@@ -30,8 +30,6 @@ export function toLocalDiscoveryItem(
     usageLabel: resource.usageCount,
     ownerAgentId,
     managed,
-    configPath: undefined,
-    conflictState: undefined,
   };
 }
 

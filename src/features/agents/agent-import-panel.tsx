@@ -1,10 +1,9 @@
-import { useEffect, useState } from "react";
+import { memo, useEffect, useState } from "react";
 import { Check, LoaderCircle, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogFooter,
   DialogHeader,
   DialogTitle,
@@ -18,23 +17,20 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { AgentProviderIcon } from "./provider-icon";
+import { AgentIcon } from "./agent-icon";
+import { agentMeta } from "./agent-meta";
 import { useAgentImport } from "./use-agent-import";
 import type {
   AgentManagementCard,
   CreateAgentResult,
   DeleteAgentResult,
   ImportAgentsResult,
+  AgentId,
   ManualAgentDraft,
   RemoveAgentResult,
 } from "./types";
 
-const providerOptions: ManualAgentDraft["provider"][] = [
-  "claude",
-  "cursor",
-  "codex",
-  "antigravity",
-];
+const providerOptions = Object.keys(agentMeta) as AgentId[];
 
 type AgentImportPanelProps = {
   managedAgentsForView: CreateAgentResult["resolvedAgents"];
@@ -45,17 +41,117 @@ type AgentImportPanelProps = {
   t: (key: string, options?: Record<string, unknown>) => string;
 };
 
-function candidateStateLabel(candidate: AgentManagementCard, t: AgentImportPanelProps["t"]) {
-  if (candidate.state === "conflict") {
-    return candidate.reason ?? t("prototype.detail.conflicts");
-  }
+type AgentCardItemProps = {
+  candidate: AgentManagementCard;
+  isImporting: boolean;
+  onToggle: (candidate: AgentManagementCard) => Promise<void>;
+  onDelete: (candidate: AgentManagementCard) => Promise<void>;
+};
 
+function candidateStateLabel(candidate: AgentManagementCard) {
   if (candidate.state === "unreadable") {
     return candidate.reason ?? candidate.state;
   }
 
   return null;
 }
+
+const AgentManagementCardItem = memo(function AgentManagementCardItem({
+  candidate,
+  isImporting,
+  onToggle,
+  onDelete,
+}: AgentCardItemProps) {
+  const isReady = candidate.state === "ready";
+  const isImported = candidate.state === "imported";
+  const stateLabel = candidateStateLabel(candidate);
+
+  return (
+    <div
+      role={isImported || isReady ? "button" : undefined}
+      tabIndex={isImported || isReady ? 0 : undefined}
+      onClick={(event) => {
+        if (!isImported && !isReady) {
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        void onToggle(candidate);
+      }}
+      onKeyDown={(event) => {
+        if (!isImported && !isReady) {
+          return;
+        }
+        if (event.key !== "Enter" && event.key !== " ") {
+          return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        void onToggle(candidate);
+      }}
+      aria-disabled={isImporting || (!isReady && !isImported)}
+      className={cn(
+        "bg-card w-full rounded-lg border p-2 text-left transition-all",
+        isImported || isReady
+          ? "hover:border-border hover:bg-accent/20 focus-visible:ring-ring cursor-pointer focus-visible:ring-2 focus-visible:outline-none"
+          : "cursor-default",
+        isImported || isReady ? "border-border bg-card" : "border-border bg-muted/60"
+      )}
+    >
+      <div className="flex items-stretch gap-2.5">
+        <div className="bg-background flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border self-start">
+          <AgentIcon provider={candidate.provider} size={18} />
+        </div>
+        <div className="min-w-0 flex-1">
+          <div className="truncate text-sm font-medium leading-5">{candidate.displayName}</div>
+          <div className="text-muted-foreground mt-1 text-[11px]">{candidate.rootPath}</div>
+          <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-1.5 text-xs">
+            <span className="bg-muted rounded px-1.5 py-0.5 text-[10px]">
+              {candidate.resourceCounts.skill} Skills
+            </span>
+            <span className="bg-muted rounded px-1.5 py-0.5 text-[10px]">
+              {candidate.resourceCounts.mcp} MCP
+            </span>
+            <span className="bg-muted rounded px-1.5 py-0.5 text-[10px]">
+              {candidate.resourceCounts.subagent} Subagents
+            </span>
+          </div>
+          {stateLabel ? (
+            <div className="text-muted-foreground mt-1 text-[11px]">{stateLabel}</div>
+          ) : null}
+        </div>
+        <div className="flex min-h-full shrink-0 flex-col items-center justify-between self-stretch">
+          <div className="flex h-5 w-5 items-center justify-center">
+            {isImported ? (
+              <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-white">
+                <Check className="h-3.5 w-3.5" />
+              </span>
+            ) : null}
+          </div>
+          <div className="flex h-7 w-7 items-center justify-center">
+            {candidate.deletable ? (
+              <Button
+                type="button"
+                variant="ghost"
+                size="icon-sm"
+                className="text-red-600 hover:text-red-600 dark:text-red-400 dark:hover:text-red-400 border-red-500/50 dark:border-red-400/60 h-7 w-7 shrink-0 rounded-md border p-0"
+                onClick={(event) => {
+                  event.preventDefault();
+                  event.stopPropagation();
+                  void onDelete(candidate);
+                }}
+                title="Delete"
+                disabled={isImporting}
+              >
+                <Trash2 className="h-3.5 w-3.5" />
+              </Button>
+            ) : null}
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+});
 
 export function AgentImportPanel({
   managedAgentsForView,
@@ -89,6 +185,7 @@ export function AgentImportPanel({
     onImportSuccess,
     onRemoveSuccess,
   });
+  const selectedProviderMeta = agentMeta[manualDraft.provider];
 
   useEffect(() => {
     void enterImporting();
@@ -112,8 +209,12 @@ export function AgentImportPanel({
   };
 
   const handleSubmitManualAdd = async () => {
-    await submitManualAdd();
-    setIsManualDialogOpen(false);
+    try {
+      await submitManualAdd();
+      setIsManualDialogOpen(false);
+    } catch {
+      // Keep dialog open so the user can retry after the error is shown elsewhere.
+    }
   };
 
   return (
@@ -121,9 +222,6 @@ export function AgentImportPanel({
       <div className="mb-3 flex items-start justify-between gap-3">
         <div>
           <div className="text-lg font-semibold">{t("prototype.actions.add")}</div>
-          <div className="text-muted-foreground mt-1 text-sm">
-            {isScanning ? t("prototype.detail.scanningAgents") : t("prototype.detail.scanOrCreate")}
-          </div>
         </div>
         <div className="flex items-center gap-2">
           <Button variant="outline" size="sm" onClick={openManualDialog}>
@@ -147,7 +245,6 @@ export function AgentImportPanel({
             <DialogContent className="sm:max-w-xl">
               <DialogHeader>
                 <DialogTitle>{t("prototype.actions.manualAdd")}</DialogTitle>
-                <DialogDescription>{t("prototype.detail.scanOrCreate")}</DialogDescription>
               </DialogHeader>
 
               <div className="grid grid-cols-2 gap-2.5">
@@ -160,24 +257,32 @@ export function AgentImportPanel({
                     }
                   >
                     <SelectTrigger className="w-full">
-                      <SelectValue />
+                      <SelectValue>
+                        <div className="flex items-center gap-2">
+                          <AgentIcon provider={manualDraft.provider} size={16} />
+                          <span>{selectedProviderMeta.name}</span>
+                        </div>
+                      </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {providerOptions.map((provider) => (
                         <SelectItem key={provider} value={provider}>
-                          {provider}
+                          <div className="flex items-center gap-2">
+                            <AgentIcon provider={provider} size={16} />
+                            <span>{agentMeta[provider].name}</span>
+                          </div>
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
                 </label>
 
-                <label className="flex flex-col gap-1.5 text-sm">
+                <label className="col-span-2 flex flex-col gap-1.5 text-sm">
                   <span>{t("prototype.detail.name")}</span>
                   <Input
                     value={manualDraft.name}
                     onChange={(event) => updateManualDraft("name", event.target.value)}
-                    placeholder="Claude Code"
+                    placeholder={selectedProviderMeta.name}
                   />
                 </label>
 
@@ -186,16 +291,7 @@ export function AgentImportPanel({
                   <Input
                     value={manualDraft.rootPath}
                     onChange={(event) => updateManualDraft("rootPath", event.target.value)}
-                    placeholder=".claude/"
-                  />
-                </label>
-
-                <label className="col-span-2 flex flex-col gap-1.5 text-sm">
-                  <span>{t("prototype.detail.config")}</span>
-                  <Input
-                    value={manualDraft.configPath}
-                    onChange={(event) => updateManualDraft("configPath", event.target.value)}
-                    placeholder=".claude/settings.json"
+                    placeholder={selectedProviderMeta.directory}
                   />
                 </label>
               </div>
@@ -219,7 +315,7 @@ export function AgentImportPanel({
             </DialogContent>
           </Dialog>
 
-          <div className="max-h-[62vh] overflow-auto p-2">
+          <div className="h-full overflow-auto p-2">
             {scanError ? (
               <div className="text-destructive rounded-lg border border-dashed p-4 text-sm">
                 {scanError}
@@ -232,93 +328,15 @@ export function AgentImportPanel({
               </div>
             ) : (
               <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
-                {managementCards.map((candidate) => {
-                  const isReady = candidate.state === "ready";
-                  const isImported = candidate.state === "imported";
-                  const stateLabel = candidateStateLabel(candidate, t);
-                  return (
-                    <button
-                      type="button"
-                      key={candidate.id}
-                      onClick={(event) => {
-                        event.preventDefault();
-                        event.stopPropagation();
-                        void toggleCandidate(candidate);
-                      }}
-                      disabled={isImporting || (!isReady && !isImported)}
-                      className={cn(
-                        "bg-card w-full rounded-lg border p-2 text-left transition-all",
-                        isImported || isReady
-                          ? "hover:border-primary/40 hover:bg-accent/40 focus-visible:ring-ring cursor-pointer focus-visible:ring-2 focus-visible:outline-none"
-                          : "cursor-default",
-                        isImported
-                          ? "border-emerald-500/40 bg-emerald-500/10"
-                          : isReady
-                            ? "border-sky-500/40 bg-sky-500/10"
-                            : "border-border bg-muted/60"
-                      )}
-                    >
-                      <div className="flex items-start gap-2.5">
-                        <div className="bg-background flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border">
-                          <AgentProviderIcon provider={candidate.provider} size={18} />
-                        </div>
-                        <div className="min-w-0 flex-1">
-                          <div className="flex items-center gap-2">
-                            <div className="min-w-0 flex-1 truncate text-sm font-medium">
-                              {candidate.displayName}
-                            </div>
-                            <div className="flex shrink-0 items-center gap-1">
-                              {isImported ? (
-                                <span className="flex h-5 w-5 items-center justify-center rounded-full bg-emerald-500 text-white">
-                                  <Check className="h-3.5 w-3.5" />
-                                </span>
-                              ) : null}
-                              {candidate.deletable ? (
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon-sm"
-                                  className="text-destructive hover:text-destructive shrink-0 hover:bg-red-500/10"
-                                  onClick={(event) => {
-                                    event.preventDefault();
-                                    event.stopPropagation();
-                                    void deleteCandidate(candidate);
-                                  }}
-                                  title="Delete"
-                                  disabled={isImporting}
-                                >
-                                  <Trash2 className="h-3.5 w-3.5" />
-                                </Button>
-                              ) : null}
-                            </div>
-                          </div>
-                          <div className="text-muted-foreground mt-1 text-[11px]">
-                            {candidate.rootPath}
-                          </div>
-                          <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-1.5 text-xs">
-                            <span className="bg-muted rounded px-1.5 py-0.5 text-[10px]">
-                              {candidate.sourceScope}
-                            </span>
-                            <span className="bg-muted rounded px-1.5 py-0.5 text-[10px]">
-                              {candidate.resourceCounts.skill} Skills
-                            </span>
-                            <span className="bg-muted rounded px-1.5 py-0.5 text-[10px]">
-                              {candidate.resourceCounts.mcp} MCP
-                            </span>
-                            <span className="bg-muted rounded px-1.5 py-0.5 text-[10px]">
-                              {candidate.resourceCounts.subagent} Subagents
-                            </span>
-                          </div>
-                          {stateLabel ? (
-                            <div className="text-muted-foreground mt-1 text-[11px]">
-                              {stateLabel}
-                            </div>
-                          ) : null}
-                        </div>
-                      </div>
-                    </button>
-                  );
-                })}
+                {managementCards.map((candidate) => (
+                  <AgentManagementCardItem
+                    key={candidate.id}
+                    candidate={candidate}
+                    isImporting={isImporting}
+                    onToggle={toggleCandidate}
+                    onDelete={deleteCandidate}
+                  />
+                ))}
               </div>
             )}
           </div>

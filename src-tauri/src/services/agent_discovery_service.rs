@@ -1,9 +1,9 @@
 use std::collections::HashSet;
 
 use crate::dto::agents::{
-    AgentConflictDto, AgentResourceCountsDto, CreateAgentResultDto, DeleteAgentResultDto,
-    DiscoveredAgentDto, ImportAgentsResultDto, ManagedAgentDto, ManualAgentDraftDto,
-    RemoveAgentResultDto, ResolvedAgentDto, ScannedAgentCandidateDto,
+    AgentResourceCountsDto, CreateAgentResultDto, DeleteAgentResultDto, DiscoveredAgentDto,
+    ImportAgentsResultDto, ManagedAgentDto, ManualAgentDraftDto, RemoveAgentResultDto,
+    ResolvedAgentDto, ScanTargetDto, ScannedAgentCandidateDto,
 };
 use crate::persistence::managed_agents_store;
 use crate::scanners::provider_scanner;
@@ -21,11 +21,11 @@ fn role_for_provider(provider: &str) -> String {
 
 fn discovered_summary(provider: &str) -> String {
     match provider {
-        "cursor" => "Detected workspace level Cursor config and ready to import into AgentDock.",
-        "claude" => "Detected Claude config and requires conflict review before import.",
-        "codex" => "Detected from user config and ready to import into AgentDock.",
-        "antigravity" => "Detected manual path but one workflow file is unreadable.",
-        _ => "Detected and ready to import into AgentDock.",
+        "cursor" => "Detected Cursor in the user directory and ready to import into AgentDock.",
+        "claude" => "Detected Claude Code in the user directory and ready to import into AgentDock.",
+        "codex" => "Detected Codex CLI in the user directory and ready to import into AgentDock.",
+        "antigravity" => "Detected Antigravity in the user directory and ready to import into AgentDock.",
+        _ => "Detected in the user directory and ready to import into AgentDock.",
     }
     .into()
 }
@@ -67,8 +67,6 @@ fn manual_resolved_agent(entry: &ManagedAgentDto) -> ResolvedAgentDto {
         alias: entry.alias.clone(),
         role: "Manually managed agent".into(),
         root_path: entry.root_path.clone().unwrap_or_else(|| ".".into()),
-        config_path: entry.config_path.clone(),
-        source_scope: "manual".into(),
         managed: is_managed,
         managed_agent_id: Some(entry.managed_agent_id.clone()),
         enabled: if is_managed { entry.enabled } else { false },
@@ -91,7 +89,6 @@ fn manual_resolved_agent(entry: &ManagedAgentDto) -> ResolvedAgentDto {
             mcp: 0,
             subagent: 0,
         },
-        conflict_ids: vec![],
         last_scanned_at: entry.imported_at.clone(),
     }
 }
@@ -120,8 +117,6 @@ fn merge_resolved_agents(
                 alias: managed.and_then(|entry| entry.alias.clone()),
                 role: role_for_provider(&agent.provider),
                 root_path: agent.root_path.clone(),
-                config_path: agent.config_path.clone(),
-                source_scope: agent.source_scope.clone(),
                 managed: managed.map(|entry| !entry.hidden).unwrap_or(false),
                 managed_agent_id: managed.map(|entry| entry.managed_agent_id.clone()),
                 enabled: managed
@@ -130,16 +125,12 @@ fn merge_resolved_agents(
                 hidden: managed.map(|entry| entry.hidden).unwrap_or(false),
                 health: if agent.status == "unreadable" {
                     "error".into()
-                } else if agent.status == "conflict" {
-                    "warning".into()
                 } else {
                     "ok".into()
                 },
                 status: agent.status.clone(),
                 status_label: if managed.map(|entry| !entry.hidden).unwrap_or(false) {
                     "Managed".into()
-                } else if agent.status == "conflict" {
-                    "Needs review".into()
                 } else if agent.status == "unreadable" {
                     "Unreadable".into()
                 } else {
@@ -152,13 +143,6 @@ fn merge_resolved_agents(
                 },
                 group_id: "assistant".into(),
                 resource_counts: agent.resource_counts.clone(),
-                conflict_ids: if agent.status == "conflict" {
-                    vec!["conflict-claude-multi-source".into()]
-                } else if agent.status == "unreadable" {
-                    vec!["conflict-antigravity-unreadable".into()]
-                } else {
-                    vec![]
-                },
                 last_scanned_at: agent.detected_at.clone(),
             }
         })
@@ -187,8 +171,6 @@ fn scanned_candidates(
                 .find(|entry| entry.discovery_id == agent.discovery_id);
             let state = if resolved.map(|entry| entry.managed).unwrap_or(false) {
                 "imported"
-            } else if agent.status == "conflict" {
-                "conflict"
             } else if agent.status == "unreadable" || agent.status == "invalid" {
                 "unreadable"
             } else {
@@ -201,9 +183,6 @@ fn scanned_candidates(
                 provider: agent.provider.clone(),
                 display_name: agent.display_name.clone(),
                 root_path: agent.root_path.clone(),
-                config_path: agent.config_path.clone(),
-                source_scope: agent.source_scope.clone(),
-                workspace_name: None,
                 resource_counts: agent.resource_counts.clone(),
                 state: state.into(),
                 reason: agent.reason.clone(),
@@ -215,76 +194,38 @@ fn scanned_candidates(
         .collect()
 }
 
-pub fn list_discovered_agents() -> Vec<DiscoveredAgentDto> {
-    let mut discovered_agents = provider_scanner::scan_discovered_agents();
-    let has_claude_workspace = discovered_agents
-        .iter()
-        .any(|agent| agent.provider == "claude" && agent.source_scope == "workspace");
-    let has_claude_user = discovered_agents
-        .iter()
-        .any(|agent| agent.provider == "claude" && agent.source_scope == "user");
-
-    if has_claude_workspace && has_claude_user {
-        for agent in &mut discovered_agents {
-            if agent.provider == "claude" {
-                agent.status = "conflict".into();
-                agent.reason = Some("Workspace and user level configs were both detected.".into());
-            }
-        }
-    }
-
-    discovered_agents
+fn discovered_agents_for_scan(scan_targets: Vec<ScanTargetDto>) -> Vec<DiscoveredAgentDto> {
+    provider_scanner::scan_discovered_agents(scan_targets)
 }
 
 pub fn list_managed_agents() -> Vec<ManagedAgentDto> {
     managed_agents_store::load_managed_agents()
 }
 
-pub fn list_agent_conflicts() -> Vec<AgentConflictDto> {
-    let discovered_agents = list_discovered_agents();
-
-    discovered_agents
-        .iter()
-        .filter_map(|agent| match agent.status.as_str() {
-            "conflict" => Some(AgentConflictDto {
-                id: "conflict-claude-multi-source".into(),
-                r#type: "same-provider-multi-source".into(),
-                severity: "warning".into(),
-                summary: "Claude Code was found in both workspace and user scopes.".into(),
-                agent_fingerprints: vec![agent.fingerprint.clone()],
-                suggested_resolution: Some("ask-user".into()),
-            }),
-            "unreadable" => Some(AgentConflictDto {
-                id: "conflict-antigravity-unreadable".into(),
-                r#type: "manual-vs-discovered".into(),
-                severity: "error".into(),
-                summary: "Antigravity contains an unreadable workflow file.".into(),
-                agent_fingerprints: vec![agent.fingerprint.clone()],
-                suggested_resolution: None,
-            }),
-            _ => None,
-        })
-        .collect()
-}
-
-pub fn list_resolved_agents() -> Vec<ResolvedAgentDto> {
-    let discovered_agents = list_discovered_agents();
+pub fn list_resolved_agents(scan_targets: Vec<ScanTargetDto>) -> Vec<ResolvedAgentDto> {
+    let discovered_agents = discovered_agents_for_scan(scan_targets);
     let managed_agents = list_managed_agents();
     merge_resolved_agents(&discovered_agents, &managed_agents)
 }
 
-pub fn scan_agents() -> Vec<ScannedAgentCandidateDto> {
-    let discovered_agents = list_discovered_agents();
-    let resolved_agents = list_resolved_agents();
+pub fn scan_agents(scan_targets: Vec<ScanTargetDto>) -> Vec<ScannedAgentCandidateDto> {
+    let discovered_agents = discovered_agents_for_scan(scan_targets);
+    let managed_agents = list_managed_agents();
+    let resolved_agents = merge_resolved_agents(&discovered_agents, &managed_agents);
     scanned_candidates(&discovered_agents, &resolved_agents)
 }
 
-pub fn refresh_agent_discovery() -> Vec<ResolvedAgentDto> {
-    list_resolved_agents()
+pub fn refresh_agent_discovery(scan_targets: Vec<ScanTargetDto>) -> Vec<ResolvedAgentDto> {
+    let discovered_agents = discovered_agents_for_scan(scan_targets);
+    let managed_agents = list_managed_agents();
+    merge_resolved_agents(&discovered_agents, &managed_agents)
 }
 
-pub fn import_agents(candidate_ids: Vec<String>) -> Result<ImportAgentsResultDto, String> {
-    let discovered_agents = list_discovered_agents();
+pub fn import_agents(
+    candidate_ids: Vec<String>,
+    scan_targets: Vec<ScanTargetDto>,
+) -> Result<ImportAgentsResultDto, String> {
+    let discovered_agents = discovered_agents_for_scan(scan_targets);
     let mut managed_agents = list_managed_agents();
 
     let mut imported_fingerprints = Vec::new();
@@ -333,7 +274,6 @@ pub fn import_agents(candidate_ids: Vec<String>) -> Result<ImportAgentsResultDto
                 source: "auto-imported".into(),
                 provider: Some(agent.provider.clone()),
                 root_path: Some(agent.root_path.clone()),
-                config_path: agent.config_path.clone(),
             });
             imported_fingerprints.push(agent.fingerprint.clone());
         }
@@ -358,8 +298,11 @@ pub fn import_agents(candidate_ids: Vec<String>) -> Result<ImportAgentsResultDto
     })
 }
 
-pub fn remove_managed_agent(managed_agent_id: String) -> Result<RemoveAgentResultDto, String> {
-    let discovered_agents = list_discovered_agents();
+pub fn remove_managed_agent(
+    managed_agent_id: String,
+    scan_targets: Vec<ScanTargetDto>,
+) -> Result<RemoveAgentResultDto, String> {
+    let discovered_agents = discovered_agents_for_scan(scan_targets);
     let mut managed_agents = list_managed_agents();
 
     let removed_agent_id = merge_resolved_agents(&discovered_agents, &managed_agents)
@@ -383,8 +326,11 @@ pub fn remove_managed_agent(managed_agent_id: String) -> Result<RemoveAgentResul
     })
 }
 
-pub fn delete_agent(managed_agent_id: String) -> Result<DeleteAgentResultDto, String> {
-    let discovered_agents = list_discovered_agents();
+pub fn delete_agent(
+    managed_agent_id: String,
+    scan_targets: Vec<ScanTargetDto>,
+) -> Result<DeleteAgentResultDto, String> {
+    let discovered_agents = discovered_agents_for_scan(scan_targets);
     let managed_agents = list_managed_agents();
 
     let deleted_agent_id = merge_resolved_agents(&discovered_agents, &managed_agents)
@@ -408,16 +354,16 @@ pub fn delete_agent(managed_agent_id: String) -> Result<DeleteAgentResultDto, St
 
 pub fn create_agent(draft: ManualAgentDraftDto) -> Result<CreateAgentResultDto, String> {
     let mut managed_agents = list_managed_agents();
-    let discovered_agents = list_discovered_agents();
+    let discovered_agents = Vec::new();
     let id_suffix = draft
         .name
         .trim()
         .to_lowercase()
         .chars()
-        .map(|ch| if ch.is_ascii_alphanumeric() { ch } else { '-' })
+        .map(|ch: char| if ch.is_ascii_alphanumeric() { ch } else { '-' })
         .collect::<String>()
         .split('-')
-        .filter(|part| !part.is_empty())
+        .filter(|part: &&str| !part.is_empty())
         .collect::<Vec<_>>()
         .join("-");
     let id_suffix = if id_suffix.is_empty() {
@@ -439,7 +385,6 @@ pub fn create_agent(draft: ManualAgentDraftDto) -> Result<CreateAgentResultDto, 
         source: "manual-imported".into(),
         provider: Some(draft.provider.clone()),
         root_path: Some(draft.root_path.trim().into()),
-        config_path: Some(draft.config_path.trim().into()),
     });
 
     managed_agents_store::save_managed_agents(&managed_agents)?;

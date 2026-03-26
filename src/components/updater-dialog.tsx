@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useUpdater } from "@/hooks/use-updater";
 import { Button } from "@/components/ui/button";
 import {
@@ -21,12 +21,16 @@ interface UpdaterDialogProps {
 export function UpdaterDialog({ manualCheck = false, onCheckComplete }: UpdaterDialogProps) {
   const { update, checking, downloading, progress, checkUpdate, installUpdate } = useUpdater();
   const [open, setOpen] = useState(false);
+  const hasAutoCheckedRef = useRef(false);
   const { t } = useTranslation();
 
   useEffect(() => {
-    if (!manualCheck) {
-      void checkUpdate();
+    if (manualCheck || hasAutoCheckedRef.current) {
+      return;
     }
+
+    hasAutoCheckedRef.current = true;
+    void checkUpdate();
   }, [manualCheck, checkUpdate]);
 
   useEffect(() => {

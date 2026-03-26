@@ -3,23 +3,65 @@ export type DiscoveryOrigin = "local" | "marketplace";
 export type InstallStateLabel = "enabled" | "installed" | "update" | "available";
 export type MarketplaceInstallStateLabel = Exclude<InstallStateLabel, "enabled">;
 
-export type AgentProvider = "cursor" | "claude" | "codex" | "antigravity";
-export type AgentSourceScope = "global" | "user" | "workspace" | "manual";
-export type AgentDiscoveryStatus = "discovered" | "invalid" | "unreadable" | "conflict";
-export type AgentHealth = "ok" | "warning" | "error";
-export type AgentConflictType =
-  | "duplicate-fingerprint"
-  | "same-provider-multi-source"
-  | "same-root-path"
-  | "manual-vs-discovered";
-export type AgentConflictSeverity = "info" | "warning" | "error";
-export type AgentImportCandidateState = "ready" | "imported" | "conflict" | "unreadable";
+export type AgentId =
+  | "adal"
+  | "amp"
+  | "antigravity"
+  | "augment"
+  | "claude"
+  | "claude-plugin"
+  | "cline"
+  | "codebuddy"
+  | "codex"
+  | "command-code"
+  | "continue"
+  | "crush"
+  | "cursor"
+  | "factory"
+  | "github-copilot"
+  | "goose"
+  | "iflow"
+  | "junie"
+  | "kilo"
+  | "kimi"
+  | "kiro"
+  | "kode"
+  | "mcpjam"
+  | "mistral"
+  | "mux"
+  | "neovate"
+  | "openclaw"
+  | "opencode"
+  | "openhands"
+  | "pi-mono"
+  | "pochi"
+  | "qoder"
+  | "qwen"
+  | "replit"
+  | "roo"
+  | "trae"
+  | "trae-cn"
+  | "warp"
+  | "windsurf"
+  | "zencoder";
 
-export type AgentGroup = {
-  id: string;
+export type AgentMeta = {
+  id: AgentId;
   name: string;
-  count: number;
+  directory: string;
+  rootFile: string | null;
+  rules: string | null;
+  commands: string | null;
+  agents: string | null;
+  skills: string | null;
+  mcp: string | null;
 };
+
+export type AgentMetaMap = Record<AgentId, AgentMeta>;
+
+export type AgentDiscoveryStatus = "discovered" | "invalid" | "unreadable";
+export type AgentHealth = "ok" | "error";
+export type AgentImportCandidateState = "ready" | "imported" | "unreadable";
 
 export type AgentResourceCounts = {
   skill: number;
@@ -30,12 +72,9 @@ export type AgentResourceCounts = {
 export type DiscoveredAgent = {
   discoveryId: string;
   fingerprint: string;
-  provider: AgentProvider;
+  provider: AgentId;
   displayName: string;
   rootPath: string;
-  configPath?: string;
-  sourceScope: AgentSourceScope;
-  workspaceName?: string;
   status: AgentDiscoveryStatus;
   reason?: string;
   resourceCounts: AgentResourceCounts;
@@ -52,26 +91,15 @@ export type ManagedAgent = {
   source: "auto-imported" | "manual-imported";
 };
 
-export type AgentConflict = {
-  id: string;
-  type: AgentConflictType;
-  severity: AgentConflictSeverity;
-  summary: string;
-  agentFingerprints: string[];
-  suggestedResolution?: "keep-latest" | "keep-managed" | "ask-user";
-};
-
 export type ResolvedAgentView = {
   id: string;
   discoveryId: string;
   fingerprint: string;
-  provider: AgentProvider;
+  provider: AgentId;
   name: string;
   alias?: string;
   role: string;
   rootPath: string;
-  configPath?: string;
-  sourceScope: AgentSourceScope;
   managed: boolean;
   managedAgentId?: string;
   enabled: boolean;
@@ -82,7 +110,6 @@ export type ResolvedAgentView = {
   summary: string;
   groupId: string;
   resourceCounts: AgentResourceCounts;
-  conflictIds: string[];
   lastScannedAt: string;
 };
 
@@ -97,12 +124,9 @@ export type AgentDiscoveryState = {
 export type ScannedAgentCandidate = {
   id: string;
   fingerprint: string;
-  provider: AgentProvider;
+  provider: AgentId;
   displayName: string;
   rootPath: string;
-  configPath?: string;
-  sourceScope: AgentSourceScope;
-  workspaceName?: string;
   resourceCounts: AgentResourceCounts;
   state: AgentImportCandidateState;
   reason?: string;
@@ -111,16 +135,26 @@ export type ScannedAgentCandidate = {
   detectedAt: string;
 };
 
-export type AgentManagementCard = ScannedAgentCandidate & {
-  origin: "scanned" | "manual";
-  deletable: boolean;
+export type AgentManagementCard =
+  | (ScannedAgentCandidate & {
+      origin: "scanned";
+      deletable: false;
+    })
+  | (ScannedAgentCandidate & {
+      origin: "manual";
+      deletable: true;
+    });
+
+export type ScanTarget = {
+  agent: AgentId;
+  name: string;
+  rootPath: string;
 };
 
 export type ManualAgentDraft = {
-  provider: AgentProvider;
+  provider: AgentId;
   name: string;
   rootPath: string;
-  configPath: string;
 };
 
 export type ImportAgentsResult = {
@@ -225,6 +259,4 @@ export type AgentDiscoveryItem = LocalDiscoveryItem | MarketplaceDiscoveryItem;
 export type AgentResourceView = AgentDiscoveryItem & {
   ownerAgentId: string | null;
   managed: boolean;
-  configPath?: string;
-  conflictState?: AgentConflictSeverity;
 };

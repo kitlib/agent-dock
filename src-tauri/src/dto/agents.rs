@@ -16,8 +16,6 @@ pub struct DiscoveredAgentDto {
     pub provider: String,
     pub display_name: String,
     pub root_path: String,
-    pub config_path: Option<String>,
-    pub source_scope: String,
     pub status: String,
     pub reason: Option<String>,
     pub resource_counts: AgentResourceCountsDto,
@@ -36,18 +34,6 @@ pub struct ManagedAgentDto {
     pub source: String,
     pub provider: Option<String>,
     pub root_path: Option<String>,
-    pub config_path: Option<String>,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct AgentConflictDto {
-    pub id: String,
-    pub r#type: String,
-    pub severity: String,
-    pub summary: String,
-    pub agent_fingerprints: Vec<String>,
-    pub suggested_resolution: Option<String>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -61,8 +47,6 @@ pub struct ResolvedAgentDto {
     pub alias: Option<String>,
     pub role: String,
     pub root_path: String,
-    pub config_path: Option<String>,
-    pub source_scope: String,
     pub managed: bool,
     pub managed_agent_id: Option<String>,
     pub enabled: bool,
@@ -73,7 +57,6 @@ pub struct ResolvedAgentDto {
     pub summary: String,
     pub group_id: String,
     pub resource_counts: AgentResourceCountsDto,
-    pub conflict_ids: Vec<String>,
     pub last_scanned_at: String,
 }
 
@@ -85,9 +68,6 @@ pub struct ScannedAgentCandidateDto {
     pub provider: String,
     pub display_name: String,
     pub root_path: String,
-    pub config_path: Option<String>,
-    pub source_scope: String,
-    pub workspace_name: Option<String>,
     pub resource_counts: AgentResourceCountsDto,
     pub state: String,
     pub reason: Option<String>,
@@ -98,11 +78,18 @@ pub struct ScannedAgentCandidateDto {
 
 #[derive(Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
+pub struct ScanTargetDto {
+    pub agent: String,
+    pub name: String,
+    pub root_path: String,
+}
+
+#[derive(Clone, Deserialize)]
+#[serde(rename_all = "camelCase")]
 pub struct ManualAgentDraftDto {
     pub provider: String,
     pub name: String,
     pub root_path: String,
-    pub config_path: String,
 }
 
 #[derive(Clone, Serialize, Deserialize)]

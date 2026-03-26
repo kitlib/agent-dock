@@ -1,8 +1,8 @@
-import { importDiscoveredAgent, refreshAgentDiscovery, setManagedAgentEnabled } from "./api";
-import type { AgentConflict, AgentDiscoveryState, ManagedAgent, ResolvedAgentView } from "./types";
+import { agentMeta } from "./agent-meta";
+import { refreshAgentDiscovery } from "./api";
+import type { AgentDiscoveryState, ManagedAgent, ResolvedAgentView } from "./types";
 
 type UseAgentManagementParams = {
-  setConflicts: React.Dispatch<React.SetStateAction<AgentConflict[]>>;
   setDiscoveryState: React.Dispatch<React.SetStateAction<AgentDiscoveryState>>;
   setManagedAgents: React.Dispatch<React.SetStateAction<ManagedAgent[]>>;
   setResolvedAgents: React.Dispatch<React.SetStateAction<ResolvedAgentView[]>>;
@@ -22,8 +22,13 @@ function toManagedAgentsSnapshot(agents: ResolvedAgentView[]): ManagedAgent[] {
     }));
 }
 
+const scanTargets = Object.values(agentMeta).map((meta) => ({
+  agent: meta.id,
+  name: meta.name,
+  rootPath: meta.directory.replace(/\/$/, ""),
+}));
+
 export function useAgentManagement({
-  setConflicts,
   setDiscoveryState,
   setManagedAgents,
   setResolvedAgents,
@@ -31,18 +36,7 @@ export function useAgentManagement({
   const syncResolvedAgents = (agents: ResolvedAgentView[]) => {
     setResolvedAgents(agents);
     setManagedAgents(toManagedAgentsSnapshot(agents));
-    setConflicts(
-      agents
-        .filter((agent) => agent.conflictIds.length > 0)
-        .map((agent) => ({
-          id: `${agent.id}-conflict`,
-          type: "same-provider-multi-source",
-          severity: agent.health === "error" ? "error" : "warning",
-          summary: agent.summary,
-          agentFingerprints: [agent.fingerprint],
-        }))
-    );
-    setDiscoveryState((current) => ({
+    setDiscoveryState((current: AgentDiscoveryState) => ({
       ...current,
       initialized: true,
       scanning: false,
@@ -53,13 +47,13 @@ export function useAgentManagement({
   };
 
   const handleRefresh = async () => {
-    setDiscoveryState((current) => ({ ...current, refreshing: true, error: null }));
+    setDiscoveryState((current: AgentDiscoveryState) => ({ ...current, refreshing: true, error: null }));
 
     try {
-      const nextAgents = await refreshAgentDiscovery();
+      const nextAgents = await refreshAgentDiscovery(scanTargets);
       syncResolvedAgents(nextAgents);
     } catch (error) {
-      setDiscoveryState((current) => ({
+      setDiscoveryState((current: AgentDiscoveryState) => ({
         ...current,
         refreshing: false,
         error: error instanceof Error ? error.message : "Failed to refresh agent discovery.",
@@ -67,19 +61,7 @@ export function useAgentManagement({
     }
   };
 
-  const handleImport = async (discoveryId: string) => {
-    const nextAgents = await importDiscoveredAgent(discoveryId);
-    syncResolvedAgents(nextAgents);
-  };
-
-  const handleSetEnabled = async (agentId: string, enabled: boolean) => {
-    const nextAgents = await setManagedAgentEnabled(agentId, enabled);
-    syncResolvedAgents(nextAgents);
-  };
-
   return {
-    importAgent: handleImport,
     refreshAgents: handleRefresh,
-    setAgentEnabled: handleSetEnabled,
   };
 }

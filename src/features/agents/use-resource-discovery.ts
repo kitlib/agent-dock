@@ -6,7 +6,7 @@ import {
   filterDiscoveryItems,
   sortDiscoveryItems,
 } from "./discovery";
-import { resourcesByKind } from "./mock";
+import { resourcesByKind } from "./resource-catalog";
 import type { AgentDiscoveryItem, MarketplaceInstallStateLabel, ResourceKind } from "./types";
 
 export function useResourceDiscovery(search: string) {
@@ -24,7 +24,9 @@ export function useResourceDiscovery(search: string) {
       activeKind,
       resourcesByKind,
       marketplaceItems,
-      marketplaceInstallStates
+      marketplaceInstallStates,
+      null,
+      false
     );
   }, [activeKind, marketplaceInstallStates]);
 

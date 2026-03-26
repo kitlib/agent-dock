@@ -25,5 +25,6 @@ dist-ssr
 
 # Claude AI
 .claude/
+.worktrees/
 .agentdock/
 src-tauri/.agentdock/

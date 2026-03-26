@@ -1,7 +1,7 @@
 import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
-import { AgentProviderIcon } from "./provider-icon";
+import { AgentIcon } from "./agent-icon";
 import type { AgentSummary } from "./types";
 
 type AgentRailProps = {
@@ -49,13 +49,13 @@ export function AgentRail({
                 "flex w-full items-center rounded-lg px-2 py-2 text-left text-sm transition-colors",
                 isCollapsed && "mx-auto h-9 w-9 justify-center p-0",
                 selectedAgentId === agent.id
-                  ? "bg-primary/10 text-foreground"
+                  ? "text-foreground"
                   : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
               )}
               title={agent.name}
             >
               <div className={cn("mr-2 flex items-center gap-2", isCollapsed && "mr-0")}>
-                <AgentProviderIcon provider={agent.provider} className="shrink-0" size={18} />
+                <AgentIcon provider={agent.provider} className="shrink-0" size={18} />
               </div>
               {!isCollapsed ? (
                 <div className="min-w-0 flex-1">

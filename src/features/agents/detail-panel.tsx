@@ -1,15 +1,13 @@
 import { Button } from "@/components/ui/button";
-import { AgentProviderIcon } from "./provider-icon";
+import { AgentIcon } from "./agent-icon";
 import { AgentResourceDetail } from "./resource-detail";
 import { installStateKey } from "./constants";
-import type { AgentConflict, AgentDiscoveryItem, AgentSummary } from "./types";
+import type { AgentDiscoveryItem, AgentSummary } from "./types";
 
 type AgentDetailPanelProps = {
-  conflicts?: AgentConflict[];
   emptyDescription?: string;
   emptyTitle?: string;
-  onImportAgent?: (discoveryId: string) => void;
-  onSetAgentEnabled?: (agentId: string, enabled: boolean) => void;
+  onRefreshAgents?: () => void;
   onUpdateMarketplaceInstallState: (id: string) => void;
   selectedAgent: AgentSummary | null;
   selectedResource: AgentDiscoveryItem | null;
@@ -17,20 +15,14 @@ type AgentDetailPanelProps = {
 };
 
 export function AgentDetailPanel({
-  conflicts = [],
   emptyDescription,
   emptyTitle,
-  onImportAgent,
-  onSetAgentEnabled,
+  onRefreshAgents,
   onUpdateMarketplaceInstallState,
   selectedAgent,
   selectedResource,
   t,
 }: AgentDetailPanelProps) {
-  const relatedConflicts = selectedAgent
-    ? conflicts.filter((conflict) => conflict.agentFingerprints.includes(selectedAgent.fingerprint))
-    : [];
-
   return (
     <div className="bg-muted/20 flex h-full min-w-0 flex-col overflow-hidden">
       <div className="border-b p-4">
@@ -62,32 +54,20 @@ export function AgentDetailPanel({
         {selectedAgent ? (
           <div className="mt-3 space-y-3 text-xs">
             <div className="text-muted-foreground flex items-center gap-2">
-              <AgentProviderIcon provider={selectedAgent.provider} size={16} />
+              <AgentIcon provider={selectedAgent.provider} size={16} />
               <span>
                 {selectedAgent.name} · {selectedAgent.role}
               </span>
             </div>
             <div className="text-muted-foreground flex flex-wrap items-center gap-2">
-              <span className="bg-muted rounded px-2 py-1">{selectedAgent.sourceScope}</span>
               <span className="bg-muted rounded px-2 py-1">{selectedAgent.statusLabel}</span>
               <span className="bg-muted rounded px-2 py-1">{selectedAgent.rootPath}</span>
             </div>
             {!selectedResource ? (
               <div className="flex flex-wrap items-center gap-2">
-                {!selectedAgent.managed && onImportAgent ? (
-                  <Button size="sm" onClick={() => onImportAgent(selectedAgent.discoveryId)}>
-                    {t("prototype.actions.import")}
-                  </Button>
-                ) : null}
-                {selectedAgent.managed && onSetAgentEnabled ? (
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => onSetAgentEnabled(selectedAgent.id, !selectedAgent.enabled)}
-                  >
-                    {selectedAgent.enabled
-                      ? t("prototype.actions.disable")
-                      : t("prototype.actions.enable")}
+                {onRefreshAgents ? (
+                  <Button variant="outline" size="sm" onClick={() => void onRefreshAgents()}>
+                    {t("prototype.actions.retryScan")}
                   </Button>
                 ) : null}
               </div>
@@ -109,7 +89,6 @@ export function AgentDetailPanel({
               <div className="text-muted-foreground mt-2 space-y-1 text-xs">
                 <div>{selectedAgent.summary}</div>
                 <div>{selectedAgent.rootPath}</div>
-                {selectedAgent.configPath ? <div>{selectedAgent.configPath}</div> : null}
               </div>
             </div>
             <div className="grid grid-cols-3 gap-3 text-xs">
@@ -130,20 +109,6 @@ export function AgentDetailPanel({
                 </div>
               </div>
             </div>
-            {relatedConflicts.length > 0 ? (
-              <section className="space-y-2">
-                <div className="font-medium">{t("prototype.detail.conflicts")}</div>
-                {relatedConflicts.map((conflict) => (
-                  <div
-                    key={conflict.id}
-                    className="rounded-lg border border-amber-500/30 bg-amber-500/5 p-3 text-xs"
-                  >
-                    <div className="font-medium">{conflict.summary}</div>
-                    <div className="text-muted-foreground mt-1">{conflict.type}</div>
-                  </div>
-                ))}
-              </section>
-            ) : null}
           </div>
         ) : (
           <div className="text-muted-foreground flex h-full items-center justify-center text-sm">

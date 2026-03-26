@@ -1,17 +1,13 @@
 import { useEffect, useState } from "react";
-import {
-  listAgentConflicts,
-  listDiscoveredAgents,
-  listManagedAgents,
-  listResolvedAgents,
-} from "./api";
-import type {
-  AgentConflict,
-  AgentDiscoveryState,
-  DiscoveredAgent,
-  ManagedAgent,
-  ResolvedAgentView,
-} from "./types";
+import { agentMeta } from "./agent-meta";
+import { listManagedAgents, listResolvedAgents } from "./api";
+import type { AgentDiscoveryState, DiscoveredAgent, ManagedAgent, ResolvedAgentView } from "./types";
+
+const scanTargets = Object.values(agentMeta).map((meta) => ({
+  agent: meta.id,
+  name: meta.name,
+  rootPath: meta.directory.replace(/\/$/, ""),
+}));
 
 export function useAgentDiscovery() {
   const [discoveryState, setDiscoveryState] = useState<AgentDiscoveryState>({
@@ -24,7 +20,6 @@ export function useAgentDiscovery() {
   const [discoveredAgents, setDiscoveredAgents] = useState<DiscoveredAgent[]>([]);
   const [managedAgents, setManagedAgents] = useState<ManagedAgent[]>([]);
   const [resolvedAgents, setResolvedAgents] = useState<ResolvedAgentView[]>([]);
-  const [conflicts, setConflicts] = useState<AgentConflict[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -33,13 +28,21 @@ export function useAgentDiscovery() {
       setDiscoveryState((current) => ({ ...current, scanning: true, error: null }));
 
       try {
-        const [nextDiscovered, nextManaged, nextResolved, nextConflicts] = await Promise.all([
-          listDiscoveredAgents(),
+        const [nextManaged, nextResolved] = await Promise.all([
           listManagedAgents(),
-          listResolvedAgents(),
-          listAgentConflicts(),
+          listResolvedAgents(scanTargets),
         ]);
-
+        const nextDiscovered = nextResolved.map((agent) => ({
+          discoveryId: agent.discoveryId,
+          fingerprint: agent.fingerprint,
+          provider: agent.provider,
+          displayName: agent.name,
+          rootPath: agent.rootPath,
+          status: agent.status,
+          reason: undefined,
+          resourceCounts: agent.resourceCounts,
+          detectedAt: agent.lastScannedAt,
+        }));
         if (cancelled) {
           return;
         }
@@ -47,7 +50,6 @@ export function useAgentDiscovery() {
         setDiscoveredAgents(nextDiscovered);
         setManagedAgents(nextManaged);
         setResolvedAgents(nextResolved);
-        setConflicts(nextConflicts);
         setDiscoveryState({
           initialized: true,
           scanning: false,
@@ -78,12 +80,10 @@ export function useAgentDiscovery() {
   }, []);
 
   return {
-    conflicts,
     discoveredAgents,
     discoveryState,
     managedAgents,
     resolvedAgents,
-    setConflicts,
     setDiscoveryState,
     setManagedAgents,
     setResolvedAgents,

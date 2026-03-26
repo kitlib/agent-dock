@@ -2,6 +2,10 @@ import { check } from "@tauri-apps/plugin-updater";
 import type { Update } from "@tauri-apps/plugin-updater";
 import { relaunch } from "@tauri-apps/plugin-process";
 
+function isUpdaterPluginMissing(error: unknown) {
+  return String(error).includes("plugin updater not found");
+}
+
 export interface UpdateProgress {
   event: "Started" | "Progress" | "Finished";
   data?: {
@@ -25,7 +29,10 @@ export async function checkForUpdates(): Promise<UpdateCheckResult> {
 
     return { status: "up-to-date" };
   } catch (error) {
-    console.error("Failed to check for updates:", error);
+    if (!isUpdaterPluginMissing(error)) {
+      console.error("Failed to check for updates:", error);
+    }
+
     return { status: "error", error };
   }
 }
