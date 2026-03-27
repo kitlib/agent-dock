@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import {
   createManualAgent,
   deleteAgent,
@@ -74,6 +74,48 @@ function isManualOnlyAgent(agent: ResolvedAgentView, scannedFingerprints: Set<st
   return !scannedFingerprints.has(agent.fingerprint) && !!agent.managedAgentId;
 }
 
+function mergeScanCandidate(
+  candidate: AgentManagementCard,
+  managedAgent: ResolvedAgentView | undefined
+): AgentManagementCard {
+  if (!managedAgent) {
+    if (!candidate.managed && candidate.state !== "imported") {
+      return candidate;
+    }
+
+    const nextState = inferScanState(false, "discovered");
+    if (!candidate.managedAgentId && candidate.state === nextState) {
+      return candidate;
+    }
+
+    return {
+      ...candidate,
+      managed: false,
+      managedAgentId: undefined,
+      state: nextState,
+    };
+  }
+
+  const nextManaged = managedAgent.managed;
+  const nextManagedAgentId = managedAgent.managedAgentId;
+  const nextState = inferScanState(nextManaged, managedAgent.status);
+
+  if (
+    candidate.managed === nextManaged &&
+    candidate.managedAgentId === nextManagedAgentId &&
+    candidate.state === nextState
+  ) {
+    return candidate;
+  }
+
+  return {
+    ...candidate,
+    managed: nextManaged,
+    managedAgentId: nextManagedAgentId,
+    state: nextState,
+  };
+}
+
 export function useAgentImport({
   managedAgentsForView = [],
   onCreateSuccess,
@@ -89,54 +131,19 @@ export function useAgentImport({
   const [isCreatingManually, setIsCreatingManually] = useState(false);
 
   const managementCards = useMemo(() => {
-    const fingerprints = new Set(scanResults.map((candidate) => candidate.fingerprint));
+    const managedByFingerprint = new Map(
+      managedAgentsForView.map((agent) => [agent.fingerprint, agent] as const)
+    );
+    const mergedScanResults = scanResults.map((candidate) =>
+      mergeScanCandidate(candidate, managedByFingerprint.get(candidate.fingerprint))
+    );
+    const fingerprints = new Set(mergedScanResults.map((candidate) => candidate.fingerprint));
     const manualOnlyCards = managedAgentsForView
       .filter((agent) => isManualOnlyAgent(agent, fingerprints))
       .map(createManualManagementCard);
 
-    return [...scanResults, ...manualOnlyCards];
+    return [...mergedScanResults, ...manualOnlyCards];
   }, [managedAgentsForView, scanResults]);
-
-  useEffect(() => {
-    setScanResults((current) =>
-      current.map((candidate) => {
-        const managedAgent = managedAgentsForView.find(
-          (agent) => agent.fingerprint === candidate.fingerprint
-        );
-
-        if (!managedAgent) {
-          if (!candidate.managed && candidate.state !== "imported") {
-            return candidate;
-          }
-
-          return {
-            ...candidate,
-            managed: false,
-            managedAgentId: undefined,
-            state: inferScanState(false, "discovered"),
-          };
-        }
-
-        const nextManaged = managedAgent.managed;
-        const nextState = inferScanState(nextManaged, managedAgent.status);
-
-        if (
-          candidate.managed === nextManaged &&
-          candidate.managedAgentId === managedAgent.managedAgentId &&
-          candidate.state === nextState
-        ) {
-          return candidate;
-        }
-
-        return {
-          ...candidate,
-          managed: nextManaged,
-          managedAgentId: managedAgent.managedAgentId,
-          state: nextState,
-        };
-      })
-    );
-  }, [managedAgentsForView]);
 
   const resetImportState = useCallback(() => {
     setScanError(null);
