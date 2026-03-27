@@ -7,7 +7,7 @@ import {
   sortDiscoveryItems,
 } from "./discovery";
 import { resourcesByKind } from "./resource-catalog";
-import type { AgentDiscoveryItem, MarketplaceInstallStateLabel, ResourceKind } from "./types";
+import type { AgentDiscoveryItem, MarketplaceInstallStateLabel, ResourceKind } from "@/features/agents/types";
 
 export function useResourceDiscovery(search: string) {
   const [activeKind, setActiveKind] = useState<ResourceKind>("skill");

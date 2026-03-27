@@ -1,9 +1,9 @@
 import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { kindIcons } from "./constants";
-import type { AgentDiscoveryItem, ResourceKind } from "./types";
-import { AgentResourceList } from "./resource-list";
+import { kindIcons } from "@/features/shared/constants";
+import type { AgentDiscoveryItem, ResourceKind } from "@/features/agents/types";
+import { AgentResourceList } from "@/features/resources/core/components/resource-list";
 import type { DragEvent } from "react";
 
 type AgentResourcePanelProps = {

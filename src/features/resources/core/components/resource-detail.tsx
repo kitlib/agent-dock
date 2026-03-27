@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
-import { installStateKey } from "./constants";
-import type { AgentDiscoveryItem, MarketplaceDiscoveryFields } from "./types";
+import { installStateKey } from "@/features/shared/constants";
+import type { AgentDiscoveryItem, MarketplaceDiscoveryFields } from "@/features/agents/types";
 
 type ResourceDetailContentProps = {
   resource: AgentDiscoveryItem;

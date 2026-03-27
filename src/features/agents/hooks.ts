@@ -1,1 +1,1 @@
-export { useAgentWorkspace as useAgentsPrototype } from "./use-agent-workspace";
+export { useHomeWorkspace as useAgentsPrototype } from "@/features/home/use-home-workspace";

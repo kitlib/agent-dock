@@ -6,7 +6,7 @@ import type {
   MarketplaceDiscoveryItem,
   MarketplaceInstallStateLabel,
   ResourceKind,
-} from "./types";
+} from "@/features/agents/types";
 
 function getInstallState(resource: AgentResource): "enabled" | "installed" {
   return resource.enabled ? "enabled" : "installed";

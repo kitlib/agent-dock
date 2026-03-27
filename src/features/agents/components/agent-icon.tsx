@@ -22,7 +22,7 @@ import {
 } from "@lobehub/icons";
 import { Bot } from "lucide-react";
 import type { ComponentType } from "react";
-import type { AgentId } from "./types";
+import type { AgentId } from "../types";
 
 type IconComponent = ComponentType<{ size?: number; className?: string }>;
 

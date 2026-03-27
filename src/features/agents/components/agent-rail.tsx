@@ -2,7 +2,7 @@ import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { AgentIcon } from "./agent-icon";
-import type { AgentSummary } from "./types";
+import type { AgentSummary } from "../types";
 
 type AgentRailProps = {
   filteredAgents: AgentSummary[];
@@ -49,8 +49,8 @@ export function AgentRail({
                 "flex w-full items-center rounded-lg px-2 py-2 text-left text-sm transition-colors",
                 isCollapsed && "mx-auto h-9 w-9 justify-center p-0",
                 selectedAgentId === agent.id
-                  ? "text-foreground"
-                  : "text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                  ? "border border-border bg-accent text-foreground shadow-xs"
+                  : "border border-transparent text-muted-foreground hover:bg-accent/50 hover:text-foreground"
               )}
               title={agent.name}
             >

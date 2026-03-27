@@ -5,10 +5,10 @@ import {
   createMarketplaceInstallStateMap,
   filterDiscoveryItems,
   sortDiscoveryItems,
-} from "./discovery";
-import { resourcesByKind } from "./resource-catalog";
-import { useAgentDiscovery } from "./use-agent-discovery";
-import { useAgentManagement } from "./use-agent-management";
+} from "@/features/resources/core/discovery";
+import { resourcesByKind } from "@/features/resources/core/resource-catalog";
+import { useAgentDiscovery } from "@/features/agents/use-agent-discovery";
+import { useAgentManagement } from "@/features/agents/use-agent-management";
 import type {
   AgentDiscoveryItem,
   CreateAgentResult,
@@ -18,7 +18,7 @@ import type {
   RemoveAgentResult,
   ResourceKind,
   ResolvedAgentView,
-} from "./types";
+} from "@/features/agents/types";
 
 type WorkspaceMode = "browse" | "adding";
 
@@ -36,7 +36,7 @@ function buildManagedAgents(resolvedAgents: ResolvedAgentView[]) {
     }));
 }
 
-export function useAgentWorkspace() {
+export function useHomeWorkspace() {
   const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>("browse");
   const [search, setSearch] = useState("");
   const [selectedAgentId, setSelectedAgentId] = useState("");

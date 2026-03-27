@@ -1,4 +1,4 @@
-import type { AgentResource, ResourceKind } from "./types";
+import type { AgentResource, ResourceKind } from "@/features/agents/types";
 
 const localResources = {
   skill: [

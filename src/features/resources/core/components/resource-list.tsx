@@ -9,8 +9,8 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { installStateKey, kindIcons } from "./constants";
-import type { AgentDiscoveryItem } from "./types";
+import { installStateKey, kindIcons } from "@/features/shared/constants";
+import type { AgentDiscoveryItem } from "@/features/agents/types";
 
 type AgentResourceListProps = {
   checkedIds: string[];

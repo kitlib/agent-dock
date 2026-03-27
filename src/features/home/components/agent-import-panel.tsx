@@ -17,9 +17,9 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
-import { AgentIcon } from "./agent-icon";
-import { agentMeta } from "./agent-meta";
-import { useAgentImport } from "./use-agent-import";
+import { AgentIcon } from "@/features/agents/components/agent-icon";
+import { agentMeta } from "@/features/agents/agent-meta";
+import { useAgentImport } from "@/features/agents/use-agent-import";
 import type {
   AgentManagementCard,
   CreateAgentResult,
@@ -28,7 +28,7 @@ import type {
   AgentId,
   ManualAgentDraft,
   RemoveAgentResult,
-} from "./types";
+} from "@/features/agents/types";
 
 const providerOptions = Object.keys(agentMeta) as AgentId[];
 
@@ -327,7 +327,7 @@ export function AgentImportPanel({
                 {isScanning ? t("prototype.detail.scanningAgents") : t("prototype.emptyList")}
               </div>
             ) : (
-              <div className="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
+              <div className="grid grid-cols-2 gap-2 xl:grid-cols-3 2xl:grid-cols-4">
                 {managementCards.map((candidate) => (
                   <AgentManagementCardItem
                     key={candidate.id}

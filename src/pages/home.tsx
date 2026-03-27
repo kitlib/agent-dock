@@ -10,10 +10,10 @@ import { registerShortcut } from "@/lib/shortcut";
 import { toggleWindow } from "@/lib/window";
 import { useAppTranslation } from "@/hooks/use-app-translation";
 import { useAgentsPrototype } from "@/features/agents/hooks";
-import { AgentRail } from "@/features/agents/agent-rail";
-import { AgentImportPanel } from "@/features/agents/agent-import-panel";
-import { AgentResourcePanel } from "@/features/agents/resource-panel";
-import { AgentDetailPanel } from "@/features/agents/detail-panel";
+import { AgentRail } from "@/features/agents/components/agent-rail";
+import { AgentImportPanel } from "@/features/home/components/agent-import-panel";
+import { AgentResourcePanel } from "@/features/home/components/resource-panel";
+import { AgentDetailPanel } from "@/features/home/components/detail-panel";
 
 const SHORTCUT_KEY = "global-shortcut-show-main";
 

@@ -1,8 +1,8 @@
 import { Button } from "@/components/ui/button";
-import { AgentIcon } from "./agent-icon";
-import { AgentResourceDetail } from "./resource-detail";
-import { installStateKey } from "./constants";
-import type { AgentDiscoveryItem, AgentSummary } from "./types";
+import { AgentIcon } from "@/features/agents/components/agent-icon";
+import { AgentResourceDetail } from "@/features/resources/core/components/resource-detail";
+import { installStateKey } from "@/features/shared/constants";
+import type { AgentDiscoveryItem, AgentSummary } from "@/features/agents/types";
 
 type AgentDetailPanelProps = {
   emptyDescription?: string;
