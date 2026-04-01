@@ -4,9 +4,18 @@ import { AgentResourceDetail } from "@/features/resources/core/components/resour
 import { installStateKey } from "@/features/shared/constants";
 import type { AgentDiscoveryItem, AgentSummary } from "@/features/agents/types";
 
+function compactHomePath(path: string | undefined) {
+  if (!path) {
+    return path;
+  }
+
+  return path.replace(/^[A-Za-z]:[\\/]Users[\\/][^\\/]+/i, "~");
+}
+
 type AgentDetailPanelProps = {
   emptyDescription?: string;
   emptyTitle?: string;
+  onOpenSkillFolder: (skillPath: string) => void;
   onRefreshAgents?: () => void;
   onUpdateMarketplaceInstallState: (id: string) => void;
   selectedAgent: AgentSummary | null;
@@ -17,6 +26,7 @@ type AgentDetailPanelProps = {
 export function AgentDetailPanel({
   emptyDescription,
   emptyTitle,
+  onOpenSkillFolder,
   onRefreshAgents,
   onUpdateMarketplaceInstallState,
   selectedAgent,
@@ -46,12 +56,23 @@ export function AgentDetailPanel({
                 ? t("prototype.badges.local")
                 : t("prototype.badges.marketplace")}
             </span>
-            <span className="bg-muted rounded px-2 py-1">
-              {t(installStateKey[selectedResource.installState])}
-            </span>
+            {selectedResource.origin === "marketplace" ? (
+              <span className="bg-muted rounded px-2 py-1">
+                {t(installStateKey[selectedResource.installState])}
+              </span>
+            ) : null}
+            {selectedResource.origin === "local" && selectedResource.kind === "skill" ? (
+              <button
+                type="button"
+                className="bg-muted hover:bg-accent hover:text-accent-foreground cursor-pointer rounded px-2 py-1 break-all transition-colors"
+                onClick={() => onOpenSkillFolder(selectedResource.skillPath ?? "")}
+              >
+                {compactHomePath(selectedResource.skillPath)}
+              </button>
+            ) : null}
           </div>
         ) : null}
-        {selectedAgent ? (
+        {selectedAgent && !selectedResource ? (
           <div className="mt-3 space-y-3 text-xs">
             <div className="text-muted-foreground flex items-center gap-2">
               <AgentIcon provider={selectedAgent.provider} size={16} />
@@ -79,6 +100,7 @@ export function AgentDetailPanel({
         {selectedResource ? (
           <AgentResourceDetail
             resource={selectedResource}
+            onOpenSkillFolder={onOpenSkillFolder}
             onUpdateMarketplaceInstallState={onUpdateMarketplaceInstallState}
             t={t}
           />

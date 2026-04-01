@@ -36,6 +36,7 @@ export default function HomePage() {
     toggleChecked,
     clearChecked,
     updateMarketplaceInstallState,
+    onOpenSkillFolder,
     managedAgentsForView,
     workspaceMode,
     enterAddingMode,
@@ -160,6 +161,7 @@ export default function HomePage() {
                   onSelectResource={selectResource}
                   onToggleChecked={toggleChecked}
                   onUpdateMarketplaceInstallState={updateMarketplaceInstallState}
+                  onOpenSkillFolder={onOpenSkillFolder}
                   search={search}
                   selectedAgentName={selectedAgent?.alias ?? selectedAgent?.name}
                   selectedResourceId={selectedResourceId}
@@ -171,6 +173,7 @@ export default function HomePage() {
 
               <ResizablePanel defaultSize="32%" minSize={200}>
                 <AgentDetailPanel
+                  onOpenSkillFolder={onOpenSkillFolder}
                   onRefreshAgents={refreshAgents}
                   selectedAgent={selectedAgent}
                   selectedResource={selectedResource}

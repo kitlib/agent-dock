@@ -104,9 +104,11 @@ fn merge_resolved_agents(
     let mut resolved_agents: Vec<_> = discovered_agents
         .iter()
         .map(|agent| {
-            let managed = managed_agents
-                .iter()
-                .find(|entry| entry.fingerprint == agent.fingerprint);
+            let managed = managed_agents.iter().find(|entry| {
+                entry.fingerprint == agent.fingerprint
+                    || (entry.provider.as_deref() == Some(agent.provider.as_str())
+                        && entry.root_path.as_deref() == Some(agent.root_path.as_str()))
+            });
 
             ResolvedAgentDto {
                 id: agent.discovery_id.replacen("discovery-", "agent-", 1),
@@ -149,7 +151,12 @@ fn merge_resolved_agents(
         .collect();
 
     for entry in managed_agents {
-        if discovered_fingerprints.contains(entry.fingerprint.as_str()) {
+        let already_resolved = discovered_agents.iter().any(|agent| {
+            entry.fingerprint == agent.fingerprint
+                || (entry.provider.as_deref() == Some(agent.provider.as_str())
+                    && entry.root_path.as_deref() == Some(agent.root_path.as_str()))
+        });
+        if discovered_fingerprints.contains(entry.fingerprint.as_str()) || already_resolved {
             continue;
         }
 

@@ -179,6 +179,17 @@ export type CreateAgentResult = {
 
 export type AgentSummary = ResolvedAgentView;
 
+export type SkillScanTarget = {
+  agentId: string;
+  provider: AgentId;
+  rootPath: string;
+  displayName: string;
+};
+
+export type SkillSupportingFile = {
+  path: string;
+};
+
 export type SkillResource = {
   id: string;
   kind: "skill";
@@ -189,6 +200,20 @@ export type SkillResource = {
   usageCount: number;
   updatedAt: string;
   markdown: string;
+  ownerAgentId?: string | null;
+  sourceLabel?: string;
+  description?: string;
+  status?: string;
+  skillPath?: string;
+  entryFilePath?: string;
+  provider?: string;
+  agentName?: string;
+  warnings?: string[];
+  errors?: string[];
+  frontmatter?: Record<string, unknown> | null;
+  frontmatterRaw?: string | null;
+  supportingFiles?: SkillSupportingFile[];
+  allowedTools?: string[];
 };
 
 export type McpResource = {

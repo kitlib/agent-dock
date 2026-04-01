@@ -1,4 +1,4 @@
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { marketplaceItems } from "@/features/marketplace/mock";
 import {
   buildDiscoveryItems,
@@ -9,6 +9,8 @@ import {
 import { resourcesByKind } from "@/features/resources/core/resource-catalog";
 import { useAgentDiscovery } from "@/features/agents/use-agent-discovery";
 import { useAgentManagement } from "@/features/agents/use-agent-management";
+import { getLocalSkillDetail, listLocalSkills, openSkillFolder } from "@/features/agents/api";
+import { filterSkillsForAgent, toSkillScanTarget } from "@/features/home/skill-targets";
 import type {
   AgentDiscoveryItem,
   CreateAgentResult,
@@ -18,6 +20,8 @@ import type {
   RemoveAgentResult,
   ResourceKind,
   ResolvedAgentView,
+  SkillResource,
+  SkillScanTarget,
 } from "@/features/agents/types";
 
 type WorkspaceMode = "browse" | "adding";
@@ -43,12 +47,21 @@ export function useHomeWorkspace() {
   const [activeKind, setActiveKind] = useState<ResourceKind>("skill");
   const [selectedResourceId, setSelectedResourceId] = useState("");
   const [checkedIds, setCheckedIds] = useState<string[]>([]);
+  const [localSkills, setLocalSkills] = useState<SkillResource[]>([]);
+  const [skillDetails, setSkillDetails] = useState<Record<string, SkillResource>>({});
   const [marketplaceInstallStates, setMarketplaceInstallStates] = useState<
     Record<string, MarketplaceInstallStateLabel>
   >(() => createMarketplaceInstallStateMap(marketplaceItems));
 
-  const { discoveredAgents, discoveryState, managedAgents, resolvedAgents, setDiscoveryState, setManagedAgents, setResolvedAgents } =
-    useAgentDiscovery();
+  const {
+    discoveredAgents,
+    discoveryState,
+    managedAgents,
+    resolvedAgents,
+    setDiscoveryState,
+    setManagedAgents,
+    setResolvedAgents,
+  } = useAgentDiscovery();
 
   const { refreshAgents } = useAgentManagement({
     setDiscoveryState,
@@ -100,50 +113,156 @@ export function useHomeWorkspace() {
 
   const normalizedSearch = search.trim().toLowerCase();
 
-  const managedAgentsForRail = useMemo(() => {
-    return resolvedAgents.filter((agent) => {
-      if (!agent.managed) {
-        return false;
-      }
+  const managedVisibleAgents = useMemo(
+    () => resolvedAgents.filter((agent) => agent.managed && !agent.hidden),
+    [resolvedAgents]
+  );
 
-      const matchSearch =
+  const managedAgentsForRail = useMemo(() => {
+    return managedVisibleAgents.filter((agent) => {
+      return (
         normalizedSearch.length === 0 ||
         agent.name.toLowerCase().includes(normalizedSearch) ||
         agent.role.toLowerCase().includes(normalizedSearch) ||
         agent.summary.toLowerCase().includes(normalizedSearch) ||
-        agent.rootPath.toLowerCase().includes(normalizedSearch);
-
-      return !agent.hidden && matchSearch;
+        agent.rootPath.toLowerCase().includes(normalizedSearch)
+      );
     });
-  }, [normalizedSearch, resolvedAgents]);
+  }, [managedVisibleAgents, normalizedSearch]);
 
   const selectedAgent =
     managedAgentsForRail.find((agent) => agent.id === selectedAgentId) ??
+    managedVisibleAgents.find((agent) => agent.id === selectedAgentId) ??
     managedAgentsForRail[0] ??
+    managedVisibleAgents[0] ??
     null;
+
+  const skillScanTargets = useMemo(
+    () =>
+      managedVisibleAgents
+        .map(toSkillScanTarget)
+        .filter((item): item is SkillScanTarget => item !== null),
+    [managedVisibleAgents]
+  );
+
+  const visibleLocalSkills = useMemo(
+    () => filterSkillsForAgent(localSkills, selectedAgent?.id ?? null),
+    [localSkills, selectedAgent?.id]
+  );
+
+  useEffect(() => {
+    console.log("[skills] workspace selection snapshot", {
+      selectedAgentId,
+      resolvedAgentIds: resolvedAgents.map((agent) => agent.id),
+      managedVisibleAgentIds: managedVisibleAgents.map((agent) => agent.id),
+      railAgentIds: managedAgentsForRail.map((agent) => agent.id),
+      effectiveSelectedAgentId: selectedAgent?.id ?? null,
+    });
+  }, [
+    managedAgentsForRail,
+    managedVisibleAgents,
+    resolvedAgents,
+    selectedAgent?.id,
+    selectedAgentId,
+  ]);
+
+  useEffect(() => {
+    console.log("[skills] visible skills snapshot", {
+      selectedAgentId: selectedAgent?.id ?? null,
+      localSkillOwners: localSkills.map((skill) => ({
+        id: skill.id,
+        ownerAgentId: skill.ownerAgentId ?? null,
+      })),
+      visibleSkillIds: visibleLocalSkills.map((skill) => skill.id),
+    });
+  }, [localSkills, selectedAgent?.id, visibleLocalSkills]);
+
+  useEffect(() => {
+    if (skillScanTargets.length === 0) {
+      setLocalSkills([]);
+      setSkillDetails({});
+      return;
+    }
+
+    let cancelled = false;
+
+    void listLocalSkills(skillScanTargets)
+      .then((skills) => {
+        if (cancelled) {
+          return;
+        }
+        setLocalSkills(skills.map((skill) => ({ ...skill, markdown: skill.markdown ?? "" })));
+      })
+      .catch(() => {
+        if (!cancelled) {
+          setLocalSkills([]);
+        }
+      });
+
+    return () => {
+      cancelled = true;
+    };
+  }, [skillScanTargets]);
+
+  useEffect(() => {
+    if (activeKind !== "skill" || !selectedResourceId || skillDetails[selectedResourceId]) {
+      return;
+    }
+
+    let cancelled = false;
+    void getLocalSkillDetail(skillScanTargets, selectedResourceId)
+      .then((detail) => {
+        if (!cancelled) {
+          setSkillDetails((current) => ({ ...current, [detail.id]: detail }));
+        }
+      })
+      .catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeKind, selectedResourceId, skillDetails, skillScanTargets]);
+
+  const localResources = useMemo(
+    () => ({
+      ...resourcesByKind,
+      skill: visibleLocalSkills,
+    }),
+    [visibleLocalSkills]
+  );
 
   const discoveryItems = useMemo(() => {
     return buildDiscoveryItems(
       activeKind,
-      resourcesByKind,
+      localResources,
       marketplaceItems,
       marketplaceInstallStates,
       selectedAgent?.id ?? null,
       selectedAgent?.managed ?? false
     );
-  }, [activeKind, marketplaceInstallStates, selectedAgent]);
+  }, [activeKind, localResources, marketplaceInstallStates, selectedAgent]);
 
   const filteredResources = useMemo(() => {
+    const includeMarketplaceWhenEmpty = activeKind !== "skill" || normalizedSearch.length > 0;
+
     return sortDiscoveryItems(
-      filterDiscoveryItems(discoveryItems, normalizedSearch),
+      filterDiscoveryItems(discoveryItems, normalizedSearch, { includeMarketplaceWhenEmpty }),
       normalizedSearch
     );
-  }, [discoveryItems, normalizedSearch]);
+  }, [activeKind, discoveryItems, normalizedSearch]);
 
-  const selectedResource =
+  const selectedResourceBase =
     filteredResources.find((resource) => resource.id === selectedResourceId) ??
     filteredResources[0] ??
     null;
+
+  const selectedResource =
+    selectedResourceBase?.kind === "skill" && selectedResourceBase.origin === "local"
+      ? ({
+          ...selectedResourceBase,
+          ...skillDetails[selectedResourceBase.id],
+        } as AgentDiscoveryItem)
+      : selectedResourceBase;
 
   const toggleChecked = (id: string) => {
     const item = filteredResources.find((resource) => resource.id === id);
@@ -173,7 +292,28 @@ export function useHomeWorkspace() {
     });
   };
 
+  const openSelectedSkillFolder = (skillPath: string) => {
+    void openSkillFolder(skillPath).catch(() => undefined);
+  };
+
+  const refreshSkills = () => {
+    setSkillDetails({});
+    if (skillScanTargets.length === 0) {
+      setLocalSkills([]);
+      return;
+    }
+
+    void listLocalSkills(skillScanTargets)
+      .then((skills) => {
+        setLocalSkills(skills.map((skill) => ({ ...skill, markdown: skill.markdown ?? "" })));
+      })
+      .catch(() => {
+        setLocalSkills([]);
+      });
+  };
+
   const selectAgent = (id: string) => {
+    console.log("[skills] user selected agent", { nextSelectedAgentId: id });
     setSelectedAgentId(id);
     setMode("browse");
   };
@@ -199,9 +339,11 @@ export function useHomeWorkspace() {
     onCreateAgentSuccess: syncCreatedAgent,
     onDeleteAgentSuccess: syncDeletedAgent,
     onImportAgentsSuccess: syncImportedAgents,
+    onOpenSkillFolder: openSelectedSkillFolder,
     onRemoveAgentSuccess: syncRemovedAgent,
     search,
     refreshAgents,
+    refreshSkills,
     selectKind,
     selectResource,
     selectedAgent,

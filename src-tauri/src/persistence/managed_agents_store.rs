@@ -55,7 +55,7 @@ pub fn default_managed_agents() -> Vec<ManagedAgentDto> {
         },
         ManagedAgentDto {
             managed_agent_id: "managed-claude".into(),
-            fingerprint: "claude-user-default".into(),
+            fingerprint: "claude-default".into(),
             alias: Some("Claude Main".into()),
             enabled: true,
             hidden: false,

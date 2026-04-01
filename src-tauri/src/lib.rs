@@ -46,7 +46,10 @@ pub fn run() {
             commands::agents::remove_managed_agent,
             commands::agents::delete_agent,
             commands::agents::create_agent,
-            commands::agents::refresh_agent_discovery
+            commands::agents::refresh_agent_discovery,
+            commands::skills::list_local_skills,
+            commands::skills::get_local_skill_detail,
+            commands::skills::open_skill_folder
         ]);
 
     // Only enable updater in release mode

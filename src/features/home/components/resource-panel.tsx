@@ -76,7 +76,11 @@ export function AgentResourcePanel({
               value={search}
               onChange={(event) => onSearchChange(event.target.value)}
               className="pl-9"
-              placeholder={t("prototype.actions.searchPlaceholder")}
+              placeholder={
+                activeKind === "skill"
+                  ? t("prototype.actions.searchSkillsPlaceholder")
+                  : t("prototype.actions.searchPlaceholder")
+              }
             />
           </div>
         </div>

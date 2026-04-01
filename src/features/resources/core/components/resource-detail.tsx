@@ -4,6 +4,7 @@ import type { AgentDiscoveryItem, MarketplaceDiscoveryFields } from "@/features/
 
 type ResourceDetailContentProps = {
   resource: AgentDiscoveryItem;
+  onOpenSkillFolder: (skillPath: string) => void;
   onUpdateMarketplaceInstallState: (id: string) => void;
   t: (key: string, options?: Record<string, unknown>) => string;
 };
@@ -81,24 +82,34 @@ function LocalResourceDetail({
     return (
       <div className="space-y-4">
         <section className="space-y-2">
-          <h3 className="text-sm font-semibold">{t("prototype.detail.preview")}</h3>
+          <h3 className="text-sm font-semibold">Description</h3>
+          <div className="bg-muted/40 rounded-lg border p-3 text-sm whitespace-pre-wrap">
+            {resource.description ?? resource.summary}
+          </div>
+        </section>
+        <section className="space-y-2">
+          <h3 className="text-sm font-semibold">Markdown</h3>
           <div className="bg-muted/40 rounded-lg border p-3 text-sm whitespace-pre-wrap">
             {resource.markdown}
           </div>
         </section>
-        <section className="space-y-2">
-          <h3 className="text-sm font-semibold">{t("prototype.detail.tags")}</h3>
-          <div className="flex flex-wrap gap-2">
-            {resource.tags.map((tag) => (
-              <span
-                key={tag}
-                className="bg-muted text-muted-foreground rounded-md px-2 py-1 text-xs"
-              >
-                {tag}
-              </span>
-            ))}
-          </div>
-        </section>
+        {(resource.warnings?.length || resource.errors?.length) ? (
+          <section className="space-y-2">
+            <h3 className="text-sm font-semibold">Diagnostics</h3>
+            <div className="space-y-2 text-sm">
+              {resource.warnings?.map((warning) => (
+                <div key={warning} className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3">
+                  {warning}
+                </div>
+              ))}
+              {resource.errors?.map((error) => (
+                <div key={error} className="rounded-lg border border-red-500/30 bg-red-500/10 p-3">
+                  {error}
+                </div>
+              ))}
+            </div>
+          </section>
+        ) : null}
       </div>
     );
   }
@@ -148,7 +159,7 @@ export function AgentResourceDetail({
   resource,
   onUpdateMarketplaceInstallState,
   t,
-}: ResourceDetailContentProps) {
+}: Omit<ResourceDetailContentProps, "onOpenSkillFolder">) {
   if (resource.origin === "marketplace") {
     return (
       <MarketplaceResourceDetail

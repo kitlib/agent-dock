@@ -9,6 +9,8 @@ import type {
   ResolvedAgentView,
   ScanTarget,
   ScannedAgentCandidate,
+  SkillResource,
+  SkillScanTarget,
 } from "./types";
 
 export async function listManagedAgents() {
@@ -45,6 +47,61 @@ export async function removeManagedAgent(managedAgentId: string, scanTargets: Sc
     managedAgentId,
     scanTargets,
   });
+}
+
+export async function listLocalSkills(scanTargets: SkillScanTarget[]) {
+  console.log("[skills] list_local_skills request", {
+    scanTargets: scanTargets.map((target) => ({
+      agentId: target.agentId,
+      provider: target.provider,
+      rootPath: target.rootPath,
+      displayName: target.displayName,
+    })),
+  });
+
+  const skills = await invoke<SkillResource[]>("list_local_skills", { scanTargets });
+
+  console.log("[skills] list_local_skills response", {
+    count: skills.length,
+    skills: skills.map((skill) => ({
+      id: skill.id,
+      name: skill.name,
+      ownerAgentId: skill.ownerAgentId ?? null,
+      provider: skill.provider ?? null,
+      agentName: skill.agentName ?? null,
+      skillPath: skill.skillPath ?? null,
+    })),
+  });
+
+  return skills;
+}
+
+export async function getLocalSkillDetail(scanTargets: SkillScanTarget[], skillId: string) {
+  console.log("[skills] get_local_skill_detail request", {
+    skillId,
+    scanTargets: scanTargets.map((target) => ({
+      agentId: target.agentId,
+      provider: target.provider,
+      rootPath: target.rootPath,
+      displayName: target.displayName,
+    })),
+  });
+
+  const detail = await invoke<SkillResource>("get_local_skill_detail", { scanTargets, skillId });
+
+  console.log("[skills] get_local_skill_detail response", {
+    skillId: detail.id,
+    ownerAgentId: detail.ownerAgentId ?? null,
+    provider: detail.provider ?? null,
+    agentName: detail.agentName ?? null,
+    skillPath: detail.skillPath ?? null,
+  });
+
+  return detail;
+}
+
+export async function openSkillFolder(skillPath: string) {
+  return invoke<void>("open_skill_folder", { skillPath });
 }
 
 export async function deleteAgent(managedAgentId: string, scanTargets: ScanTarget[]) {

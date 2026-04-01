@@ -1,43 +1,7 @@
 import type { AgentResource, ResourceKind } from "@/features/agents/types";
 
 const localResources = {
-  skill: [
-    {
-      id: "skill-release-checklist",
-      kind: "skill",
-      name: "Release Checklist",
-      summary: "Runs local release preparation steps with manual gates.",
-      enabled: true,
-      tags: ["workflow", "release"],
-      usageCount: 12,
-      updatedAt: "2026-03-22",
-      markdown:
-        "# Release Checklist\n\n- Verify version files\n- Run smoke checks\n- Prepare notes\n- Pause before push",
-    },
-    {
-      id: "skill-prototype-review",
-      kind: "skill",
-      name: "Prototype Review",
-      summary: "Audits layout consistency, spacing, and interaction states.",
-      enabled: true,
-      tags: ["ui", "review"],
-      usageCount: 9,
-      updatedAt: "2026-03-21",
-      markdown:
-        "# Prototype Review\n\nUse this skill to inspect hierarchy, spacing, and i18n coverage before handoff.",
-    },
-    {
-      id: "skill-doc-sync",
-      kind: "skill",
-      name: "Doc Sync",
-      summary: "Keeps feature docs aligned with implementation milestones.",
-      enabled: false,
-      tags: ["docs"],
-      usageCount: 4,
-      updatedAt: "2026-03-18",
-      markdown: "# Doc Sync\n\nCompare feature docs with current code paths and list mismatches.",
-    },
-  ],
+  skill: [],
   mcp: [
     {
       id: "mcp-filesystem-local",

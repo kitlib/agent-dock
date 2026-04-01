@@ -8,6 +8,10 @@ import type {
   ResourceKind,
 } from "@/features/agents/types";
 
+type DiscoveryFilterOptions = {
+  includeMarketplaceWhenEmpty?: boolean;
+};
+
 function getInstallState(resource: AgentResource): "enabled" | "installed" {
   return resource.enabled ? "enabled" : "installed";
 }
@@ -77,9 +81,18 @@ export function getSearchScore(item: AgentDiscoveryItem, keyword: string) {
   return score;
 }
 
-export function filterDiscoveryItems(items: AgentDiscoveryItem[], keyword: string) {
+export function filterDiscoveryItems(
+  items: AgentDiscoveryItem[],
+  keyword: string,
+  options: DiscoveryFilterOptions = {}
+) {
+  const { includeMarketplaceWhenEmpty = true } = options;
+
   return items.filter((item) => {
-    if (!keyword) return true;
+    if (!keyword) {
+      return includeMarketplaceWhenEmpty || item.origin === "local";
+    }
+
     return getSearchScore(item, keyword) > 0;
   });
 }
