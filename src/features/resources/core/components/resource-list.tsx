@@ -16,6 +16,7 @@ type AgentResourceListProps = {
   checkedIds: string[];
   filteredResources: AgentDiscoveryItem[];
   onDragStart: (event: DragEvent<HTMLDivElement>, resourceId: string) => void;
+  onOpenSkillFolder: (skillPath: string) => void;
   onSelectResource: (resource: AgentDiscoveryItem) => void;
   onToggleChecked: (id: string) => void;
   onUpdateMarketplaceInstallState: (id: string) => void;
@@ -23,17 +24,33 @@ type AgentResourceListProps = {
   t: (key: string, options?: Record<string, unknown>) => string;
 };
 
-function renderDiscoveryMeta(resource: AgentDiscoveryItem, t: AgentResourceListProps["t"]) {
+function renderDiscoveryMeta(
+  resource: AgentDiscoveryItem,
+  t: AgentResourceListProps["t"],
+  active: boolean
+) {
+  const shouldShowInstallState = !(resource.origin === "local" && resource.kind === "skill");
+  const badgeClassName = active
+    ? "bg-background/85 text-foreground border-border/70 border"
+    : "bg-muted text-muted-foreground";
+
   return (
-    <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-2 text-xs">
-      <span className="bg-muted rounded px-2 py-1">
+    <div
+      className={cn(
+        "mt-1 flex flex-wrap items-center gap-2 text-xs",
+        active ? "text-foreground/75" : "text-muted-foreground"
+      )}
+    >
+      <span className={cn("rounded px-2 py-1", badgeClassName)}>
         {resource.origin === "local"
           ? t("prototype.badges.local")
           : t("prototype.badges.marketplace")}
       </span>
-      <span className="bg-muted rounded px-2 py-1">
-        {t(installStateKey[resource.installState])}
-      </span>
+      {shouldShowInstallState ? (
+        <span className={cn("rounded px-2 py-1", badgeClassName)}>
+          {t(installStateKey[resource.installState])}
+        </span>
+      ) : null}
       {resource.origin === "local" && resource.usageLabel !== undefined ? (
         <span>{t("prototype.detail.usedBy", { count: resource.usageLabel })}</span>
       ) : null}
@@ -54,6 +71,7 @@ export function AgentResourceList({
   checkedIds,
   filteredResources,
   onDragStart,
+  onOpenSkillFolder,
   onSelectResource,
   onToggleChecked,
   onUpdateMarketplaceInstallState,
@@ -65,6 +83,9 @@ export function AgentResourceList({
       {filteredResources.map((resource) => {
         const Icon = kindIcons[resource.kind];
         const active = resource.id === selectedResourceId;
+        const shouldShowOpenSkillFolder = resource.origin === "local" && resource.kind === "skill";
+        const skillPath = shouldShowOpenSkillFolder ? resource.skillPath?.trim() ?? "" : "";
+        const disableOpenSkillFolder = skillPath.length === 0;
 
         return (
           <div
@@ -74,7 +95,7 @@ export function AgentResourceList({
             onClick={() => onSelectResource(resource)}
             className={cn(
               "group border-border/70 hover:bg-accent/40 rounded-lg border px-3 py-2 transition-colors",
-              active ? "bg-accent border-primary/40" : "bg-background"
+              active ? "bg-accent/80 border-primary/40 text-accent-foreground" : "bg-background"
             )}
           >
             <div className="flex items-start gap-3">
@@ -83,26 +104,45 @@ export function AgentResourceList({
                   checked={checkedIds.includes(resource.id)}
                   onCheckedChange={() => onToggleChecked(resource.id)}
                   onClick={(event) => event.stopPropagation()}
-                  className="mt-1"
+                  className={cn(
+                    "mt-1",
+                    active &&
+                      "border-foreground/50 data-[state=checked]:border-foreground data-[state=checked]:bg-foreground data-[state=checked]:text-background"
+                  )}
                   aria-label={resource.name}
                 />
               ) : null}
-              <Icon className="text-muted-foreground mt-0.5 h-4 w-4 shrink-0" />
+              <Icon
+                className={cn(
+                  "mt-0.5 h-4 w-4 shrink-0",
+                  active ? "text-foreground/80" : "text-muted-foreground"
+                )}
+              />
               <div className="min-w-0 flex-1">
                 <div className="flex items-center justify-between gap-3">
-                  <div className="truncate text-sm font-medium">{resource.name}</div>
-                  <div className="text-muted-foreground text-xs">{resource.updatedAt}</div>
+                  <div className={cn("truncate text-sm font-medium", active && "text-foreground")}>
+                    {resource.name}
+                  </div>
+                  <div className={cn("text-xs", active ? "text-foreground/70" : "text-muted-foreground")}>
+                    {resource.updatedAt}
+                  </div>
                 </div>
-                <div className="text-muted-foreground mt-1 line-clamp-1 text-xs">
+                <div
+                  className={cn(
+                    "mt-1 line-clamp-1 text-xs",
+                    active ? "text-foreground/80" : "text-muted-foreground"
+                  )}
+                >
                   {resource.summary}
                 </div>
-                {renderDiscoveryMeta(resource, t)}
+                {renderDiscoveryMeta(resource, t, active)}
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
                   <Button
                     variant="ghost"
                     size="icon-xs"
+                    className={cn(active && "text-foreground/80 hover:text-foreground")}
                     onClick={(event) => event.stopPropagation()}
                   >
                     <MoreHorizontal className="h-4 w-4" />
@@ -111,6 +151,18 @@ export function AgentResourceList({
                 <DropdownMenuContent align="end">
                   {resource.origin === "local" ? (
                     <>
+                      {shouldShowOpenSkillFolder ? (
+                        <DropdownMenuItem
+                          disabled={disableOpenSkillFolder}
+                          onClick={() => {
+                            if (!disableOpenSkillFolder) {
+                              onOpenSkillFolder(skillPath);
+                            }
+                          }}
+                        >
+                          {t("prototype.actions.open")}
+                        </DropdownMenuItem>
+                      ) : null}
                       <DropdownMenuItem>{t("prototype.actions.enable")}</DropdownMenuItem>
                       <DropdownMenuItem>{t("prototype.actions.disable")}</DropdownMenuItem>
                     </>
