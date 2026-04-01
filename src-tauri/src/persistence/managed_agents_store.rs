@@ -50,7 +50,7 @@ pub fn default_managed_agents() -> Vec<ManagedAgentDto> {
             hidden: false,
             imported_at: "2026-03-24T08:00:00Z".into(),
             source: "auto-imported".into(),
-            provider: Some("cursor".into()),
+            agent_type: Some("cursor".into()),
             root_path: Some(".cursor".into()),
         },
         ManagedAgentDto {
@@ -61,7 +61,7 @@ pub fn default_managed_agents() -> Vec<ManagedAgentDto> {
             hidden: false,
             imported_at: "2026-03-24T08:30:00Z".into(),
             source: "manual-imported".into(),
-            provider: Some("claude".into()),
+            agent_type: Some("claude".into()),
             root_path: Some(".claude".into()),
         },
         ManagedAgentDto {
@@ -72,7 +72,7 @@ pub fn default_managed_agents() -> Vec<ManagedAgentDto> {
             hidden: false,
             imported_at: "2026-03-24T09:00:00Z".into(),
             source: "manual-imported".into(),
-            provider: Some("antigravity".into()),
+            agent_type: Some("antigravity".into()),
             root_path: Some(".agent".into()),
         },
     ]

@@ -123,7 +123,7 @@ AgentDock 的主功能是一个面向多 Agent 的本地资源管理中心，用
 - 自动依赖安装
 - MCP 在线安装
 - Subagents 在线安装
-- 多 provider 聚合搜索
+- 多 agent type 聚合搜索
 - 云端同步
 - 评分、评论、推荐系统
 

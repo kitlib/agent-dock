@@ -1,8 +1,8 @@
-import type { AgentMetaMap } from "./types";
+import type { AgentTypeMetaMap } from "./types";
 
-export const agentMeta: AgentMetaMap = {
+export const agentTypeMeta: AgentTypeMetaMap = {
   adal: {
-    id: "adal",
+    agentType: "adal",
     name: "AdaL",
     directory: ".adal/",
     rootFile: null,
@@ -13,7 +13,7 @@ export const agentMeta: AgentMetaMap = {
     mcp: "settings.json",
   },
   amp: {
-    id: "amp",
+    agentType: "amp",
     name: "Amp",
     directory: ".agents/",
     rootFile: null,
@@ -24,7 +24,7 @@ export const agentMeta: AgentMetaMap = {
     mcp: ".amp/settings.json",
   },
   antigravity: {
-    id: "antigravity",
+    agentType: "antigravity",
     name: "Antigravity",
     directory: ".agent/",
     rootFile: null,
@@ -35,7 +35,7 @@ export const agentMeta: AgentMetaMap = {
     mcp: null,
   },
   augment: {
-    id: "augment",
+    agentType: "augment",
     name: "Augment Code",
     directory: ".augment/",
     rootFile: null,
@@ -46,7 +46,7 @@ export const agentMeta: AgentMetaMap = {
     mcp: null,
   },
   claude: {
-    id: "claude",
+    agentType: "claude",
     name: "Claude Code",
     directory: ".claude/",
     rootFile: "CLAUDE.md",
@@ -57,7 +57,7 @@ export const agentMeta: AgentMetaMap = {
     mcp: ".mcp.json (root)",
   },
   "claude-plugin": {
-    id: "claude-plugin",
+    agentType: "claude-plugin",
     name: "Claude Code Plugin",
     directory: ".claude-plugin/",
     rootFile: null,
@@ -68,7 +68,7 @@ export const agentMeta: AgentMetaMap = {
     mcp: ".mcp.json (root)",
   },
   cline: {
-    id: "cline",
+    agentType: "cline",
     name: "Cline",
     directory: ".cline/",
     rootFile: null,
@@ -79,7 +79,7 @@ export const agentMeta: AgentMetaMap = {
     mcp: "cline_mcp_settings.json",
   },
   codebuddy: {
-    id: "codebuddy",
+    agentType: "codebuddy",
     name: "CodeBuddy",
     directory: ".codebuddy/",
     rootFile: null,
@@ -90,7 +90,7 @@ export const agentMeta: AgentMetaMap = {
     mcp: null,
   },
   codex: {
-    id: "codex",
+    agentType: "codex",
     name: "Codex CLI",
     directory: ".codex/",
     rootFile: null,
@@ -101,7 +101,7 @@ export const agentMeta: AgentMetaMap = {
     mcp: "config.toml",
   },
   "command-code": {
-    id: "command-code",
+    agentType: "command-code",
     name: "Command Code",
     directory: ".commandcode/",
     rootFile: null,
@@ -112,7 +112,7 @@ export const agentMeta: AgentMetaMap = {
     mcp: null,
   },
   continue: {
-    id: "continue",
+    agentType: "continue",
     name: "Continue",
     directory: ".continue/",
     rootFile: null,
@@ -123,7 +123,7 @@ export const agentMeta: AgentMetaMap = {
     mcp: null,
   },
   crush: {
-    id: "crush",
+    agentType: "crush",
     name: "Crush",
     directory: ".config/crush/",
     rootFile: null,
@@ -134,7 +134,7 @@ export const agentMeta: AgentMetaMap = {
     mcp: "crush.json (root)",
   },
   cursor: {
-    id: "cursor",
+    agentType: "cursor",
     name: "Cursor",
     directory: ".cursor/",
     rootFile: null,
@@ -145,7 +145,7 @@ export const agentMeta: AgentMetaMap = {
     mcp: "mcp.json",
   },
   factory: {
-    id: "factory",
+    agentType: "factory",
     name: "Factory AI",
     directory: ".factory/",
     rootFile: null,
@@ -156,7 +156,7 @@ export const agentMeta: AgentMetaMap = {
     mcp: "settings/mcp.json",
   },
   "github-copilot": {
-    id: "github-copilot",
+    agentType: "github-copilot",
     name: "GitHub Copilot",
     directory: ".github/",
     rootFile: null,
@@ -167,7 +167,7 @@ export const agentMeta: AgentMetaMap = {
     mcp: null,
   },
   goose: {
-    id: "goose",
+    agentType: "goose",
     name: "Goose",
     directory: ".goose/",
     rootFile: null,
@@ -178,7 +178,7 @@ export const agentMeta: AgentMetaMap = {
     mcp: "config.yaml",
   },
   iflow: {
-    id: "iflow",
+    agentType: "iflow",
     name: "iFlow CLI",
     directory: ".iflow/",
     rootFile: "IFLOW.md",
@@ -189,7 +189,7 @@ export const agentMeta: AgentMetaMap = {
     mcp: "settings.json",
   },
   junie: {
-    id: "junie",
+    agentType: "junie",
     name: "Junie",
     directory: ".junie/",
     rootFile: null,
@@ -200,7 +200,7 @@ export const agentMeta: AgentMetaMap = {
     mcp: null,
   },
   kilo: {
-    id: "kilo",
+    agentType: "kilo",
     name: "Kilo Code",
     directory: ".kilocode/",
     rootFile: null,
@@ -211,7 +211,7 @@ export const agentMeta: AgentMetaMap = {
     mcp: "mcp.json",
   },
   kimi: {
-    id: "kimi",
+    agentType: "kimi",
     name: "Kimi Code CLI",
     directory: ".agents/",
     rootFile: null,
@@ -222,7 +222,7 @@ export const agentMeta: AgentMetaMap = {
     mcp: ".kimi/mcp.json",
   },
   kiro: {
-    id: "kiro",
+    agentType: "kiro",
     name: "Kiro",
     directory: ".kiro/",
     rootFile: null,
@@ -233,7 +233,7 @@ export const agentMeta: AgentMetaMap = {
     mcp: "settings/mcp.json",
   },
   kode: {
-    id: "kode",
+    agentType: "kode",
     name: "Kode",
     directory: ".kode/",
     rootFile: null,
@@ -244,7 +244,7 @@ export const agentMeta: AgentMetaMap = {
     mcp: null,
   },
   mcpjam: {
-    id: "mcpjam",
+    agentType: "mcpjam",
     name: "MCPJam",
     directory: ".mcpjam/",
     rootFile: null,
@@ -255,7 +255,7 @@ export const agentMeta: AgentMetaMap = {
     mcp: null,
   },
   mistral: {
-    id: "mistral",
+    agentType: "mistral",
     name: "Mistral Vibe",
     directory: ".vibe/",
     rootFile: null,
@@ -266,7 +266,7 @@ export const agentMeta: AgentMetaMap = {
     mcp: null,
   },
   mux: {
-    id: "mux",
+    agentType: "mux",
     name: "Mux",
     directory: ".mux/",
     rootFile: null,
@@ -277,7 +277,7 @@ export const agentMeta: AgentMetaMap = {
     mcp: null,
   },
   neovate: {
-    id: "neovate",
+    agentType: "neovate",
     name: "Neovate",
     directory: ".neovate/",
     rootFile: null,
@@ -288,7 +288,7 @@ export const agentMeta: AgentMetaMap = {
     mcp: "mcp.json",
   },
   openclaw: {
-    id: "openclaw",
+    agentType: "openclaw",
     name: "OpenClaw",
     directory: ".openclaw/",
     rootFile: null,
@@ -299,7 +299,7 @@ export const agentMeta: AgentMetaMap = {
     mcp: null,
   },
   opencode: {
-    id: "opencode",
+    agentType: "opencode",
     name: "OpenCode",
     directory: ".opencode/",
     rootFile: null,
@@ -310,7 +310,7 @@ export const agentMeta: AgentMetaMap = {
     mcp: "opencode.json",
   },
   openhands: {
-    id: "openhands",
+    agentType: "openhands",
     name: "OpenHands",
     directory: ".openhands/",
     rootFile: null,
@@ -321,7 +321,7 @@ export const agentMeta: AgentMetaMap = {
     mcp: "mcp.json",
   },
   "pi-mono": {
-    id: "pi-mono",
+    agentType: "pi-mono",
     name: "Pi-Mono",
     directory: ".pi/",
     rootFile: null,
@@ -332,7 +332,7 @@ export const agentMeta: AgentMetaMap = {
     mcp: null,
   },
   pochi: {
-    id: "pochi",
+    agentType: "pochi",
     name: "Pochi",
     directory: ".pochi/",
     rootFile: null,
@@ -343,7 +343,7 @@ export const agentMeta: AgentMetaMap = {
     mcp: null,
   },
   qoder: {
-    id: "qoder",
+    agentType: "qoder",
     name: "Qoder",
     directory: ".qoder/",
     rootFile: null,
@@ -354,7 +354,7 @@ export const agentMeta: AgentMetaMap = {
     mcp: null,
   },
   qwen: {
-    id: "qwen",
+    agentType: "qwen",
     name: "Qwen Code",
     directory: ".qwen/",
     rootFile: "QWEN.md",
@@ -365,7 +365,7 @@ export const agentMeta: AgentMetaMap = {
     mcp: "settings.json",
   },
   replit: {
-    id: "replit",
+    agentType: "replit",
     name: "Replit",
     directory: ".agents/",
     rootFile: "replit.md",
@@ -376,7 +376,7 @@ export const agentMeta: AgentMetaMap = {
     mcp: null,
   },
   roo: {
-    id: "roo",
+    agentType: "roo",
     name: "Roo Code",
     directory: ".roo/",
     rootFile: null,
@@ -387,7 +387,7 @@ export const agentMeta: AgentMetaMap = {
     mcp: "mcp.json",
   },
   trae: {
-    id: "trae",
+    agentType: "trae",
     name: "Trae",
     directory: ".trae/",
     rootFile: null,
@@ -398,7 +398,7 @@ export const agentMeta: AgentMetaMap = {
     mcp: null,
   },
   "trae-cn": {
-    id: "trae-cn",
+    agentType: "trae-cn",
     name: "Trae CN",
     directory: ".trae-cn/",
     rootFile: null,
@@ -409,7 +409,7 @@ export const agentMeta: AgentMetaMap = {
     mcp: null,
   },
   warp: {
-    id: "warp",
+    agentType: "warp",
     name: "Warp",
     directory: ".warp/",
     rootFile: "WARP.md",
@@ -420,7 +420,7 @@ export const agentMeta: AgentMetaMap = {
     mcp: null,
   },
   windsurf: {
-    id: "windsurf",
+    agentType: "windsurf",
     name: "Windsurf",
     directory: ".windsurf/",
     rootFile: null,
@@ -431,7 +431,7 @@ export const agentMeta: AgentMetaMap = {
     mcp: null,
   },
   zencoder: {
-    id: "zencoder",
+    agentType: "zencoder",
     name: "Zencoder",
     directory: ".zencoder/",
     rootFile: null,

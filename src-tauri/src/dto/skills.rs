@@ -5,7 +5,7 @@ use serde_json::Value;
 #[serde(rename_all = "camelCase")]
 pub struct SkillScanTargetDto {
     pub agent_id: String,
-    pub provider: String,
+    pub agent_type: String,
     pub root_path: String,
     pub display_name: String,
 }
@@ -33,7 +33,7 @@ pub struct LocalSkillSummaryDto {
     pub status: String,
     pub skill_path: String,
     pub entry_file_path: String,
-    pub provider: String,
+    pub agent_type: String,
     pub agent_name: String,
     pub warnings: Vec<String>,
     pub errors: Vec<String>,
@@ -57,7 +57,7 @@ pub struct LocalSkillDetailDto {
     pub status: String,
     pub skill_path: String,
     pub entry_file_path: String,
-    pub provider: String,
+    pub agent_type: String,
     pub agent_name: String,
     pub warnings: Vec<String>,
     pub errors: Vec<String>,

@@ -199,7 +199,7 @@ fn parse_skill(scan_target: &SkillScanTargetDto, skill_dir: PathBuf) -> Option<P
         status: status.clone(),
         skill_path: normalize_path(&skill_dir),
         entry_file_path: normalize_path(&entry_file),
-        provider: scan_target.provider.clone(),
+        agent_type: scan_target.agent_type.clone(),
         agent_name: scan_target.display_name.clone(),
         warnings: warnings.clone(),
         errors: errors.clone(),
@@ -221,7 +221,7 @@ fn parse_skill(scan_target: &SkillScanTargetDto, skill_dir: PathBuf) -> Option<P
         status,
         skill_path: normalize_path(&skill_dir),
         entry_file_path: normalize_path(&entry_file),
-        provider: scan_target.provider.clone(),
+        agent_type: scan_target.agent_type.clone(),
         agent_name: scan_target.display_name.clone(),
         warnings,
         errors,
@@ -315,7 +315,7 @@ mod tests {
 
         let skills = scan_skills(vec![SkillScanTargetDto {
             agent_id: "agent-claude".into(),
-            provider: "claude".into(),
+            agent_type: "claude".into(),
             root_path: "~/.claude/skills".into(),
             display_name: "Claude Main".into(),
         }]);
@@ -359,7 +359,7 @@ mod tests {
 
         let skills = scan_skills(vec![SkillScanTargetDto {
             agent_id: "agent-claude".into(),
-            provider: "claude".into(),
+            agent_type: "claude".into(),
             root_path: ".claude/skills".into(),
             display_name: "Claude Main".into(),
         }]);

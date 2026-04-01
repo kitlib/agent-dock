@@ -55,7 +55,7 @@ export function AgentRail({
               title={agent.name}
             >
               <div className={cn("mr-2 flex items-center gap-2", isCollapsed && "mr-0")}>
-                <AgentIcon provider={agent.provider} className="shrink-0" size={18} />
+                <AgentIcon agentType={agent.agentType} className="shrink-0" size={18} />
               </div>
               {!isCollapsed ? (
                 <div className="min-w-0 flex-1">

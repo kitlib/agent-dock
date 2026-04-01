@@ -1,5 +1,5 @@
-import { agentMeta } from "@/features/agents/agent-meta";
-import type { AgentId, ResolvedAgentView, SkillResource, SkillScanTarget } from "@/features/agents/types";
+import { agentTypeMeta } from "@/features/agents/agent-meta";
+import type { AgentTypeId, ResolvedAgentView, SkillResource, SkillScanTarget } from "@/features/agents/types";
 
 function trimTrailingSlash(value: string) {
   return value.replace(/\/+$/, "");
@@ -10,7 +10,7 @@ function trimLeadingSlash(value: string) {
 }
 
 export function buildSkillScanPath(agent: ResolvedAgentView) {
-  const skillRelativePath = agentMeta[agent.provider as AgentId]?.skills;
+  const skillRelativePath = agentTypeMeta[agent.agentType as AgentTypeId]?.skills;
   if (!skillRelativePath) {
     return null;
   }
@@ -32,7 +32,7 @@ export function toSkillScanTarget(agent: ResolvedAgentView): SkillScanTarget | n
 
   return {
     agentId: agent.id,
-    provider: agent.provider,
+    agentType: agent.agentType,
     rootPath,
     displayName: agent.alias ?? agent.name,
   };

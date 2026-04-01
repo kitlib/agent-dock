@@ -20,7 +20,7 @@ The backend owns Tauri runtime wiring, desktop plugins, local file-system discov
 | --- | --- | --- |
 | Commands | `src/commands/` | Thin Tauri command handlers exposed to the frontend |
 | DTOs | `src/dto/` | Serializable request/response types shared across commands and services |
-| Scanners | `src/scanners/` | Local disk scanning for providers and skills |
+| Scanners | `src/scanners/` | Local disk scanning for agent types and skills |
 | Services | `src/services/` | Orchestration of discovery and detail lookup |
 | Persistence | `src/persistence/` | Managed agent storage and local durable state |
 | Plugins | `src/plugins/` | System tray and other runtime plugin integration |
@@ -39,7 +39,7 @@ The backend owns Tauri runtime wiring, desktop plugins, local file-system discov
 - `src/commands/skills.rs` — skill command handlers
 - `src/services/agent_discovery_service.rs` — resolved agent orchestration
 - `src/services/skill_discovery_service.rs` — local skill summary/detail orchestration
-- `src/scanners/provider_scanner.rs` — provider scan logic
+- `src/scanners/agent_type_scanner.rs` — agent type scan logic
 - `src/scanners/skill_scanner.rs` — skill metadata discovery from local folders
 - `src/persistence/managed_agents_store.rs` — durable managed-agent storage
 

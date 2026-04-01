@@ -111,7 +111,7 @@
       "scanningAgents": "Scanning local agent directories...",
       "scanOrCreate": "Scan local agents or create one manually.",
       "rootPath": "Root path",
-      "selectProvider": "Provider",
+      "selectAgentType": "Agent type",
       "name": "Name",
       "alias": "Alias",
       "skills": "Skills",

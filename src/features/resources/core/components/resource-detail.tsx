@@ -4,7 +4,6 @@ import type { AgentDiscoveryItem, MarketplaceDiscoveryFields } from "@/features/
 
 type ResourceDetailContentProps = {
   resource: AgentDiscoveryItem;
-  onOpenSkillFolder: (skillPath: string) => void;
   onUpdateMarketplaceInstallState: (id: string) => void;
   t: (key: string, options?: Record<string, unknown>) => string;
 };
@@ -159,7 +158,7 @@ export function AgentResourceDetail({
   resource,
   onUpdateMarketplaceInstallState,
   t,
-}: Omit<ResourceDetailContentProps, "onOpenSkillFolder">) {
+}: ResourceDetailContentProps) {
   if (resource.origin === "marketplace") {
     return (
       <MarketplaceResourceDetail

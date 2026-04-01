@@ -1,4 +1,4 @@
-import { agentMeta } from "./agent-meta";
+import { agentTypeMeta } from "./agent-meta";
 import { refreshAgentDiscovery } from "./api";
 import type { AgentDiscoveryState, ManagedAgent, ResolvedAgentView } from "./types";
 
@@ -22,8 +22,8 @@ function toManagedAgentsSnapshot(agents: ResolvedAgentView[]): ManagedAgent[] {
     }));
 }
 
-const scanTargets = Object.values(agentMeta).map((meta) => ({
-  agent: meta.id,
+const scanTargets = Object.values(agentTypeMeta).map((meta) => ({
+  agentType: meta.agentType,
   name: meta.name,
   rootPath: meta.directory.replace(/\/$/, ""),
 }));

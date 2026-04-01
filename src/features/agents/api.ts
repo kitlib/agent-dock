@@ -53,7 +53,7 @@ export async function listLocalSkills(scanTargets: SkillScanTarget[]) {
   console.log("[skills] list_local_skills request", {
     scanTargets: scanTargets.map((target) => ({
       agentId: target.agentId,
-      provider: target.provider,
+      agentType: target.agentType,
       rootPath: target.rootPath,
       displayName: target.displayName,
     })),
@@ -67,7 +67,7 @@ export async function listLocalSkills(scanTargets: SkillScanTarget[]) {
       id: skill.id,
       name: skill.name,
       ownerAgentId: skill.ownerAgentId ?? null,
-      provider: skill.provider ?? null,
+      agentType: skill.agentType ?? null,
       agentName: skill.agentName ?? null,
       skillPath: skill.skillPath ?? null,
     })),
@@ -81,7 +81,7 @@ export async function getLocalSkillDetail(scanTargets: SkillScanTarget[], skillI
     skillId,
     scanTargets: scanTargets.map((target) => ({
       agentId: target.agentId,
-      provider: target.provider,
+      agentType: target.agentType,
       rootPath: target.rootPath,
       displayName: target.displayName,
     })),
@@ -92,7 +92,7 @@ export async function getLocalSkillDetail(scanTargets: SkillScanTarget[], skillI
   console.log("[skills] get_local_skill_detail response", {
     skillId: detail.id,
     ownerAgentId: detail.ownerAgentId ?? null,
-    provider: detail.provider ?? null,
+    agentType: detail.agentType ?? null,
     agentName: detail.agentName ?? null,
     skillPath: detail.skillPath ?? null,
   });

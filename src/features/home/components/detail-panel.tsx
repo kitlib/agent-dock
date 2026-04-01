@@ -75,7 +75,7 @@ export function AgentDetailPanel({
         {selectedAgent && !selectedResource ? (
           <div className="mt-3 space-y-3 text-xs">
             <div className="text-muted-foreground flex items-center gap-2">
-              <AgentIcon provider={selectedAgent.provider} size={16} />
+              <AgentIcon agentType={selectedAgent.agentType} size={16} />
               <span>
                 {selectedAgent.name} · {selectedAgent.role}
               </span>
@@ -100,7 +100,6 @@ export function AgentDetailPanel({
         {selectedResource ? (
           <AgentResourceDetail
             resource={selectedResource}
-            onOpenSkillFolder={onOpenSkillFolder}
             onUpdateMarketplaceInstallState={onUpdateMarketplaceInstallState}
             t={t}
           />

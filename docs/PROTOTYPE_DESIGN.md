@@ -366,7 +366,7 @@ Marketplace 页面是辅助导入入口，用于发现和安装资源。
 - 搜索框
 - 资源类型切换：Skills / MCP / Subagents
 - source 选择器
-- provider 状态提示
+- agent type 状态提示
 - 打开 source 设置按钮
 
 首期重点支持 Skills，MCP 和 Subagents 可先作为预留入口。
@@ -417,7 +417,7 @@ Resource Name    Skillhub    v1.2.0    Not installed    [Install]
 建议显示：
 - source 列表
 - source 名称
-- provider
+- agent type
 - endpoint
 - enabled 状态
 - health 状态

@@ -5,7 +5,7 @@
 - 不拆独立业务页面
 - 先收敛首页结构，再接 Tauri 真实数据
 - Marketplace 作为首页内能力接入
-- provider 使用 `skills.sh`
+- source 使用 `skills.sh`
 
 ## 阶段
 1. **首页收敛**：拆分 `home.tsx`，抽离 rail、列表、详情、筛选和选择逻辑

@@ -288,7 +288,7 @@ User clicks update
 
 结合 AgentDock 当前目标，建议把 `skills.sh` 集成拆成 4 层。
 
-## 6.1 Provider 适配层
+## 6.1 Source 适配层
 
 建议新增后端模块：
 
@@ -325,7 +325,7 @@ src-tauri/src/marketplace/service.rs
 
 职责：
 
-- 聚合 provider 返回结果
+- 聚合 source 返回结果
 - 做缓存
 - 做 source 启用/禁用判断
 - 统一错误输出
@@ -369,7 +369,7 @@ skills.sh item
 
 ## 6.4 前端页面层
 
-建议在 AgentDock 的 `Marketplace` 页面中，将 `skills.sh` 视为一个 source provider，而不是特判逻辑。
+建议在 AgentDock 的 `Marketplace` 页面中，将 `skills.sh` 视为一个 source，而不是特判逻辑。
 
 建议页面状态至少包含：
 
@@ -402,7 +402,7 @@ skills.sh item
 
 ```ts
 interface MarketplaceItem {
-  provider: "skillssh"
+  source: "skillssh"
   remoteId: string
   name: string
   sourceRepo: string
@@ -417,13 +417,13 @@ interface MarketplaceItem {
 
 字段建议：
 
-- `provider`: 来源 provider
+- `source`: 来源 source
 - `remoteId`: 如 `owner/repo/skill_id`
 - `sourceRepo`: 如 `owner/repo`
 - `externalUrl`: 指向 skills.sh 或 GitHub 页面
 - `installKind`: 首期固定为 `git`
 - `installRef`: Git clone 所需标识
-- `subpathHint`: 若未来 provider 可直接返回 skill 目录提示，可用于加速定位
+- `subpathHint`: 若未来 source 可直接返回 skill 目录提示，可用于加速定位
 
 这样未来接入其他 marketplace 时，前端页面无需重写。
 
@@ -549,7 +549,7 @@ src-tauri/src/commands/marketplace.rs
 
 原则应是：
 
-- provider 层负责解析外部结构
+- source 层负责解析外部结构
 - service 层负责统一模型
 - UI 只消费内部模型
 
@@ -580,7 +580,7 @@ src-tauri/src/commands/marketplace.rs
 ### 首期不建议做
 
 - 复杂详情页抓取
-- 多 provider 聚合排序
+- 多 source 聚合排序
 - skills.sh 账号态能力
 - 评分、评论、推荐
 
@@ -593,13 +593,13 @@ src-tauri/src/commands/marketplace.rs
 ```txt
 listMarketplaceLeaderboard(source, board)
 searchMarketplaceItems(source, query, limit)
-installMarketplaceItem(provider, remoteId, options)
+installMarketplaceItem(source, remoteId, options)
 checkMarketplaceItemUpdate(localResourceId)
 updateMarketplaceItem(localResourceId)
 checkMarketplaceSourceHealth(source)
 ```
 
-如果当前只支持 `skills.sh`，也建议保留 `source/provider` 参数，避免未来重构接口。
+如果当前只支持 `skills.sh`，也建议保留 `source` 参数，避免未来重构接口。
 
 ---
 

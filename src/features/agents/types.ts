@@ -3,7 +3,7 @@ export type DiscoveryOrigin = "local" | "marketplace";
 export type InstallStateLabel = "enabled" | "installed" | "update" | "available";
 export type MarketplaceInstallStateLabel = Exclude<InstallStateLabel, "enabled">;
 
-export type AgentId =
+export type AgentTypeId =
   | "adal"
   | "amp"
   | "antigravity"
@@ -45,8 +45,8 @@ export type AgentId =
   | "windsurf"
   | "zencoder";
 
-export type AgentMeta = {
-  id: AgentId;
+export type AgentTypeMeta = {
+  agentType: AgentTypeId;
   name: string;
   directory: string;
   rootFile: string | null;
@@ -57,7 +57,7 @@ export type AgentMeta = {
   mcp: string | null;
 };
 
-export type AgentMetaMap = Record<AgentId, AgentMeta>;
+export type AgentTypeMetaMap = Record<AgentTypeId, AgentTypeMeta>;
 
 export type AgentDiscoveryStatus = "discovered" | "invalid" | "unreadable";
 export type AgentHealth = "ok" | "error";
@@ -72,7 +72,7 @@ export type AgentResourceCounts = {
 export type DiscoveredAgent = {
   discoveryId: string;
   fingerprint: string;
-  provider: AgentId;
+  agentType: AgentTypeId;
   displayName: string;
   rootPath: string;
   status: AgentDiscoveryStatus;
@@ -95,7 +95,7 @@ export type ResolvedAgentView = {
   id: string;
   discoveryId: string;
   fingerprint: string;
-  provider: AgentId;
+  agentType: AgentTypeId;
   name: string;
   alias?: string;
   role: string;
@@ -124,7 +124,7 @@ export type AgentDiscoveryState = {
 export type ScannedAgentCandidate = {
   id: string;
   fingerprint: string;
-  provider: AgentId;
+  agentType: AgentTypeId;
   displayName: string;
   rootPath: string;
   resourceCounts: AgentResourceCounts;
@@ -146,13 +146,13 @@ export type AgentManagementCard =
     });
 
 export type ScanTarget = {
-  agent: AgentId;
+  agentType: AgentTypeId;
   name: string;
   rootPath: string;
 };
 
 export type ManualAgentDraft = {
-  provider: AgentId;
+  agentType: AgentTypeId;
   name: string;
   rootPath: string;
 };
@@ -181,7 +181,7 @@ export type AgentSummary = ResolvedAgentView;
 
 export type SkillScanTarget = {
   agentId: string;
-  provider: AgentId;
+  agentType: AgentTypeId;
   rootPath: string;
   displayName: string;
 };
@@ -206,7 +206,7 @@ export type SkillResource = {
   status?: string;
   skillPath?: string;
   entryFilePath?: string;
-  provider?: string;
+  agentType?: string;
   agentName?: string;
   warnings?: string[];
   errors?: string[];

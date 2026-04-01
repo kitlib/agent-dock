@@ -13,6 +13,7 @@ type AgentResourcePanelProps = {
   isRailCollapsed: boolean;
   onClearChecked: () => void;
   onDragStart: (event: DragEvent<HTMLDivElement>, resourceId: string) => void;
+  onOpenSkillFolder: (skillPath: string) => void;
   onSearchChange: (value: string) => void;
   onSelectKind: (kind: ResourceKind) => void;
   onSelectResource: (resource: AgentDiscoveryItem) => void;
@@ -31,6 +32,7 @@ export function AgentResourcePanel({
   isRailCollapsed,
   onClearChecked,
   onDragStart,
+  onOpenSkillFolder,
   onSearchChange,
   onSelectKind,
   onSelectResource,
@@ -110,6 +112,7 @@ export function AgentResourcePanel({
             checkedIds={checkedIds}
             filteredResources={filteredResources}
             onDragStart={onDragStart}
+            onOpenSkillFolder={onOpenSkillFolder}
             onSelectResource={onSelectResource}
             onToggleChecked={onToggleChecked}
             onUpdateMarketplaceInstallState={onUpdateMarketplaceInstallState}

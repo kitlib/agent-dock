@@ -5,7 +5,7 @@
 为 AgentDock 的本地 Agent 发现链路设计一套可落地的 `applications` crate 接入方案，用于支持：
 
 - 为本地 Agent 扫描补充“已安装应用”信号
-- 提高 provider 识别的命中率与稳定性
+- 提高 agent type 识别的命中率与稳定性
 - 改善本地 Agent 的名称、安装路径、可读性线索
 - 为后续图标、运行状态、前台应用等增强能力预留接入点
 - 在不破坏现有扫描模型的前提下，增强本地 Agent 识别精度
@@ -23,10 +23,10 @@
 具体判断如下：
 
 1. `applications` 是 Rust crate，能自然接入当前 Tauri 后端，不会改变前端架构。
-2. 该 crate 的能力更偏“发现本机已安装应用”，与 AgentDock 当前“扫描本地 agent/provider 安装痕迹”的需求存在交集。
-3. 它可以为现有 provider 级扫描补充更准确的安装态线索，例如应用名称、可执行位置、图标、运行状态等。
+2. 该 crate 的能力更偏“发现本机已安装应用”，与 AgentDock 当前“扫描本地 agent/agent type 安装痕迹”的需求存在交集。
+3. 它可以为现有 agent type 级扫描补充更准确的安装态线索，例如应用名称、可执行位置、图标、运行状态等。
 4. 它不适合直接替代现有扫描逻辑，因为“已安装应用发现”与“Agent 资源识别”并不完全等价。
-5. 最合适的落地方式是：保持 `provider_scanner` 为主，新增 `applications` 适配层，在 service 层做归并、去重和置信度提升。
+5. 最合适的落地方式是：保持 `agent_type_scanner` 为主，新增 `applications` 适配层，在 service 层做归并、去重和置信度提升。
 
 这个方案的优点是：
 
@@ -68,7 +68,7 @@ AgentDock 当前已经具备完整的本地 Agent 发现、解析和导入链路
 - 将 discovered agents 与 managed agents 做归并
 - 生成 resolved agents
 - 生成 import candidates
-- 根据 provider 和 managed 状态补全摘要、角色、状态标签
+- 根据 agent type 和 managed 状态补全摘要、角色、状态标签
 
 这说明当前服务层已经是“发现结果归并与整形”的中心位置，因此它也是接入 `applications` 信号的最佳位置。
 
@@ -76,17 +76,17 @@ AgentDock 当前已经具备完整的本地 Agent 发现、解析和导入链路
 
 从当前实现命名和调用关系看，本地扫描核心来源是：
 
-- `src-tauri/src/scanners/provider_scanner.rs`
+- `src-tauri/src/scanners/agent_type_scanner.rs`
 
 也就是说，当前发现链路更偏：
 
-- 基于 provider 规则
+- 基于 agent type 规则
 - 基于用户目录和本地安装痕迹
-- 基于 AgentDock 已知 provider 模型进行识别
+- 基于 AgentDock 已知 agent type 模型进行识别
 
 这个思路适合 AgentDock 当前场景，但局限也明显：
 
-- 只能识别“已知 provider 的既定痕迹”
+- 只能识别“已知 agent type 的既定痕迹”
 - 对安装路径变化、命名差异、平台差异的鲁棒性有限
 - 难以充分利用系统层面的“已安装应用”事实
 
@@ -112,17 +112,17 @@ AgentDock 当前已经具备完整的本地 Agent 发现、解析和导入链路
 
 AgentDock 当前本地 Agent 扫描的核心目标不是“罗列全部应用”，而是：
 
-- 找到本地可管理的 agent/provider 安装实体
+- 找到本地可管理的 agent/agent type 安装实体
 - 提高扫描结果的真实性与可导入性
 - 为展示层提供更可信的名称、路径和状态信息
 
 `applications` 可以提供以下增强价值：
 
 1. **补充安装态证据**
-   - 当 provider 规则命中某个路径时，可用 `applications` 提供的已安装应用元数据进行佐证。
+   - 当 agent type 规则命中某个路径时，可用 `applications` 提供的已安装应用元数据进行佐证。
 
 2. **改进 display name**
-   - 某些 provider 目录名、可执行文件名并不适合直接展示；系统应用名称通常更适合作为 UI 展示名。
+   - 某些 agent type 目录名、可执行文件名并不适合直接展示；系统应用名称通常更适合作为 UI 展示名。
 
 3. **辅助 root path / install path 判断**
    - 当前规则扫描可能拿到的是配置路径或用户目录中的局部路径；系统安装信息可能帮助建立更可靠的安装位置映射。
@@ -131,7 +131,7 @@ AgentDock 当前本地 Agent 扫描的核心目标不是“罗列全部应用”
    - 即使第一阶段不把图标纳入主链路，也可以先在适配层保留字段，为后续 detail panel 或 rail 展示做准备。
 
 5. **提升未知或边缘安装路径的识别率**
-   - 当 provider 规则不够覆盖时，已安装应用列表可以作为候选补全源。
+   - 当 agent type 规则不够覆盖时，已安装应用列表可以作为候选补全源。
 
 ---
 
@@ -141,16 +141,16 @@ AgentDock 当前本地 Agent 扫描的核心目标不是“罗列全部应用”
 
 原因：
 
-- `applications` 关注的是“系统中有哪些应用”，不是“哪些应用可映射为 AgentDock 的 provider 资源”
+- `applications` 关注的是“系统中有哪些应用”，不是“哪些应用可映射为 AgentDock 的 agent type 资源”
 - 系统应用条目里可能包含大量与 agent 无关的信息
 - 不同平台的应用数据质量不一致
-- 仅依赖该 crate 容易让 AgentDock 的 provider 识别规则变得模糊
+- 仅依赖该 crate 容易让 AgentDock 的 agent type 识别规则变得模糊
 
 如果直接替代现有扫描器，可能会带来：
 
 - 误识别增加
 - 去重逻辑复杂化
-- provider 类型判断不稳定
+- agent type 判断不稳定
 - 扫描结果与现有 managed/import 逻辑耦合失衡
 
 ### 5.2 不推荐：让前端直接依赖 `applications` 原始模型
@@ -173,7 +173,7 @@ AgentDock 当前本地 Agent 扫描的核心目标不是“罗列全部应用”
 Frontend
   -> Tauri commands (agents.rs)
     -> agent_discovery_service
-      -> provider_scanner               # 现有主扫描链路
+      -> agent_type_scanner             # 现有主扫描链路
       -> applications adapter           # 新增辅助发现源
       -> merge / dedupe / confidence
       -> ResolvedAgentDto / CandidateDto
@@ -181,8 +181,8 @@ Frontend
 
 ### 6.1 架构原则
 
-1. **provider scanner 仍是主来源**
-   - 继续承担 provider 识别、规则命中、已有导入逻辑兼容。
+1. **agent type scanner 仍是主来源**
+   - 继续承担 agent type 识别、规则命中、已有导入逻辑兼容。
 
 2. **applications adapter 只提供补充信号**
    - 不直接决定最终导入结果。
@@ -234,9 +234,9 @@ Frontend
 
 职责：
 
-- 接收 provider 扫描结果
+- 接收 agent type 扫描结果
 - 接收 applications 适配层结果
-- 做 provider 命中增强、名称回填、路径归一、去重和置信度处理
+- 做 agent type 命中增强、名称回填、路径归一、去重和置信度处理
 - 最终输出现有 `ResolvedAgentDto` / `ScannedAgentCandidateDto`
 
 这是最关键的改动点。
@@ -281,7 +281,7 @@ Frontend
 Frontend
   -> scan_agents(scan_targets)
     -> agent_discovery_service
-      -> provider_scanner::scan_discovered_agents(scan_targets)
+      -> agent_type_scanner::scan_discovered_agents(scan_targets)
       -> merge with managed agents
       -> return candidate / resolved DTOs
 ```
@@ -292,9 +292,9 @@ Frontend
 Frontend
   -> scan_agents(scan_targets)
     -> agent_discovery_service
-      -> provider_scanner::scan_discovered_agents(scan_targets)
+      -> agent_type_scanner::scan_discovered_agents(scan_targets)
       -> application_catalog_service::list_installed_applications()
-      -> correlate provider results with installed applications
+      -> correlate agent type results with installed applications
       -> dedupe and enrich fields
       -> merge with managed agents
       -> return candidate / resolved DTOs
@@ -304,10 +304,10 @@ Frontend
 
 建议 service 层按以下优先级处理：
 
-1. **已有 provider 强规则命中结果优先保留**
+1. **已有 agent type 强规则命中结果优先保留**
 2. **若命中应用目录 / 可执行文件 / 显示名对应关系，则补充应用元数据**
-3. **若 provider 规则弱命中，但应用安装信息强匹配，可提高可信度**
-4. **若仅有应用信息但无法映射到已知 provider，不直接生成可导入 agent**
+3. **若 agent type 规则弱命中，但应用安装信息强匹配，可提高可信度**
+4. **若仅有应用信息但无法映射到已知 agent type，不直接生成可导入 agent**
 
 这个原则可以避免把“本机所有应用”误引入 AgentDock 的 agent 候选列表。
 
@@ -322,11 +322,11 @@ Frontend
 - 图标线索预留
 - 运行状态补充
 - 前台应用上下文增强
-- provider 规则命中后的可信度提升
+- agent type 规则命中后的可信度提升
 
 ### 9.2 不适合让 `applications` 单独负责的能力
 
-- provider 类型判定
+- agent type 判定
 - AgentDock 导入资格判定
 - managed agent 主键生成
 - 资源池模型映射
@@ -353,7 +353,7 @@ Frontend
 
 ## 10.2 应用发现不等于 Agent 发现
 
-系统中的“已安装应用”与 AgentDock 里的“可管理 Agent/provider”不是同一个概念。
+系统中的“已安装应用”与 AgentDock 里的“可管理 Agent/agent type”不是同一个概念。
 
 如果没有 service 层的映射与过滤，直接暴露应用列表会引入大量噪音。
 
@@ -370,7 +370,7 @@ Frontend
 
 ## 10.4 扫描性能
 
-如果每次刷新都全量扫描 provider 痕迹并同时全量拉取已安装应用信息，可能带来性能抖动。
+如果每次刷新都全量扫描 agent type 痕迹并同时全量拉取已安装应用信息，可能带来性能抖动。
 
 建议至少考虑：
 
@@ -418,7 +418,7 @@ Frontend
 建议动作：
 
 - 为扫描结果增加内部调试字段或日志
-- 标记某个候选是由 provider 规则命中，还是由应用安装线索增强
+- 标记某个候选是由 agent type 规则命中，还是由应用安装线索增强
 - 为后续调优去重和匹配策略提供证据
 
 这一阶段主要服务于算法和规则调优。
@@ -447,7 +447,7 @@ Frontend
 2. **先服务层收敛，再考虑 DTO 扩张**
    - 避免为了外部 crate 的字段扩散修改前端。
 
-3. **先保留现有 provider 扫描主导权**
+3. **先保留现有 agent type 扫描主导权**
    - 这样即使新依赖效果一般，也不会造成主链路退化。
 
 4. **把 `applications` 当作可替换适配层**
@@ -468,11 +468,11 @@ Frontend
 而是：
 
 - 一个 Rust 后端可控、低侵入的辅助发现源
-- 一个提升本地 Agent/provider 识别质量的增强模块
+- 一个提升本地 Agent/agent type 识别质量的增强模块
 - 一个为图标、运行状态、安装态展示预留能力的扩展点
 
 因此推荐采用：
 
-> 保留现有 provider 扫描主链路，新增 `applications` 适配层，在 `agent_discovery_service` 中统一归并。
+> 保留现有 agent type 扫描主链路，新增 `applications` 适配层，在 `agent_discovery_service` 中统一归并。
 
 这条路线最符合 AgentDock 现有架构，也最适合在不破坏现有 Agent 导入与管理逻辑的前提下，逐步提升本地扫描精度。

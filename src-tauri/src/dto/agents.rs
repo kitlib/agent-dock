@@ -13,7 +13,7 @@ pub struct AgentResourceCountsDto {
 pub struct DiscoveredAgentDto {
     pub discovery_id: String,
     pub fingerprint: String,
-    pub provider: String,
+    pub agent_type: String,
     pub display_name: String,
     pub root_path: String,
     pub status: String,
@@ -32,7 +32,8 @@ pub struct ManagedAgentDto {
     pub hidden: bool,
     pub imported_at: String,
     pub source: String,
-    pub provider: Option<String>,
+    #[serde(alias = "provider")]
+    pub agent_type: Option<String>,
     pub root_path: Option<String>,
 }
 
@@ -42,7 +43,7 @@ pub struct ResolvedAgentDto {
     pub id: String,
     pub discovery_id: String,
     pub fingerprint: String,
-    pub provider: String,
+    pub agent_type: String,
     pub name: String,
     pub alias: Option<String>,
     pub role: String,
@@ -65,7 +66,7 @@ pub struct ResolvedAgentDto {
 pub struct ScannedAgentCandidateDto {
     pub id: String,
     pub fingerprint: String,
-    pub provider: String,
+    pub agent_type: String,
     pub display_name: String,
     pub root_path: String,
     pub resource_counts: AgentResourceCountsDto,
@@ -79,7 +80,7 @@ pub struct ScannedAgentCandidateDto {
 #[derive(Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ScanTargetDto {
-    pub agent: String,
+    pub agent_type: String,
     pub name: String,
     pub root_path: String,
 }
@@ -87,7 +88,7 @@ pub struct ScanTargetDto {
 #[derive(Clone, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ManualAgentDraftDto {
-    pub provider: String,
+    pub agent_type: String,
     pub name: String,
     pub root_path: String,
 }

@@ -22,11 +22,11 @@ import {
 } from "@lobehub/icons";
 import { Bot } from "lucide-react";
 import type { ComponentType } from "react";
-import type { AgentId } from "../types";
+import type { AgentTypeId } from "../types";
 
 type IconComponent = ComponentType<{ size?: number; className?: string }>;
 
-export const agentIcons: Record<AgentId, IconComponent> = {
+export const agentIcons: Record<AgentTypeId, IconComponent> = {
   adal: Bot,
   amp: Amp,
   antigravity: Antigravity.Color,
@@ -70,15 +70,15 @@ export const agentIcons: Record<AgentId, IconComponent> = {
 };
 
 export function AgentIcon({
-  provider,
+  agentType,
   className,
   size = 18,
 }: {
-  provider: AgentId;
+  agentType: AgentTypeId;
   className?: string;
   size?: number;
 }) {
-  const Icon = agentIcons[provider];
+  const Icon = agentIcons[agentType];
 
   return <Icon size={size} className={className} />;
 }

@@ -111,7 +111,7 @@
       "scanningAgents": "正在扫描本地 Agent 目录...",
       "scanOrCreate": "",
       "rootPath": "根目录",
-      "selectProvider": "提供方",
+      "selectAgentType": "Agent 类型",
       "name": "名称",
       "alias": "别名",
       "skills": "Skills",

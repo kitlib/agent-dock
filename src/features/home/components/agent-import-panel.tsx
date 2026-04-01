@@ -18,19 +18,19 @@ import {
 } from "@/components/ui/select";
 import { cn } from "@/lib/utils";
 import { AgentIcon } from "@/features/agents/components/agent-icon";
-import { agentMeta } from "@/features/agents/agent-meta";
+import { agentTypeMeta } from "@/features/agents/agent-meta";
 import { useAgentImport } from "@/features/agents/use-agent-import";
 import type {
   AgentManagementCard,
   CreateAgentResult,
   DeleteAgentResult,
   ImportAgentsResult,
-  AgentId,
+  AgentTypeId,
   ManualAgentDraft,
   RemoveAgentResult,
 } from "@/features/agents/types";
 
-const providerOptions = Object.keys(agentMeta) as AgentId[];
+const agentTypeOptions = Object.keys(agentTypeMeta) as AgentTypeId[];
 
 type AgentImportPanelProps = {
   managedAgentsForView: CreateAgentResult["resolvedAgents"];
@@ -100,7 +100,7 @@ const AgentManagementCardItem = memo(function AgentManagementCardItem({
     >
       <div className="flex items-stretch gap-2.5">
         <div className="bg-background flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border self-start">
-          <AgentIcon provider={candidate.provider} size={18} />
+          <AgentIcon agentType={candidate.agentType} size={18} />
         </div>
         <div className="min-w-0 flex-1">
           <div className="truncate text-sm font-medium leading-5">{candidate.displayName}</div>
@@ -185,7 +185,7 @@ export function AgentImportPanel({
     onImportSuccess,
     onRemoveSuccess,
   });
-  const selectedProviderMeta = agentMeta[manualDraft.provider];
+  const selectedAgentTypeMeta = agentTypeMeta[manualDraft.agentType];
 
   useEffect(() => {
     void enterImporting();
@@ -249,27 +249,27 @@ export function AgentImportPanel({
 
               <div className="grid grid-cols-2 gap-2.5">
                 <label className="col-span-2 flex flex-col gap-1.5 text-sm">
-                  <span>{t("prototype.detail.selectProvider")}</span>
+                  <span>{t("prototype.detail.selectAgentType")}</span>
                   <Select
-                    value={manualDraft.provider}
+                    value={manualDraft.agentType}
                     onValueChange={(value) =>
-                      updateManualDraft("provider", value as ManualAgentDraft["provider"])
+                      updateManualDraft("agentType", value as ManualAgentDraft["agentType"])
                     }
                   >
                     <SelectTrigger className="w-full">
                       <SelectValue>
                         <div className="flex items-center gap-2">
-                          <AgentIcon provider={manualDraft.provider} size={16} />
-                          <span>{selectedProviderMeta.name}</span>
+                          <AgentIcon agentType={manualDraft.agentType} size={16} />
+                          <span>{selectedAgentTypeMeta.name}</span>
                         </div>
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
-                      {providerOptions.map((provider) => (
-                        <SelectItem key={provider} value={provider}>
+                      {agentTypeOptions.map((agentType) => (
+                        <SelectItem key={agentType} value={agentType}>
                           <div className="flex items-center gap-2">
-                            <AgentIcon provider={provider} size={16} />
-                            <span>{agentMeta[provider].name}</span>
+                            <AgentIcon agentType={agentType} size={16} />
+                            <span>{agentTypeMeta[agentType].name}</span>
                           </div>
                         </SelectItem>
                       ))}
@@ -282,7 +282,7 @@ export function AgentImportPanel({
                   <Input
                     value={manualDraft.name}
                     onChange={(event) => updateManualDraft("name", event.target.value)}
-                    placeholder={selectedProviderMeta.name}
+                    placeholder={selectedAgentTypeMeta.name}
                   />
                 </label>
 
@@ -291,7 +291,7 @@ export function AgentImportPanel({
                   <Input
                     value={manualDraft.rootPath}
                     onChange={(event) => updateManualDraft("rootPath", event.target.value)}
-                    placeholder={selectedProviderMeta.directory}
+                    placeholder={selectedAgentTypeMeta.directory}
                   />
                 </label>
               </div>

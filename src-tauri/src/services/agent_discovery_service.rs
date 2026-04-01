@@ -6,10 +6,10 @@ use crate::dto::agents::{
     ResolvedAgentDto, ScanTargetDto, ScannedAgentCandidateDto,
 };
 use crate::persistence::managed_agents_store;
-use crate::scanners::provider_scanner;
+use crate::scanners::agent_type_scanner;
 
-fn role_for_provider(provider: &str) -> String {
-    match provider {
+fn role_for_agent_type(agent_type: &str) -> String {
+    match agent_type {
         "cursor" => "AI coding assistant",
         "claude" => "CLI coding assistant",
         "codex" => "Terminal coding assistant",
@@ -19,8 +19,8 @@ fn role_for_provider(provider: &str) -> String {
     .into()
 }
 
-fn discovered_summary(provider: &str) -> String {
-    match provider {
+fn discovered_summary(agent_type: &str) -> String {
+    match agent_type {
         "cursor" => "Detected Cursor in the user directory and ready to import into AgentDock.",
         "claude" => "Detected Claude Code in the user directory and ready to import into AgentDock.",
         "codex" => "Detected Codex CLI in the user directory and ready to import into AgentDock.",
@@ -35,11 +35,11 @@ fn manual_resolved_agent(entry: &ManagedAgentDto) -> ResolvedAgentDto {
         .managed_agent_id
         .strip_prefix("managed-")
         .unwrap_or(entry.managed_agent_id.as_str());
-    let provider = entry.provider.as_deref().unwrap_or_else(|| {
+    let agent_type = entry.agent_type.as_deref().unwrap_or_else(|| {
         entry
             .fingerprint
             .split_once('-')
-            .map(|(provider, _)| provider)
+            .map(|(agent_type, _)| agent_type)
             .unwrap_or("claude")
     });
     let name = entry.alias.clone().unwrap_or_else(|| {
@@ -62,7 +62,7 @@ fn manual_resolved_agent(entry: &ManagedAgentDto) -> ResolvedAgentDto {
         id: format!("agent-{}", id_suffix),
         discovery_id: format!("discovery-{}", id_suffix),
         fingerprint: entry.fingerprint.clone(),
-        provider: provider.into(),
+        agent_type: agent_type.into(),
         name,
         alias: entry.alias.clone(),
         role: "Manually managed agent".into(),
@@ -106,7 +106,7 @@ fn merge_resolved_agents(
         .map(|agent| {
             let managed = managed_agents.iter().find(|entry| {
                 entry.fingerprint == agent.fingerprint
-                    || (entry.provider.as_deref() == Some(agent.provider.as_str())
+                    || (entry.agent_type.as_deref() == Some(agent.agent_type.as_str())
                         && entry.root_path.as_deref() == Some(agent.root_path.as_str()))
             });
 
@@ -114,10 +114,10 @@ fn merge_resolved_agents(
                 id: agent.discovery_id.replacen("discovery-", "agent-", 1),
                 discovery_id: agent.discovery_id.clone(),
                 fingerprint: agent.fingerprint.clone(),
-                provider: agent.provider.clone(),
+                agent_type: agent.agent_type.clone(),
                 name: agent.display_name.clone(),
                 alias: managed.and_then(|entry| entry.alias.clone()),
-                role: role_for_provider(&agent.provider),
+                role: role_for_agent_type(&agent.agent_type),
                 root_path: agent.root_path.clone(),
                 managed: managed.map(|entry| !entry.hidden).unwrap_or(false),
                 managed_agent_id: managed.map(|entry| entry.managed_agent_id.clone()),
@@ -141,7 +141,7 @@ fn merge_resolved_agents(
                 summary: if managed.is_some() {
                     format!("Imported {} into AgentDock management.", agent.display_name)
                 } else {
-                    discovered_summary(&agent.provider)
+                    discovered_summary(&agent.agent_type)
                 },
                 group_id: "assistant".into(),
                 resource_counts: agent.resource_counts.clone(),
@@ -153,7 +153,7 @@ fn merge_resolved_agents(
     for entry in managed_agents {
         let already_resolved = discovered_agents.iter().any(|agent| {
             entry.fingerprint == agent.fingerprint
-                || (entry.provider.as_deref() == Some(agent.provider.as_str())
+                || (entry.agent_type.as_deref() == Some(agent.agent_type.as_str())
                     && entry.root_path.as_deref() == Some(agent.root_path.as_str()))
         });
         if discovered_fingerprints.contains(entry.fingerprint.as_str()) || already_resolved {
@@ -187,7 +187,7 @@ fn scanned_candidates(
             ScannedAgentCandidateDto {
                 id: agent.discovery_id.replacen("discovery-", "candidate-", 1),
                 fingerprint: agent.fingerprint.clone(),
-                provider: agent.provider.clone(),
+                agent_type: agent.agent_type.clone(),
                 display_name: agent.display_name.clone(),
                 root_path: agent.root_path.clone(),
                 resource_counts: agent.resource_counts.clone(),
@@ -202,7 +202,7 @@ fn scanned_candidates(
 }
 
 fn discovered_agents_for_scan(scan_targets: Vec<ScanTargetDto>) -> Vec<DiscoveredAgentDto> {
-    provider_scanner::scan_discovered_agents(scan_targets)
+    agent_type_scanner::scan_discovered_agents(scan_targets)
 }
 
 pub fn list_managed_agents() -> Vec<ManagedAgentDto> {
@@ -279,7 +279,7 @@ pub fn import_agents(
                 hidden: false,
                 imported_at: agent.detected_at.clone(),
                 source: "auto-imported".into(),
-                provider: Some(agent.provider.clone()),
+                agent_type: Some(agent.agent_type.clone()),
                 root_path: Some(agent.root_path.clone()),
             });
             imported_fingerprints.push(agent.fingerprint.clone());
@@ -378,7 +378,7 @@ pub fn create_agent(draft: ManualAgentDraftDto) -> Result<CreateAgentResultDto, 
     } else {
         id_suffix
     };
-    let fingerprint = format!("{}-{}", draft.provider, id_suffix);
+    let fingerprint = format!("{}-{}", draft.agent_type, id_suffix);
     let managed_agent_id = format!("managed-{}", id_suffix);
 
     managed_agents.retain(|entry| entry.fingerprint != fingerprint);
@@ -390,7 +390,7 @@ pub fn create_agent(draft: ManualAgentDraftDto) -> Result<CreateAgentResultDto, 
         hidden: false,
         imported_at: "2026-03-25T10:30:00Z".into(),
         source: "manual-imported".into(),
-        provider: Some(draft.provider.clone()),
+        agent_type: Some(draft.agent_type.clone()),
         root_path: Some(draft.root_path.trim().into()),
     });
 

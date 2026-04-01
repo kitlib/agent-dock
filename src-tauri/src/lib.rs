@@ -7,12 +7,6 @@ mod services;
 
 use tauri::Manager;
 
-// Learn more about Tauri commands at https://tauri.app/develop/calling-rust/
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
-
 #[tauri::command]
 fn update_tray_menu(
     app: tauri::AppHandle,
@@ -37,7 +31,6 @@ pub fn run() {
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(plugins::system_tray::init())
         .invoke_handler(tauri::generate_handler![
-            greet,
             update_tray_menu,
             commands::agents::list_managed_agents,
             commands::agents::list_resolved_agents,

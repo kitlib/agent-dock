@@ -6,7 +6,7 @@ import {
   removeManagedAgent,
   scanAgents,
 } from "./api";
-import { agentMeta } from "./agent-meta";
+import { agentTypeMeta } from "./agent-meta";
 import type {
   AgentManagementCard,
   CreateAgentResult,
@@ -31,13 +31,13 @@ function inferScanState(managed: boolean, status: ResolvedAgentView["status"]) {
 }
 
 const defaultManualDraft: ManualAgentDraft = {
-  provider: "claude",
-  name: agentMeta.claude.name,
-  rootPath: agentMeta.claude.directory,
+  agentType: "claude",
+  name: agentTypeMeta.claude.name,
+  rootPath: agentTypeMeta.claude.directory,
 };
 
-const scanTargets: ScanTarget[] = Object.values(agentMeta).map((meta) => ({
-  agent: meta.id,
+const scanTargets: ScanTarget[] = Object.values(agentTypeMeta).map((meta) => ({
+  agentType: meta.agentType,
   name: meta.name,
   rootPath: meta.directory.replace(/\/$/, ""),
 }));
@@ -56,7 +56,7 @@ function createManualManagementCard(agent: ResolvedAgentView): AgentManagementCa
   return {
     id: agent.discoveryId || `candidate-${agent.id}`,
     fingerprint: agent.fingerprint,
-    provider: agent.provider,
+    agentType: agent.agentType,
     displayName: agent.alias ?? agent.name,
     rootPath: agent.rootPath,
     resourceCounts: agent.resourceCounts,
@@ -232,13 +232,13 @@ export function useAgentImport({
     value: ManualAgentDraft[K]
   ) => {
     setManualDraft((current: ManualAgentDraft) => {
-      if (field === "provider") {
-        const provider = value as ManualAgentDraft["provider"];
+      if (field === "agentType") {
+        const agentType = value as ManualAgentDraft["agentType"];
         return {
           ...current,
-          provider,
-          name: agentMeta[provider].name,
-          rootPath: agentMeta[provider].directory,
+          agentType,
+          name: agentTypeMeta[agentType].name,
+          rootPath: agentTypeMeta[agentType].directory,
         };
       }
 

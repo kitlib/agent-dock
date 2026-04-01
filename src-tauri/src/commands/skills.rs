@@ -11,7 +11,7 @@ pub fn list_local_skills(scan_targets: Vec<SkillScanTargetDto>) -> Result<Vec<Lo
         "[skills] list_local_skills command targets: {:?}",
         scan_targets
             .iter()
-            .map(|target| format!("{}|{}|{}", target.agent_id, target.provider, target.root_path))
+            .map(|target| format!("{}|{}|{}", target.agent_id, target.agent_type, target.root_path))
             .collect::<Vec<_>>()
     );
 
@@ -22,8 +22,8 @@ pub fn list_local_skills(scan_targets: Vec<SkillScanTargetDto>) -> Result<Vec<Lo
         skills
             .iter()
             .map(|skill| format!(
-                "{}|owner={}|provider={}|path={}",
-                skill.id, skill.owner_agent_id, skill.provider, skill.skill_path
+                "{}|owner={}|agentType={}|path={}",
+                skill.id, skill.owner_agent_id, skill.agent_type, skill.skill_path
             ))
             .collect::<Vec<_>>()
     );
@@ -41,15 +41,15 @@ pub fn get_local_skill_detail(
         skill_id,
         scan_targets
             .iter()
-            .map(|target| format!("{}|{}|{}", target.agent_id, target.provider, target.root_path))
+            .map(|target| format!("{}|{}|{}", target.agent_id, target.agent_type, target.root_path))
             .collect::<Vec<_>>()
     );
 
     let detail = skill_discovery_service::get_local_skill_detail(scan_targets, &skill_id)?;
 
     println!(
-        "[skills] get_local_skill_detail command result: {}|owner={}|provider={}|path={}",
-        detail.id, detail.owner_agent_id, detail.provider, detail.skill_path
+        "[skills] get_local_skill_detail command result: {}|owner={}|agentType={}|path={}",
+        detail.id, detail.owner_agent_id, detail.agent_type, detail.skill_path
     );
 
     Ok(detail)

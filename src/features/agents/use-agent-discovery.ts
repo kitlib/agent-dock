@@ -1,10 +1,10 @@
 import { useEffect, useState } from "react";
-import { agentMeta } from "./agent-meta";
+import { agentTypeMeta } from "./agent-meta";
 import { listManagedAgents, listResolvedAgents } from "./api";
 import type { AgentDiscoveryState, DiscoveredAgent, ManagedAgent, ResolvedAgentView } from "./types";
 
-const scanTargets = Object.values(agentMeta).map((meta) => ({
-  agent: meta.id,
+const scanTargets = Object.values(agentTypeMeta).map((meta) => ({
+  agentType: meta.agentType,
   name: meta.name,
   rootPath: meta.directory.replace(/\/$/, ""),
 }));
@@ -35,7 +35,7 @@ export function useAgentDiscovery() {
         const nextDiscovered = nextResolved.map((agent) => ({
           discoveryId: agent.discoveryId,
           fingerprint: agent.fingerprint,
-          provider: agent.provider,
+          agentType: agent.agentType,
           displayName: agent.name,
           rootPath: agent.rootPath,
           status: agent.status,

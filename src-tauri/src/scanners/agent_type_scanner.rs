@@ -4,7 +4,7 @@ use crate::dto::agents::{AgentResourceCountsDto, DiscoveredAgentDto, ScanTargetD
 
 #[derive(Clone)]
 pub struct AgentScanTarget {
-    pub agent: String,
+    pub agent_type: String,
     pub name: String,
     pub root_path: PathBuf,
 }
@@ -13,7 +13,7 @@ pub fn scan_targets_from_dto(scan_targets: Vec<ScanTargetDto>) -> Vec<AgentScanT
     scan_targets
         .into_iter()
         .map(|target| AgentScanTarget {
-            agent: target.agent,
+            agent_type: target.agent_type,
             name: target.name,
             root_path: PathBuf::from(target.root_path),
         })
@@ -137,7 +137,7 @@ fn agent_resource_counts(agent: &str, absolute_root: &Path) -> AgentResourceCoun
 }
 
 fn detect_status(target: &AgentScanTarget, absolute_root: &PathBuf) -> (String, Option<String>) {
-    if target.agent == "antigravity" {
+    if target.agent_type == "antigravity" {
         let workflows_path = absolute_root.join("workflows");
         if workflows_path.exists() {
             let unreadable_workflow = fs::read_dir(&workflows_path)
@@ -171,8 +171,8 @@ pub fn scan_discovered_agents(scan_targets: Vec<ScanTargetDto>) -> Vec<Discovere
             let absolute_root = base_dir.join(&target.root_path);
 
             println!(
-                "[agent-scan] checking agent={} baseDir={} root={} exists={}",
-                target.agent,
+                "[agent-scan] checking agentType={} baseDir={} root={} exists={}",
+                target.agent_type,
                 base_dir.display(),
                 absolute_root.display(),
                 absolute_root.exists()
@@ -185,20 +185,20 @@ pub fn scan_discovered_agents(scan_targets: Vec<ScanTargetDto>) -> Vec<Discovere
             let (status, reason) = detect_status(&target, &absolute_root);
 
             let agent = DiscoveredAgentDto {
-                discovery_id: format!("discovery-{}", target.agent),
-                fingerprint: agent_fingerprint(&target.agent),
-                provider: target.agent.clone(),
+                discovery_id: format!("discovery-{}", target.agent_type),
+                fingerprint: agent_fingerprint(&target.agent_type),
+                agent_type: target.agent_type.clone(),
                 display_name: target.name.clone(),
                 root_path: display_path(&target.root_path),
                 status,
                 reason,
-                resource_counts: agent_resource_counts(&target.agent, &absolute_root),
+                resource_counts: agent_resource_counts(&target.agent_type, &absolute_root),
                 detected_at: "2026-03-25T10:20:00Z".into(),
             };
 
             println!(
-                "[agent-scan] discovered agent={} status={} rootPath={} reason={}",
-                agent.provider,
+                "[agent-scan] discovered agentType={} status={} rootPath={} reason={}",
+                agent.agent_type,
                 agent.status,
                 agent.root_path,
                 agent.reason.as_deref().unwrap_or("<none>")
@@ -227,7 +227,7 @@ mod tests {
     }
 
     #[test]
-    fn build_skill_scan_root_matches_provider_layout() {
+    fn build_skill_scan_root_matches_agent_type_layout() {
         let claude_root = PathBuf::from("C:/Users/test/.claude");
         let pi_root = PathBuf::from("C:/Users/test/.pi");
 
@@ -243,7 +243,7 @@ mod tests {
 
     #[test]
     fn agent_resource_counts_counts_only_skill_directories_with_skill_md() {
-        let root = temp_dir("provider-scan");
+        let root = temp_dir("agent-type-scan");
         let skills_root = root.join("skills");
         let valid_skill = skills_root.join("release-checklist");
         let invalid_skill = skills_root.join("notes-only");
@@ -263,7 +263,7 @@ mod tests {
 
     #[test]
     fn agent_resource_counts_returns_zero_when_skills_root_missing() {
-        let root = temp_dir("provider-scan-missing");
+        let root = temp_dir("agent-type-scan-missing");
         fs::create_dir_all(&root).expect("create temp root");
 
         let counts = agent_resource_counts("claude", &root);
