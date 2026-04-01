@@ -2,251 +2,134 @@
 
 ## Project Overview
 
-Modern desktop application built with Tauri v2 + React 19 + TypeScript + shadcn/ui.
+AgentDock is a Tauri v2 desktop application for browsing, managing, and composing local AI tooling resources, with the current product focus on agent discovery, skill discovery, and workspace-oriented resource management.
 
 ## Architecture
 
 - **Frontend**: React 19 + TypeScript + Vite + Tailwind CSS v4 + shadcn/ui
-- **Backend**: Tauri v2 (Rust)
-- **Build**: pnpm + Vite + Cargo
+- **Backend**: Tauri v2 + Rust
+- **Tooling**: pnpm, Cargo, ESLint, Prettier
+- **Current Focus**: local agent management, skill discovery, resource catalog, desktop workspace flows
+
+## Repository Map
+
+```mermaid
+graph TD
+    Root[agent-dock]
+    Root --> Frontend[src/ Frontend module]
+    Root --> Backend[src-tauri/ Backend module]
+    Root --> Docs[docs/ Product and implementation docs]
+    Root --> Scripts[scripts/ Release and utility scripts]
+
+    Frontend --> Pages[pages/ Pathname-selected entry pages]
+    Frontend --> Features[features/ Domain feature modules]
+    Frontend --> Components[components/ Shared UI and wrappers]
+    Frontend --> I18n[i18n/ Locale resources]
+
+    Features --> Agents[features/agents]
+    Features --> Home[features/home]
+    Features --> Resources[features/resources]
+    Features --> Marketplace[features/marketplace]
+
+    Backend --> Commands[commands/ Tauri command surface]
+    Backend --> Dto[dto/ Shared command payloads]
+    Backend --> Scanners[scanners/ Local discovery scanners]
+    Backend --> Services[services/ Domain orchestration]
+    Backend --> Persistence[persistence/ Local managed state]
+    Backend --> Plugins[plugins/ Tauri plugins and tray]
+```
+
+已生成 Mermaid 结构图，便于快速理解根级结构与当前重点模块关系。
 
 ## Module Index
 
-| Module | Path | Tech Stack | Responsibility |
-|--------|------|------------|----------------|
-| Frontend | `src/` | TypeScript/React | UI, components, styles, i18n |
-| Backend | `src-tauri/` | Rust | System calls, native features |
-| Documentation | `docs/` | Markdown | Project guides and references |
+| Module | Path | Responsibility | Current Status |
+| --- | --- | --- | --- |
+| Frontend | `src/` | Desktop UI, feature flows, resource browsing, i18n | Active |
+| Backend | `src-tauri/` | Tauri commands, scanners, services, persistence, tray integration | Active |
+| Documentation | `docs/` | Product docs, implementation plans, development guides | Active |
 
-## Development
+## Current Development Focus
 
-### Prerequisites
+1. **Agent discovery and management**: discover local agents, import them into managed state, and render resolved agent views.
+2. **Skill discovery**: scan `skills/` folders under managed agent roots, expose summaries/details through Tauri commands, and surface them in the home workspace.
+3. **Workspace resource composition**: unify local skills, MCP resources, and subagents inside the home workspace resource browser.
+4. **Desktop shell behaviors**: maintain tray menu, updater gating, single-instance behavior, and global shortcut integration.
 
-- Node.js >= 18
-- pnpm >= 9
-- Rust >= 1.70
+## Entry Points
 
-### Commands
+- **Frontend entry**: `src/main.tsx`
+- **Frontend pages**: `src/pages/home.tsx`, `src/pages/about.tsx`, `src/pages/settings.tsx`
+- **Backend entry**: `src-tauri/src/main.rs`
+- **Backend runtime wiring**: `src-tauri/src/lib.rs`
+
+## Key Workflows
+
+### Frontend page selection
+
+`src/main.tsx` selects a page component from `window.location.pathname`, so route additions must update the page map instead of introducing a router implicitly.
+
+### Tauri command flow
+
+1. Define DTOs in `src-tauri/src/dto/`
+2. Implement orchestration in `src-tauri/src/services/`
+3. Implement scanning or persistence helpers in `src-tauri/src/scanners/` or `src-tauri/src/persistence/`
+4. Expose command handlers in `src-tauri/src/commands/`
+5. Register commands in `src-tauri/src/lib.rs`
+6. Invoke from `src/features/**/api.ts`
+
+### Resource workspace flow
+
+Managed agents are resolved first, then their `skills/` directories are transformed into skill scan targets and displayed alongside other local resource types in the home workspace.
+
+## Development Commands
 
 ```bash
-pnpm install        # Install dependencies
-pnpm tauri dev      # Start dev server
-pnpm tauri build    # Build for production
-pnpm format         # Format code
+pnpm install
+pnpm dev
+pnpm tauri dev
+pnpm build
+pnpm tauri build
+pnpm format
+pnpm lint
+pnpm check
 ```
 
-## Coding Standards
+## Collaboration Rules
 
-### TypeScript/React
+### Global coding rules
 
-- TypeScript strict mode
-- Function components with Hooks
-- Path alias: `@/` maps to `src/`
-- Format with Prettier
-- **Comments and logs MUST be in English only**
-- Keep code clean and minimal
+1. All comments, logs, and user-facing error strings added in code must stay in English.
+2. Keep implementations direct and minimal; avoid speculative abstraction.
+3. Prefer editing feature-layer code over modifying generated shadcn wrappers in `src/components/ui/`.
+4. Do not change source code under the guise of documentation updates.
 
-### Rust
+### Frontend rules
 
-- Follow Rust naming conventions
-- Use `#[tauri::command]` macro for Tauri commands
-- **Comments and logs MUST be in English only**
+- Use `@/` imports for files inside `src/`.
+- Keep domain logic inside `src/features/` before adding new top-level utility layers.
+- Reuse current workspace/resource patterns when extending home page capabilities.
+- Treat `src/components/ui/` as generated wrappers; adapt usage outside that directory.
 
-### Styling
+### Backend rules
 
-- Tailwind CSS v4
-- shadcn/ui component system
-- CSS variables for theming (light/dark mode)
+- Use `#[tauri::command]` for frontend-facing commands.
+- Keep command modules thin; move orchestration into services.
+- Keep file-system discovery in scanners and durable state in persistence.
+- When adding new command families, update `commands/mod.rs`, `dto/mod.rs`, `services/mod.rs`, `scanners/mod.rs`, and `src/lib.rs` together.
 
-### Code Quality Rules
+## Module Navigation
 
-1. **Language**: All comments, console logs, and error messages MUST be in English
-2. **Cleanliness**: Remove unnecessary code, avoid redundant implementations
-3. **Simplicity**: Follow KISS principle - keep implementations straightforward
+- Frontend details: `src/CLAUDE.md`
+- Backend details: `src-tauri/CLAUDE.md`
+- Product and implementation context: `docs/`
 
-## Key Conventions
+## Documentation Notes
 
-1. **Add Components**: `pnpm dlx shadcn@latest add <component>`
-2. **Path Alias**: Use `@/` prefix, e.g., `import { Button } from "@/components/ui/button"`
-3. **Tauri Commands**: Define in `src-tauri/src/lib.rs`, call with `invoke()`
-4. **shadcn/ui Components**: Do not modify files under `src/components/ui/`; adapt usage from feature/page code instead
-5. **shadcn Wrappers**: If a shadcn-generated wrapper under `src/components/ui/` does not match current library APIs, do not edit the wrapper directly. Fix compatibility in page/feature code or replace usage patterns outside `src/components/ui/`
+The `docs/` directory already contains implementation plans and development guides for subagents, MCP, skills, and local agent discovery. Prefer updating existing guides before adding new top-level docs.
 
-### Example: Tauri Command
+## Scope Boundaries for AI Assistance
 
-```typescript
-// Frontend
-import { invoke } from "@tauri-apps/api/core";
-const result = await invoke("command_name", { arg1: value });
-```
-
-```rust
-// Backend (src-tauri/src/lib.rs)
-#[tauri::command]
-fn command_name(arg1: &str) -> String {
-    format!("Result: {}", arg1)
-}
-```
-
----
-
-## Frontend Module (src)
-
-### Responsibilities
-
-UI rendering, interaction, and styling.
-
-### Entry Points
-
-- **Entry**: `src/main.tsx`
-- **Page Selector**: `src/main.tsx` lazily selects a page component based on `window.location.pathname`
-- **Pages**: `src/pages/home.tsx`, `src/pages/about.tsx`, `src/pages/settings.tsx`
-- **Build Tool**: Vite (`vite.config.ts`)
-
-### Key Dependencies
-
-- react@19.1.0, react-dom@19.1.0
-- @tauri-apps/api@2, @tauri-apps/plugin-opener@2
-- tailwindcss@4.2.1, shadcn/ui components
-- lucide-react@0.577.0 (icons)
-- i18next, react-i18next (internationalization)
-
-### Configuration
-
-- `tsconfig.json` - TypeScript config (strict mode)
-- `vite.config.ts` - Vite build config
-- `components.json` - shadcn/ui config
-- `src/i18n/index.ts` - i18n configuration
-
-### Internationalization
-
-The project uses i18next for multi-language support:
-
-```typescript
-// Usage in components
-import { useTranslation } from "react-i18next";
-
-function MyComponent() {
-  const { t, i18n } = useTranslation();
-
-  return (
-    <div>
-      <h1>{t("app.title")}</h1>
-      <button onClick={() => i18n.changeLanguage("zh")}>
-        Switch Language
-      </button>
-    </div>
-  );
-}
-```
-
-**Supported Languages**: English (en), Chinese (zh)
-
-**Translation Files**: `src/i18n/locales/{en,zh}.json`
-
-See [I18N Documentation](./docs/I18N.md) for detailed usage.
-
-### Toast Notifications
-
-The project uses sonner (via shadcn/ui) for toast notifications:
-
-```typescript
-// Import toast function
-import { toast } from "sonner";
-
-// Show success toast
-toast.success("Operation completed!");
-
-// Show error toast
-toast.error("Something went wrong!");
-
-// Show info toast
-toast.info("Information message");
-
-// Show warning toast
-toast.warning("Warning message");
-
-// With i18n support
-import { useTranslation } from "react-i18next";
-const { t } = useTranslation();
-toast.success(t("settings.shortcut.setSuccess", { shortcut: "Ctrl+Shift+A" }));
-```
-
-**Setup Requirements**:
-1. Add `<Toaster />` component to your page/app root
-2. Import from `@/components/ui/sonner`
-
-**Example**:
-```typescript
-import { Toaster } from "@/components/ui/sonner";
-
-export default function Settings() {
-  return (
-    <ThemeProvider>
-      <Toaster />
-      <SettingsContent />
-    </ThemeProvider>
-  );
-}
-```
-
-**Features**:
-- Auto-adapts to light/dark theme
-- Supports i18n with variable interpolation
-- Auto-dismisses after duration (default: 4s)
-- Customizable icons and styling
-
----
-
-## Backend Module (src-tauri)
-
-### Responsibilities
-
-System-level calls, native features, cross-platform desktop app wrapper.
-
-### Entry Points
-
-- **Entry**: `src-tauri/src/main.rs`
-- **App Logic**: `src-tauri/src/lib.rs`
-- **Build Config**: `Cargo.toml`
-
-### Commands
-
-| Command | Parameters | Returns | Description |
-|---------|------------|---------|-------------|
-| `greet` | `name: &str` | `String` | Example greeting command |
-
-### Key Dependencies
-
-- tauri@2 - Tauri framework
-- tauri-plugin-opener@2 - Open external links
-- serde@1, serde_json@1 - Serialization
-
-### Configuration
-
-- `tauri.conf.json` - Tauri app config
-- `capabilities/default.json` - Permissions config
-
-**Key Settings**:
-- Product: `AgentDock`
-- Identifier: `com.agentdock.app`
-- Window: 800x600
-- Dev Port: 1420
-
----
-
-## Documentation (docs)
-
-### Available Guides
-
-- **AUTO_UPDATE.md** - Tauri auto-update configuration and GitHub Actions setup
-- **I18N.md** - Internationalization guide (English)
-- **I18N.zh-CN.md** - 国际化指南（中文）
-
-### Adding Documentation
-
-When adding new features, create corresponding documentation:
-
-1. Create English version: `docs/FEATURE.md`
-2. Create Chinese version: `docs/FEATURE.zh-CN.md`
-3. Update README.md and README.zh-CN.md if needed
+- Root `CLAUDE.md` should stay concise and high-level.
+- Module-specific interfaces, files, and workflows belong in module-level `CLAUDE.md` files.
+- If a module evolves significantly, update the relevant local `CLAUDE.md` instead of overloading this root file.

@@ -4,153 +4,108 @@
 
 ## Responsibilities
 
-System-level calls, native features, and cross-platform desktop app wrapper. Built with Tauri v2 + Rust for secure, high-performance desktop applications.
+The backend owns Tauri runtime wiring, desktop plugins, local file-system discovery, durable managed agent state, and the command surface consumed by the React frontend.
 
 ## Entry Points
 
-- **Entry**: `src/main.rs`
-- **App Logic**: `src/lib.rs`
-- **Build Config**: `Cargo.toml`
+- **Binary entry**: `src/main.rs`
+- **Runtime wiring**: `src/lib.rs`
+- **Build manifest**: `Cargo.toml`
+- **Tauri config**: `tauri.conf.json`
+- **Permissions**: `capabilities/default.json`
+
+## Module Map
+
+| Module | Path | Responsibility |
+| --- | --- | --- |
+| Commands | `src/commands/` | Thin Tauri command handlers exposed to the frontend |
+| DTOs | `src/dto/` | Serializable request/response types shared across commands and services |
+| Scanners | `src/scanners/` | Local disk scanning for providers and skills |
+| Services | `src/services/` | Orchestration of discovery and detail lookup |
+| Persistence | `src/persistence/` | Managed agent storage and local durable state |
+| Plugins | `src/plugins/` | System tray and other runtime plugin integration |
+
+## Current Backend Focus
+
+1. Agent discovery and managed agent resolution.
+2. Skill discovery under managed agent roots.
+3. Tauri command exposure for agent and skill operations.
+4. Desktop shell integrations such as tray behavior, updater gating, and single-instance handling.
+
+## Important Files
+
+- `src/lib.rs` — plugin setup and command registration
+- `src/commands/agents.rs` — agent command handlers
+- `src/commands/skills.rs` — skill command handlers
+- `src/services/agent_discovery_service.rs` — resolved agent orchestration
+- `src/services/skill_discovery_service.rs` — local skill summary/detail orchestration
+- `src/scanners/provider_scanner.rs` — provider scan logic
+- `src/scanners/skill_scanner.rs` — skill metadata discovery from local folders
+- `src/persistence/managed_agents_store.rs` — durable managed-agent storage
+
+## Command Flow Pattern
+
+### Add or extend a command family
+
+1. Define serializable types in `src/dto/`.
+2. Implement scanner or persistence helpers as needed.
+3. Add orchestration in `src/services/`.
+4. Expose thin `#[tauri::command]` wrappers in `src/commands/`.
+5. Export the module from the relevant `mod.rs` files.
+6. Register commands in `src/lib.rs`.
+7. Keep command names aligned with frontend `invoke()` usage.
+
+### Current registered command groups
+
+- Core demo/system: `greet`, `update_tray_menu`
+- Agent management: `list_managed_agents`, `list_resolved_agents`, `scan_agents`, `import_agents`, `remove_managed_agent`, `delete_agent`, `create_agent`, `refresh_agent_discovery`
+- Skill discovery: `list_local_skills`, `get_local_skill_detail`
+
+## Dependency Notes
+
+Key backend crates currently include:
+
+- `tauri` with `tray-icon`
+- `tauri-plugin-opener`
+- `tauri-plugin-global-shortcut`
+- `tauri-plugin-single-instance`
+- `tauri-plugin-updater`
+- `serde`, `serde_json`, `serde_yaml`
+- `chrono`
+
+`serde_yaml` and `chrono` indicate local metadata parsing and timestamp handling in discovery flows, so keep DTOs and parsers consistent when extending scanner behavior.
+
+## Development Commands
 
 ```bash
-pnpm tauri dev   # Development build
-pnpm tauri build # Production build
+pnpm tauri dev
+pnpm tauri build
+cargo test --manifest-path src-tauri/Cargo.toml
+cargo check --manifest-path src-tauri/Cargo.toml
 ```
 
-## Commands
+## Backend Conventions
 
-| Command | Parameters | Returns | Description |
-|---------|------------|---------|-------------|
-| `greet` | `name: &str` | `String` | Example greeting command |
+- Keep `commands/` thin and free of business logic.
+- Put scan-time file-system traversal in `scanners/`.
+- Put multi-step orchestration and shaping in `services/`.
+- Put local durable state reads/writes in `persistence/`.
+- Update `mod.rs` exports whenever adding a new backend module.
+- Register every new frontend-facing command in `src/lib.rs` immediately.
+- Keep comments, logs, and user-facing strings in English.
 
-### Define Command
+## Safety and Scope
 
-```rust
-// src/lib.rs
-#[tauri::command]
-fn greet(name: &str) -> String {
-    format!("Hello, {}! You've been greeted from Rust!", name)
-}
-```
+- Avoid leaking raw filesystem assumptions into the frontend; expose typed DTOs instead.
+- Prefer returning structured DTOs over ad-hoc JSON strings.
+- If a new feature touches both scan logic and command exposure, verify scanner → service → command → frontend alignment before considering it done.
 
-### Call from Frontend
+## Verification Checklist
 
-```typescript
-import { invoke } from "@tauri-apps/api/core";
+Before finishing backend changes in this module, verify:
 
-const result = await invoke("greet", { name: "World" });
-// Returns: "Hello, World! You've been greeted from Rust!"
-```
-
-### Register Command
-
-```rust
-// src/lib.rs
-pub fn run() {
-    tauri::Builder::default()
-        .plugin(tauri_plugin_opener::init())
-        .invoke_handler(tauri::generate_handler![greet])
-        .run(tauri::generate_context!())
-        .expect("error while running tauri application");
-}
-```
-
-## Key Dependencies
-
-| Package | Version | Purpose |
-|---------|---------|---------|
-| tauri | 2 | Tauri framework core |
-| tauri-plugin-opener | 2 | Open external links |
-| serde | 1 | Serialization framework |
-| serde_json | 1 | JSON serialization |
-| tauri-build | 2 | Build scripts (dev) |
-
-## Configuration
-
-### tauri.conf.json
-
-```json
-{
-  "productName": "AgentDock",
-  "version": "0.1.0",
-  "identifier": "com.agentdock.app",
-  "build": {
-    "beforeDevCommand": "pnpm dev",
-    "devUrl": "http://localhost:1420",
-    "beforeBuildCommand": "pnpm build",
-    "frontendDist": "../dist"
-  }
-}
-```
-
-### capabilities/default.json
-
-```json
-{
-  "identifier": "default",
-  "windows": ["main"],
-  "permissions": ["core:default", "opener:default"]
-}
-```
-
-## Testing
-
-```bash
-cd src-tauri
-cargo test
-```
-
-## Common Tasks
-
-### Add New Command
-
-1. Define in `src/lib.rs`:
-```rust
-#[tauri::command]
-fn my_command(arg: &str) -> String {
-    format!("Result: {}", arg)
-}
-```
-
-2. Register:
-```rust
-.invoke_handler(tauri::generate_handler![greet, my_command])
-```
-
-### Add Plugin
-
-1. Add to `Cargo.toml`:
-```toml
-[dependencies]
-tauri-plugin-clipboard = "2"
-```
-
-2. Initialize:
-```rust
-.plugin(tauri_plugin_clipboard::init())
-```
-
-3. Update `capabilities/default.json`
-
-### Configure App Icons
-
-Icons in `icons/` directory:
-- `icon.png` - Base icon
-- `icon.ico` - Windows
-- `icon.icns` - macOS
-- Various PNG sizes for different platforms
-
-## File Structure
-
-```
-src-tauri/
-├── Cargo.toml           # Rust dependencies
-├── tauri.conf.json      # Tauri app config
-├── build.rs             # Build script
-├── src/
-│   ├── main.rs          # Entry point
-│   └── lib.rs           # App logic & commands
-├── capabilities/
-│   └── default.json     # Permissions
-└── icons/               # App icons
-```
+1. New modules are exported from the corresponding `mod.rs` files.
+2. Commands are registered in `src/lib.rs`.
+3. DTOs serialize cleanly for Tauri.
+4. Rust checks pass for the backend crate.
+5. Frontend invoke names still match backend command names.

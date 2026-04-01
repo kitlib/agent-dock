@@ -4,133 +4,98 @@
 
 ## Responsibilities
 
-UI rendering, interaction, and styling. Built with React 19 + TypeScript + Tailwind CSS v4 + shadcn/ui.
+The frontend renders the desktop experience for browsing agents and local resources, selecting workspace context, and presenting detailed views for skills, MCP entries, and subagents.
 
 ## Entry Points
 
-- **Entry**: `main.tsx`
-- **Page Selector**: `main.tsx` maps pathname values to lazily loaded page components
+- **App bootstrap**: `main.tsx`
+- **Page selection**: `main.tsx` maps pathname values to lazily loaded page components
 - **Pages**: `pages/home.tsx`, `pages/about.tsx`, `pages/settings.tsx`
-- **Build Tool**: Vite 7
-- **Dev Port**: 1420
+- **Styling entry**: `index.css`
+- **I18n bootstrap**: `i18n/index.ts`
+
+## Key Feature Areas
+
+| Area | Path | Responsibility |
+| --- | --- | --- |
+| Agent APIs and types | `features/agents/` | Tauri invoke wrappers, scan target models, resolved agent/resource types |
+| Home workspace | `features/home/` | Workspace state, selection, filtering, loading local skills, resource composition |
+| Resource catalog | `features/resources/` | Local resource definitions, discovery shaping, details presentation |
+| Marketplace mocks | `features/marketplace/` | Mock marketplace items and install state scaffolding |
+| Shared UI | `components/` | Page-level and shared React UI; `components/ui/` is shadcn-generated |
+
+## Current Frontend Focus
+
+1. Resolve managed agents into workspace rails and selection state.
+2. Convert managed agent roots into skill scan targets by appending `/skills`.
+3. Fetch local skill summaries and details through Tauri APIs.
+4. Merge local skills with cataloged MCP/subagent resources in the home workspace.
+
+## Important Files
+
+- `main.tsx` — top-level pathname-to-page mapping
+- `features/home/use-home-workspace.ts` — central workspace state and local skill loading flow
+- `features/agents/api.ts` — Tauri invoke wrappers for agents and skills
+- `features/agents/types.ts` — shared frontend data contracts
+- `features/resources/core/resource-catalog.ts` — built-in local MCP/subagent resource definitions
+- `features/resources/core/components/resource-detail.tsx` — resource detail rendering
+
+## Data Flow
+
+1. Home workspace loads resolved agents.
+2. Managed, visible agents become skill scan targets.
+3. `features/agents/api.ts` calls `list_local_skills` / `get_local_skill_detail`.
+4. Returned skills are normalized into `SkillResource` records.
+5. Resource discovery utilities merge local skills with other resource kinds for browse/add flows.
+
+## Development Commands
 
 ```bash
-pnpm dev        # Frontend dev server only
-pnpm tauri dev  # Full Tauri app development
+pnpm dev
+pnpm tauri dev
+pnpm format
+pnpm format:check
+pnpm lint
+pnpm check
 ```
 
-## Key Dependencies
+## Frontend Conventions
 
-| Package | Version | Purpose |
-|---------|---------|---------|
-| react | ^19.1.0 | UI framework |
-| @tauri-apps/api | ^2 | Tauri frontend API |
-| tailwindcss | ^4.2.1 | CSS framework |
-| lucide-react | ^0.577.0 | Icon library |
-| i18next | ^24.2.2 | Internationalization core |
-| react-i18next | ^16.2.0 | React i18n integration |
-| typescript | ~5.8.3 | TypeScript compiler |
-| vite | ^7.0.4 | Build tool |
-| prettier | ^3.8.1 | Code formatter |
+- Use `@/` imports for all internal frontend modules.
+- Keep page orchestration in `pages/` and feature logic in `features/`.
+- Prefer colocating feature hooks, typed models, and presentation helpers within the feature directory.
+- Do not edit generated wrappers under `components/ui/`; change consuming code instead.
+- Keep search/filter/sort logic in feature utilities or hooks, not inline in page JSX.
 
-## Configuration
+## Extension Guidelines
 
-- `../tsconfig.json` - TypeScript strict mode
-- `../vite.config.ts` - Vite build config with `@/` alias
-- `../components.json` - shadcn/ui config
-- `i18n/index.ts` - i18next configuration
+### Add a new Tauri-backed frontend capability
 
-### Path Alias
+1. Add or update the corresponding invoke wrapper in `features/agents/api.ts` or a domain-specific API module.
+2. Extend shared types in the relevant `features/**/types.ts` file.
+3. Load data inside a feature hook rather than directly in a page component.
+4. Keep transformation logic near the consumer hook.
 
-```typescript
-// Configured in tsconfig.json
-"@/*": ["./src/*"]
+### Add a new page
 
-// Usage
-import { Button } from "@/components/ui/button";
-import { cn } from "@/lib/utils";
-```
+1. Create `pages/<name>.tsx`.
+2. Add a lazy import in `main.tsx`.
+3. Register the pathname in `pageMap`.
+4. Ensure page-level providers like toaster/theme remain wired correctly.
 
-### Internationalization
+### Add a new resource kind
 
-```typescript
-// Usage in components
-import { useTranslation } from "react-i18next";
+1. Extend the `ResourceKind` union and related view models.
+2. Update `resourcesByKind` and discovery utilities.
+3. Add kind-specific rendering in the resource detail and list UI.
+4. Keep label/search/sort behavior aligned with existing resource kinds.
 
-function MyComponent() {
-  const { t, i18n } = useTranslation();
+## Testing and Verification
 
-  return (
-    <div>
-      <h1>{t("app.title")}</h1>
-      <button onClick={() => i18n.changeLanguage("zh")}>
-        {t("language.toggle")}
-      </button>
-    </div>
-  );
-}
-```
+There are currently formatting, lint, and build checks exposed from the root package scripts. Prefer `pnpm check` before claiming frontend work complete.
 
-**Supported Languages**: English (en), Chinese (zh)
+## Boundaries
 
-**Translation Files**: `i18n/locales/{en,zh}.json`
-
-See [I18N Documentation](../docs/I18N.md) for detailed usage.
-
-## Tauri API Usage
-
-```typescript
-import { invoke } from "@tauri-apps/api/core";
-
-const result = await invoke("greet", { name: "World" });
-// Returns: "Hello, World! You've been greeted from Rust!"
-```
-
-## Code Quality
-
-```bash
-pnpm format        # Format code
-pnpm format:check  # Check formatting
-```
-
-## Common Tasks
-
-### Add shadcn/ui Components
-
-```bash
-pnpm dlx shadcn@latest add button
-pnpm dlx shadcn@latest add input
-pnpm dlx shadcn@latest add dialog
-```
-
-### Add Routing
-
-1. Create a page component under `src/pages/`
-2. Add a lazy import for the page in `src/main.tsx`
-3. Register the pathname-to-page mapping in `pageMap` inside `src/main.tsx`
-
-## File Structure
-
-```
-src/
-├── main.tsx          # Entry point and pathname-based page selector
-├── index.css         # Global styles + Tailwind theme
-├── vite-env.d.ts     # Vite type declarations
-├── assets/           # Static assets
-├── components/       # React components
-│   ├── ui/          # shadcn/ui components
-│   ├── language-toggle.tsx
-│   ├── mode-toggle.tsx
-│   └── ...
-├── i18n/            # Internationalization
-│   ├── index.ts     # i18n configuration
-│   └── locales/     # Translation files
-│       ├── en.json
-│       └── zh.json
-├── lib/             # Utility functions
-│   └── utils.ts
-└── pages/           # Page components
-    ├── home.tsx
-    ├── about.tsx
-    └── settings.tsx
-```
+- Frontend state should not infer backend file layout beyond explicit API contracts.
+- Discovery logic that touches the file system belongs in Rust scanners/services, not in React hooks.
+- Hardcoded mock resources are acceptable only for marketplace/local catalog placeholders, not for managed agent or local skill data.
