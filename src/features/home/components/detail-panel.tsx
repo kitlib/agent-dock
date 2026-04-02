@@ -12,6 +12,26 @@ function compactHomePath(path: string | undefined) {
   return path.replace(/^[A-Za-z]:[\\/]Users[\\/][^\\/]+/i, "~");
 }
 
+function getSkillTitle(selectedResource: AgentDiscoveryItem | null) {
+  if (!selectedResource || selectedResource.kind !== "skill" || selectedResource.origin !== "local") {
+    return selectedResource?.name;
+  }
+
+  return (
+    selectedResource.frontmatter?.name?.toString() ??
+    selectedResource.frontmatter?.title?.toString() ??
+    selectedResource.name
+  );
+}
+
+function getOpenPath(selectedResource: AgentDiscoveryItem | null) {
+  if (!selectedResource || selectedResource.kind !== "skill" || selectedResource.origin !== "local") {
+    return "";
+  }
+
+  return selectedResource.entryFilePath ?? selectedResource.skillPath ?? "";
+}
+
 type AgentDetailPanelProps = {
   emptyDescription?: string;
   emptyTitle?: string;
@@ -33,11 +53,13 @@ export function AgentDetailPanel({
   selectedResource,
   t,
 }: AgentDetailPanelProps) {
+  const openPath = getOpenPath(selectedResource);
+
   return (
     <div className="bg-muted/20 flex h-full min-w-0 flex-col overflow-hidden">
       <div className="border-b p-4">
         <div className="text-lg font-semibold break-words">
-          {selectedResource?.name ??
+          {getSkillTitle(selectedResource) ??
             selectedAgent?.alias ??
             selectedAgent?.name ??
             emptyTitle ??
@@ -65,9 +87,9 @@ export function AgentDetailPanel({
               <button
                 type="button"
                 className="bg-muted hover:bg-accent hover:text-accent-foreground cursor-pointer rounded px-2 py-1 break-all transition-colors"
-                onClick={() => onOpenSkillFolder(selectedResource.skillPath ?? "")}
+                onClick={() => onOpenSkillFolder(openPath)}
               >
-                {compactHomePath(selectedResource.skillPath)}
+                {compactHomePath(openPath)}
               </button>
             ) : null}
           </div>

@@ -7,6 +7,9 @@ use crate::dto::skills::{
     LocalSkillDetailDto, LocalSkillSummaryDto, SkillScanTargetDto, SkillSupportingFileDto,
 };
 
+const COMMANDS_SOURCE: &str = "commands";
+const SKILL_ENTRY_FILE: &str = "SKILL.md";
+
 #[derive(Clone)]
 pub struct ParsedSkill {
     pub summary: LocalSkillSummaryDto,
@@ -17,8 +20,8 @@ fn normalize_path(path: &Path) -> String {
     path.to_string_lossy().replace('\\', "/")
 }
 
-fn skill_id(agent_id: &str, skill_dir_name: &str) -> String {
-    format!("{agent_id}::{skill_dir_name}")
+fn skill_id(agent_id: &str, skill_name: &str, source: &str) -> String {
+    format!("{agent_id}::{source}::{skill_name}")
 }
 
 fn split_frontmatter(contents: &str) -> (Option<String>, String) {
@@ -77,14 +80,78 @@ fn name_from_frontmatter(frontmatter: Option<&Value>, fallback: &str) -> String 
         .and_then(|value| value.get("name").or_else(|| value.get("title")))
         .and_then(|value| value.as_str())
         .map(str::to_string)
-        .unwrap_or_else(|| fallback.replace('-', " "))
+        .unwrap_or_else(|| fallback.to_string())
 }
 
-fn description_from_frontmatter(frontmatter: Option<&Value>, fallback: &str) -> String {
+fn description_from_frontmatter(frontmatter: Option<&Value>) -> Option<String> {
     frontmatter
         .and_then(|value| value.get("description"))
         .and_then(|value| value.as_str())
         .map(str::to_string)
+}
+
+fn description_from_frontmatter_raw(frontmatter_raw: Option<&str>) -> Option<String> {
+    let mut lines = frontmatter_raw?.lines().peekable();
+
+    while let Some(line) = lines.next() {
+        let trimmed = line.trim();
+        if trimmed.is_empty() || line != trimmed {
+            continue;
+        }
+
+        let Some(raw_value) = trimmed.strip_prefix("description:") else {
+            continue;
+        };
+
+        let value = raw_value.trim();
+        if value.is_empty() {
+            return None;
+        }
+
+        if matches!(value, "|" | ">" | "|-" | ">-" | "|+" | ">+") {
+            let mut block_lines = Vec::new();
+
+            while let Some(next_line) = lines.peek() {
+                if next_line.trim().is_empty() {
+                    block_lines.push(String::new());
+                    lines.next();
+                    continue;
+                }
+
+                if next_line.trim_start() == *next_line {
+                    break;
+                }
+
+                block_lines.push(next_line.trim().to_string());
+                lines.next();
+            }
+
+            let block_text = if value.starts_with('>') {
+                block_lines.join(" ")
+            } else {
+                block_lines.join("\n")
+            };
+            let normalized = block_text.trim().to_string();
+            return (!normalized.is_empty()).then_some(normalized);
+        }
+
+        let normalized = value
+            .trim_matches(|character| matches!(character, '"' | '\''))
+            .trim()
+            .to_string();
+        return (!normalized.is_empty()).then_some(normalized);
+    }
+
+    None
+}
+
+fn resolved_description(
+    frontmatter: Option<&Value>,
+    frontmatter_raw: Option<&str>,
+    fallback: &str,
+) -> String {
+    description_from_frontmatter(frontmatter)
+        .or_else(|| description_from_frontmatter_raw(frontmatter_raw))
         .unwrap_or_else(|| fallback.to_string())
 }
 
@@ -97,8 +164,8 @@ fn updated_at(path: &Path) -> String {
         .unwrap_or_else(|| Utc::now().format("%Y-%m-%d").to_string())
 }
 
-fn supporting_files(skill_dir: &Path) -> Vec<SkillSupportingFileDto> {
-    let Ok(entries) = fs::read_dir(skill_dir) else {
+fn supporting_files(path: &Path, entry_file_name: &str) -> Vec<SkillSupportingFileDto> {
+    let Ok(entries) = fs::read_dir(path) else {
         return Vec::new();
     };
 
@@ -109,7 +176,7 @@ fn supporting_files(skill_dir: &Path) -> Vec<SkillSupportingFileDto> {
             if !path.is_file() {
                 return None;
             }
-            if path.file_name().and_then(|name| name.to_str()) == Some("SKILL.md") {
+            if path.file_name().and_then(|name| name.to_str()) == Some(entry_file_name) {
                 return None;
             }
             Some(SkillSupportingFileDto {
@@ -144,14 +211,32 @@ fn resolve_scan_root(root_path: &str) -> PathBuf {
     user_home_dir().join(path)
 }
 
-fn parse_skill(scan_target: &SkillScanTargetDto, skill_dir: PathBuf) -> Option<ParsedSkill> {
-    let entry_file = skill_dir.join("SKILL.md");
+fn command_name(scan_root: &Path, entry_file: &Path) -> Option<String> {
+    let relative_path = entry_file.strip_prefix(scan_root).ok()?;
+    let without_extension = relative_path.with_extension("");
+    Some(normalize_path(&without_extension))
+}
+
+fn display_name_from_path(path: &str) -> String {
+    path.replace('/', ":")
+}
+
+fn parse_skill(
+    scan_target: &SkillScanTargetDto,
+    scan_root: &Path,
+    skill_path: PathBuf,
+    entry_file: PathBuf,
+) -> Option<ParsedSkill> {
     if !entry_file.exists() {
         return None;
     }
 
-    let skill_dir_name = skill_dir.file_name()?.to_string_lossy().to_string();
-    let id = skill_id(&scan_target.agent_id, &skill_dir_name);
+    let skill_name = if scan_target.source == COMMANDS_SOURCE {
+        command_name(scan_root, &entry_file)?
+    } else {
+        skill_path.file_name()?.to_string_lossy().to_string()
+    };
+    let id = skill_id(&scan_target.agent_id, &skill_name, &scan_target.source);
     let updated_at = updated_at(&entry_file);
     let mut warnings = Vec::new();
     let mut errors = Vec::new();
@@ -173,8 +258,17 @@ fn parse_skill(scan_target: &SkillScanTargetDto, skill_dir: PathBuf) -> Option<P
     }
 
     let summary_text = summary_from_markdown(&markdown);
-    let name = name_from_frontmatter(frontmatter.as_ref(), &skill_dir_name);
-    let description = description_from_frontmatter(frontmatter.as_ref(), &summary_text);
+    let fallback_name = if scan_target.source == COMMANDS_SOURCE {
+        display_name_from_path(&skill_name)
+    } else {
+        skill_name.clone()
+    };
+    let name = name_from_frontmatter(frontmatter.as_ref(), &fallback_name);
+    let description = resolved_description(
+        frontmatter.as_ref(),
+        frontmatter_raw.as_deref(),
+        &summary_text,
+    );
     let tags = tags_from_frontmatter(frontmatter.as_ref());
     let allowed_tools = allowed_tools_from_frontmatter(frontmatter.as_ref());
     let status = if errors.is_empty() {
@@ -197,7 +291,7 @@ fn parse_skill(scan_target: &SkillScanTargetDto, skill_dir: PathBuf) -> Option<P
         source_label: format!("{} local", scan_target.display_name),
         description: description.clone(),
         status: status.clone(),
-        skill_path: normalize_path(&skill_dir),
+        skill_path: normalize_path(&skill_path),
         entry_file_path: normalize_path(&entry_file),
         agent_type: scan_target.agent_type.clone(),
         agent_name: scan_target.display_name.clone(),
@@ -219,7 +313,7 @@ fn parse_skill(scan_target: &SkillScanTargetDto, skill_dir: PathBuf) -> Option<P
         owner_agent_id: scan_target.agent_id.clone(),
         source_label: format!("{} local", scan_target.display_name),
         status,
-        skill_path: normalize_path(&skill_dir),
+        skill_path: normalize_path(&skill_path),
         entry_file_path: normalize_path(&entry_file),
         agent_type: scan_target.agent_type.clone(),
         agent_name: scan_target.display_name.clone(),
@@ -227,23 +321,54 @@ fn parse_skill(scan_target: &SkillScanTargetDto, skill_dir: PathBuf) -> Option<P
         errors,
         frontmatter,
         frontmatter_raw,
-        supporting_files: supporting_files(&skill_dir),
+        supporting_files: supporting_files(&skill_path, entry_file.file_name()?.to_str()?),
         allowed_tools,
     };
 
     Some(ParsedSkill { summary, detail })
 }
 
+fn collect_command_markdown_files(scan_root: &Path) -> Vec<PathBuf> {
+    let Ok(entries) = fs::read_dir(scan_root) else {
+        return Vec::new();
+    };
+
+    let mut files = Vec::new();
+    for entry in entries.filter_map(Result::ok) {
+        let path = entry.path();
+        if path.is_dir() {
+            files.extend(collect_command_markdown_files(&path));
+            continue;
+        }
+
+        if path.is_file() && path.extension().and_then(|extension| extension.to_str()) == Some("md") {
+            files.push(path);
+        }
+    }
+
+    files.sort();
+    files
+}
+
 pub fn scan_skills(scan_targets: Vec<SkillScanTargetDto>) -> Vec<ParsedSkill> {
     let mut parsed_skills = Vec::new();
 
     for scan_target in scan_targets {
-        let skills_root = resolve_scan_root(&scan_target.root_path);
-        if !skills_root.exists() || !skills_root.is_dir() {
+        let scan_root = resolve_scan_root(&scan_target.root_path);
+        if !scan_root.exists() || !scan_root.is_dir() {
             continue;
         }
 
-        let Ok(entries) = fs::read_dir(&skills_root) else {
+        if scan_target.source == COMMANDS_SOURCE {
+            for path in collect_command_markdown_files(&scan_root) {
+                if let Some(skill) = parse_skill(&scan_target, &scan_root, path.clone(), path) {
+                    parsed_skills.push(skill);
+                }
+            }
+            continue;
+        }
+
+        let Ok(entries) = fs::read_dir(&scan_root) else {
             continue;
         };
 
@@ -252,7 +377,8 @@ pub fn scan_skills(scan_targets: Vec<SkillScanTargetDto>) -> Vec<ParsedSkill> {
             if !path.is_dir() {
                 continue;
             }
-            if let Some(skill) = parse_skill(&scan_target, path) {
+
+            if let Some(skill) = parse_skill(&scan_target, &scan_root, path.clone(), path.join(SKILL_ENTRY_FILE)) {
                 parsed_skills.push(skill);
             }
         }
@@ -264,7 +390,7 @@ pub fn scan_skills(scan_targets: Vec<SkillScanTargetDto>) -> Vec<ParsedSkill> {
 
 #[cfg(test)]
 mod tests {
-    use super::{resolve_scan_root, scan_skills};
+    use super::{resolve_scan_root, scan_skills, COMMANDS_SOURCE};
     use crate::dto::skills::SkillScanTargetDto;
     use std::{env, fs, path::PathBuf, time::{SystemTime, UNIX_EPOCH}};
 
@@ -274,6 +400,29 @@ mod tests {
             .expect("system time before unix epoch")
             .as_nanos();
         std::env::temp_dir().join(format!("agent-dock-{name}-{unique}"))
+    }
+
+    fn write_skill(skill_dir: &PathBuf, contents: &str) {
+        fs::create_dir_all(skill_dir).expect("create skill dir");
+        fs::write(skill_dir.join("SKILL.md"), contents).expect("write skill markdown");
+    }
+
+    fn scan_test_skill(skill_name: &str, contents: &str) -> crate::scanners::skill_scanner::ParsedSkill {
+        let root = temp_dir(skill_name);
+        let skill_dir = root.join(skill_name);
+        write_skill(&skill_dir, contents);
+
+        let mut skills = scan_skills(vec![SkillScanTargetDto {
+            agent_id: "agent-claude".into(),
+            agent_type: "claude".into(),
+            root_path: root.to_string_lossy().to_string(),
+            display_name: "Claude Main".into(),
+            source: "skills".into(),
+        }]);
+
+        let skill = skills.pop().expect("skill should be parsed");
+        fs::remove_dir_all(&root).expect("cleanup temp dir");
+        skill
     }
 
     #[test]
@@ -318,6 +467,7 @@ mod tests {
             agent_type: "claude".into(),
             root_path: "~/.claude/skills".into(),
             display_name: "Claude Main".into(),
+            source: "skills".into(),
         }]);
 
         if let Some(value) = previous_userprofile {
@@ -333,26 +483,29 @@ mod tests {
         ids.sort();
 
         assert_eq!(ids, vec![
-            "agent-claude::find-skills".to_string(),
-            "agent-claude::peon-ping-log".to_string(),
+            "agent-claude::skills::find-skills".to_string(),
+            "agent-claude::skills::peon-ping-log".to_string(),
         ]);
 
         fs::remove_dir_all(&home).expect("cleanup temp dir");
     }
 
     #[test]
-    fn scan_skills_reads_windows_claude_home_skill_directory_from_relative_root() {
-        let home = temp_dir("claude-home");
-        let skills_root = home.join(".claude").join("skills");
-        let first_skill = skills_root.join("find-skills");
-        let second_skill = skills_root.join("peon-ping-log");
+    fn scan_skills_reads_claude_commands_markdown_files_from_tilde_root() {
+        let home = temp_dir("claude-commands-tilde");
+        let commands_root = home.join(".claude").join("commands");
 
-        fs::create_dir_all(&first_skill).expect("create first skill dir");
-        fs::create_dir_all(&second_skill).expect("create second skill dir");
-        fs::write(first_skill.join("SKILL.md"), "# Find skills\nLocate local skills.")
-            .expect("write first skill markdown");
-        fs::write(second_skill.join("SKILL.md"), "# Peon ping log\nInspect ping logs.")
-            .expect("write second skill markdown");
+        fs::create_dir_all(&commands_root).expect("create commands dir");
+        fs::write(
+            commands_root.join("feat.md"),
+            "---\nname: Feature command\ndescription: Command description\n---\n\n# Feature command\n\nRun feature flow.\n",
+        )
+        .expect("write command markdown");
+        fs::write(
+            commands_root.join("workflow.md"),
+            "# Workflow\n\nRun workflow.",
+        )
+        .expect("write workflow markdown");
 
         let previous_userprofile = env::var_os("USERPROFILE");
         env::set_var("USERPROFILE", &home);
@@ -360,8 +513,9 @@ mod tests {
         let skills = scan_skills(vec![SkillScanTargetDto {
             agent_id: "agent-claude".into(),
             agent_type: "claude".into(),
-            root_path: ".claude/skills".into(),
+            root_path: "~/.claude/commands".into(),
             display_name: "Claude Main".into(),
+            source: COMMANDS_SOURCE.into(),
         }]);
 
         if let Some(value) = previous_userprofile {
@@ -377,12 +531,102 @@ mod tests {
         ids.sort();
 
         assert_eq!(ids, vec![
-            "agent-claude::find-skills".to_string(),
-            "agent-claude::peon-ping-log".to_string(),
+            "agent-claude::commands::feat".to_string(),
+            "agent-claude::commands::workflow".to_string(),
         ]);
-        assert!(skills.iter().all(|skill| skill.summary.owner_agent_id == "agent-claude"));
-        assert!(skills.iter().all(|skill| skill.summary.skill_path.contains("/.claude/skills/")));
+        assert!(skills.iter().all(|skill| skill.summary.kind == "skill"));
+        assert!(skills.iter().all(|skill| skill.detail.entry_file_path.ends_with(".md")));
 
         fs::remove_dir_all(&home).expect("cleanup temp dir");
     }
+    #[test]
+    fn scan_skills_reads_nested_claude_commands_markdown_files_from_tilde_root() {
+        let home = temp_dir("claude-commands-nested-tilde");
+        let nested_commands_root = home.join(".claude").join("commands").join("zcf");
+
+        fs::create_dir_all(&nested_commands_root).expect("create nested commands dir");
+        fs::write(nested_commands_root.join("feat.md"), "# Feat\n\nNested command.")
+            .expect("write nested feat markdown");
+        fs::write(nested_commands_root.join("workflow.md"), "# Workflow\n\nNested workflow.")
+            .expect("write nested workflow markdown");
+
+        let previous_userprofile = env::var_os("USERPROFILE");
+        env::set_var("USERPROFILE", &home);
+
+        let skills = scan_skills(vec![SkillScanTargetDto {
+            agent_id: "agent-claude".into(),
+            agent_type: "claude".into(),
+            root_path: "~/.claude/commands".into(),
+            display_name: "Claude Main".into(),
+            source: COMMANDS_SOURCE.into(),
+        }]);
+
+        if let Some(value) = previous_userprofile {
+            env::set_var("USERPROFILE", value);
+        } else {
+            env::remove_var("USERPROFILE");
+        }
+
+        let mut ids = skills
+            .iter()
+            .map(|skill| skill.summary.id.clone())
+            .collect::<Vec<_>>();
+        ids.sort();
+
+        assert_eq!(ids, vec![
+            "agent-claude::commands::zcf/feat".to_string(),
+            "agent-claude::commands::zcf/workflow".to_string(),
+        ]);
+
+        fs::remove_dir_all(&home).expect("cleanup temp dir");
+    }
+
+    #[test]
+    fn scan_skills_uses_frontmatter_description_when_yaml_is_valid() {
+        let skill = scan_test_skill(
+            "valid-frontmatter-skill",
+            "---\nname: Valid frontmatter skill\ndescription: \"Description from frontmatter\"\n---\n\n# Heading\n\nSummary from markdown.\n",
+        );
+
+        assert_eq!(skill.detail.description, "Description from frontmatter");
+        assert_eq!(skill.summary.description, "Description from frontmatter");
+        assert!(skill.detail.warnings.is_empty());
+    }
+
+    #[test]
+    fn scan_skills_recovers_single_line_description_from_invalid_yaml() {
+        let skill = scan_test_skill(
+            "invalid-frontmatter-single-line",
+            "---\nname: invalid-frontmatter-single-line\ndescription: A股实时行情与分时量能分析。Use when: 查询实时行情\n---\n\n# Heading\n\nSummary from markdown.\n",
+        );
+
+        assert_eq!(skill.detail.description, "A股实时行情与分时量能分析。Use when: 查询实时行情");
+        assert_eq!(skill.summary.description, "A股实时行情与分时量能分析。Use when: 查询实时行情");
+        assert!(skill.detail.warnings.iter().any(|warning| warning == "Failed to parse frontmatter."));
+    }
+
+    #[test]
+    fn scan_skills_recovers_block_description_from_invalid_yaml() {
+        let skill = scan_test_skill(
+            "invalid-frontmatter-block",
+            "---\nname: invalid-frontmatter-block\ndescription: >\n  第一行描述。\n  第二行描述。\nbad: [oops\n---\n\n# Heading\n\nSummary from markdown.\n",
+        );
+
+        assert_eq!(skill.detail.description, "第一行描述。 第二行描述。");
+        assert_eq!(skill.summary.description, "第一行描述。 第二行描述。");
+        assert!(skill.detail.warnings.iter().any(|warning| warning == "Failed to parse frontmatter."));
+    }
+
+    #[test]
+    fn scan_skills_falls_back_to_summary_when_description_cannot_be_recovered() {
+        let skill = scan_test_skill(
+            "invalid-frontmatter-no-description",
+            "---\nname: invalid-frontmatter-no-description\ntags: [oops\n---\n\n# Heading\n\nSummary from markdown.\n",
+        );
+
+        assert_eq!(skill.detail.description, "Summary from markdown.");
+        assert_eq!(skill.summary.description, "Summary from markdown.");
+        assert!(skill.detail.warnings.iter().any(|warning| warning == "Failed to parse frontmatter."));
+    }
+
 }

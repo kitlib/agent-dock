@@ -17,6 +17,12 @@ import { AgentDetailPanel } from "@/features/home/components/detail-panel";
 
 const SHORTCUT_KEY = "global-shortcut-show-main";
 
+async function registerMainWindowShortcut(shortcut: string) {
+  await registerShortcut(shortcut, async () => {
+    await toggleWindow("main");
+  });
+}
+
 export default function HomePage() {
   const { t } = useAppTranslation();
   const {
@@ -74,9 +80,7 @@ export default function HomePage() {
         console.log("Shortcut changed event received:", event.payload.shortcut);
         const newShortcut = event.payload.shortcut;
         if (newShortcut) {
-          await registerShortcut(newShortcut, async () => {
-            await toggleWindow("main");
-          });
+          await registerMainWindowShortcut(newShortcut);
         }
       }
     );
@@ -93,15 +97,13 @@ export default function HomePage() {
     };
     initTrayMenu();
 
-    const initShortcut = async () => {
+    async function initShortcut() {
       const savedShortcut = localStorage.getItem(SHORTCUT_KEY);
       if (savedShortcut) {
         console.log("Registering saved shortcut:", savedShortcut);
-        await registerShortcut(savedShortcut, async () => {
-          await toggleWindow("main");
-        });
+        await registerMainWindowShortcut(savedShortcut);
       }
-    };
+    }
     initShortcut();
 
     return () => {
@@ -148,7 +150,7 @@ export default function HomePage() {
             </ResizablePanel>
           ) : (
             <>
-              <ResizablePanel defaultSize="50%" minSize={420}>
+              <ResizablePanel defaultSize="30%" minSize={420}>
                 <AgentResourcePanel
                   activeKind={activeKind}
                   checkedIds={checkedIds}
@@ -171,7 +173,7 @@ export default function HomePage() {
 
               <ResizableHandle withHandle />
 
-              <ResizablePanel defaultSize="32%" minSize={200}>
+              <ResizablePanel defaultSize="52%" minSize={200}>
                 <AgentDetailPanel
                   onOpenSkillFolder={onOpenSkillFolder}
                   onRefreshAgents={refreshAgents}

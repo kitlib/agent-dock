@@ -56,6 +56,7 @@ export async function listLocalSkills(scanTargets: SkillScanTarget[]) {
       agentType: target.agentType,
       rootPath: target.rootPath,
       displayName: target.displayName,
+      source: target.source,
     })),
   });
 
@@ -84,6 +85,7 @@ export async function getLocalSkillDetail(scanTargets: SkillScanTarget[], skillI
       agentType: target.agentType,
       rootPath: target.rootPath,
       displayName: target.displayName,
+      source: target.source,
     })),
   });
 

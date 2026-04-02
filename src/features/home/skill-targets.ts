@@ -9,33 +9,42 @@ function trimLeadingSlash(value: string) {
   return value.replace(/^\/+/, "");
 }
 
-export function buildSkillScanPath(agent: ResolvedAgentView) {
-  const skillRelativePath = agentTypeMeta[agent.agentType as AgentTypeId]?.skills;
-  if (!skillRelativePath) {
-    return null;
-  }
-
+function buildScanPath(agent: ResolvedAgentView, relativePath: string) {
   const rootPath = trimTrailingSlash(agent.rootPath);
-  const relativePath = trimLeadingSlash(trimTrailingSlash(skillRelativePath));
-  return `${rootPath}/${relativePath}`;
+  const normalizedRelativePath = trimLeadingSlash(trimTrailingSlash(relativePath));
+  return `${rootPath}/${normalizedRelativePath}`;
 }
 
-export function toSkillScanTarget(agent: ResolvedAgentView): SkillScanTarget | null {
+export function toSkillScanTargets(agent: ResolvedAgentView): SkillScanTarget[] {
   if (!agent.managed || agent.hidden || !agent.rootPath) {
-    return null;
+    return [];
   }
 
-  const rootPath = buildSkillScanPath(agent);
-  if (!rootPath) {
-    return null;
+  const meta = agentTypeMeta[agent.agentType as AgentTypeId];
+  const displayName = agent.alias ?? agent.name;
+  const targets: SkillScanTarget[] = [];
+
+  if (meta?.skills) {
+    targets.push({
+      agentId: agent.id,
+      agentType: agent.agentType,
+      rootPath: buildScanPath(agent, meta.skills),
+      displayName,
+      source: "skills",
+    });
   }
 
-  return {
-    agentId: agent.id,
-    agentType: agent.agentType,
-    rootPath,
-    displayName: agent.alias ?? agent.name,
-  };
+  if (meta?.commands) {
+    targets.push({
+      agentId: agent.id,
+      agentType: agent.agentType,
+      rootPath: buildScanPath(agent, meta.commands),
+      displayName,
+      source: "commands",
+    });
+  }
+
+  return targets;
 }
 
 export function filterSkillsForAgent(skills: SkillResource[], selectedAgentId: string | null) {

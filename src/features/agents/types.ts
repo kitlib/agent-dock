@@ -184,6 +184,7 @@ export type SkillScanTarget = {
   agentType: AgentTypeId;
   rootPath: string;
   displayName: string;
+  source: "skills" | "commands";
 };
 
 export type SkillSupportingFile = {

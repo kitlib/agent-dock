@@ -8,6 +8,7 @@ pub struct SkillScanTargetDto {
     pub agent_type: String,
     pub root_path: String,
     pub display_name: String,
+    pub source: String,
 }
 
 #[derive(Clone, Serialize, Deserialize)]

@@ -10,7 +10,7 @@ import { resourcesByKind } from "@/features/resources/core/resource-catalog";
 import { useAgentDiscovery } from "@/features/agents/use-agent-discovery";
 import { useAgentManagement } from "@/features/agents/use-agent-management";
 import { getLocalSkillDetail, listLocalSkills, openSkillFolder } from "@/features/agents/api";
-import { filterSkillsForAgent, toSkillScanTarget } from "@/features/home/skill-targets";
+import { filterSkillsForAgent, toSkillScanTargets } from "@/features/home/skill-targets";
 import type {
   AgentDiscoveryItem,
   CreateAgentResult,
@@ -21,7 +21,6 @@ import type {
   ResourceKind,
   ResolvedAgentView,
   SkillResource,
-  SkillScanTarget,
 } from "@/features/agents/types";
 
 type WorkspaceMode = "browse" | "adding";
@@ -137,13 +136,7 @@ export function useHomeWorkspace() {
     managedVisibleAgents[0] ??
     null;
 
-  const skillScanTargets = useMemo(
-    () =>
-      managedVisibleAgents
-        .map(toSkillScanTarget)
-        .filter((item): item is SkillScanTarget => item !== null),
-    [managedVisibleAgents]
-  );
+  const skillScanTargets = useMemo(() => managedVisibleAgents.flatMap(toSkillScanTargets), [managedVisibleAgents]);
 
   const visibleLocalSkills = useMemo(
     () => filterSkillsForAgent(localSkills, selectedAgent?.id ?? null),
@@ -204,25 +197,6 @@ export function useHomeWorkspace() {
     };
   }, [skillScanTargets]);
 
-  useEffect(() => {
-    if (activeKind !== "skill" || !selectedResourceId || skillDetails[selectedResourceId]) {
-      return;
-    }
-
-    let cancelled = false;
-    void getLocalSkillDetail(skillScanTargets, selectedResourceId)
-      .then((detail) => {
-        if (!cancelled) {
-          setSkillDetails((current) => ({ ...current, [detail.id]: detail }));
-        }
-      })
-      .catch(() => undefined);
-
-    return () => {
-      cancelled = true;
-    };
-  }, [activeKind, selectedResourceId, skillDetails, skillScanTargets]);
-
   const localResources = useMemo(
     () => ({
       ...resourcesByKind,
@@ -250,6 +224,38 @@ export function useHomeWorkspace() {
       normalizedSearch
     );
   }, [activeKind, discoveryItems, normalizedSearch]);
+
+  useEffect(() => {
+    if (activeKind !== "skill") {
+      return;
+    }
+
+    const detailTarget = filteredResources.find(
+      (resource) => resource.id === selectedResourceId
+    ) ?? filteredResources[0];
+
+    if (
+      !detailTarget ||
+      detailTarget.kind !== "skill" ||
+      detailTarget.origin !== "local" ||
+      skillDetails[detailTarget.id]
+    ) {
+      return;
+    }
+
+    let cancelled = false;
+    void getLocalSkillDetail(skillScanTargets, detailTarget.id)
+      .then((detail) => {
+        if (!cancelled) {
+          setSkillDetails((current) => ({ ...current, [detail.id]: detail }));
+        }
+      })
+      .catch(() => undefined);
+
+    return () => {
+      cancelled = true;
+    };
+  }, [activeKind, filteredResources, selectedResourceId, skillDetails, skillScanTargets]);
 
   const selectedResourceBase =
     filteredResources.find((resource) => resource.id === selectedResourceId) ??
