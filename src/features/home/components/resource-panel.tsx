@@ -1,16 +1,27 @@
+import type { DragEvent } from "react";
 import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import { kindIcons } from "@/features/shared/constants";
 import type { AgentDiscoveryItem, ResourceKind } from "@/features/agents/types";
+import { kindIcons } from "@/features/shared/constants";
 import { AgentResourceList } from "@/features/resources/core/components/resource-list";
-import type { DragEvent } from "react";
+
+const resourceKinds: readonly ResourceKind[] = ["skill", "mcp", "subagent"];
+
+type Translate = (key: string, options?: Record<string, unknown>) => string;
+
+function getSearchPlaceholder(activeKind: ResourceKind, t: Translate): string {
+  if (activeKind === "skill") {
+    return t("prototype.actions.searchSkillsPlaceholder");
+  }
+
+  return t("prototype.actions.searchPlaceholder");
+}
 
 type AgentResourcePanelProps = {
   activeKind: ResourceKind;
   checkedIds: string[];
   filteredResources: AgentDiscoveryItem[];
-  isRailCollapsed: boolean;
   onClearChecked: () => void;
   onDragStart: (event: DragEvent<HTMLDivElement>, resourceId: string) => void;
   onOpenSkillFolder: (skillPath: string) => void;
@@ -20,7 +31,7 @@ type AgentResourcePanelProps = {
   onToggleChecked: (id: string) => void;
   onUpdateMarketplaceInstallState: (id: string) => void;
   search: string;
-  selectedAgentName?: string;
+  totalCount: number;
   selectedResourceId: string;
   t: (key: string, options?: Record<string, unknown>) => string;
 };
@@ -29,7 +40,6 @@ export function AgentResourcePanel({
   activeKind,
   checkedIds,
   filteredResources,
-  isRailCollapsed,
   onClearChecked,
   onDragStart,
   onOpenSkillFolder,
@@ -39,7 +49,7 @@ export function AgentResourcePanel({
   onToggleChecked,
   onUpdateMarketplaceInstallState,
   search,
-  selectedAgentName,
+  totalCount,
   selectedResourceId,
   t,
 }: AgentResourcePanelProps) {
@@ -48,7 +58,7 @@ export function AgentResourcePanel({
       <div className="border-b p-3">
         <div className="flex flex-wrap items-center justify-between gap-2">
           <div className="flex flex-wrap items-center gap-2">
-            {(["skill", "mcp", "subagent"] as ResourceKind[]).map((kind) => {
+            {resourceKinds.map((kind) => {
               const Icon = kindIcons[kind];
               const active = activeKind === kind;
 
@@ -65,11 +75,9 @@ export function AgentResourcePanel({
               );
             })}
           </div>
-          {selectedAgentName && !isRailCollapsed ? (
-            <div className="bg-muted text-muted-foreground hidden rounded-md px-2 py-1 text-xs lg:flex">
-              {selectedAgentName}
-            </div>
-          ) : null}
+          <div className="bg-muted text-muted-foreground hidden rounded-md px-2 py-1 text-xs lg:flex">
+            {t("prototype.actions.totalCount", { count: totalCount })}
+          </div>
         </div>
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <div className="relative min-w-[240px] flex-1">
@@ -78,11 +86,7 @@ export function AgentResourcePanel({
               value={search}
               onChange={(event) => onSearchChange(event.target.value)}
               className="pl-9"
-              placeholder={
-                activeKind === "skill"
-                  ? t("prototype.actions.searchSkillsPlaceholder")
-                  : t("prototype.actions.searchPlaceholder")
-              }
+              placeholder={getSearchPlaceholder(activeKind, t)}
             />
           </div>
         </div>

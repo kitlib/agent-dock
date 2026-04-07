@@ -48,12 +48,18 @@ type AgentCardItemProps = {
   onDelete: (candidate: AgentManagementCard) => Promise<void>;
 };
 
-function candidateStateLabel(candidate: AgentManagementCard) {
+function candidateStateLabel(candidate: AgentManagementCard): string | null {
   if (candidate.state === "unreadable") {
     return candidate.reason ?? candidate.state;
   }
 
   return null;
+}
+
+function candidateSkillResourceCount(candidate: AgentManagementCard): number {
+  const { skill, command } = candidate.resourceCounts;
+
+  return skill + command;
 }
 
 const AgentManagementCardItem = memo(function AgentManagementCardItem({
@@ -64,14 +70,15 @@ const AgentManagementCardItem = memo(function AgentManagementCardItem({
 }: AgentCardItemProps) {
   const isReady = candidate.state === "ready";
   const isImported = candidate.state === "imported";
+  const canToggle = isImported || isReady;
   const stateLabel = candidateStateLabel(candidate);
 
   return (
     <div
-      role={isImported || isReady ? "button" : undefined}
-      tabIndex={isImported || isReady ? 0 : undefined}
+      role={canToggle ? "button" : undefined}
+      tabIndex={canToggle ? 0 : undefined}
       onClick={(event) => {
-        if (!isImported && !isReady) {
+        if (!canToggle) {
           return;
         }
         event.preventDefault();
@@ -79,7 +86,7 @@ const AgentManagementCardItem = memo(function AgentManagementCardItem({
         void onToggle(candidate);
       }}
       onKeyDown={(event) => {
-        if (!isImported && !isReady) {
+        if (!canToggle) {
           return;
         }
         if (event.key !== "Enter" && event.key !== " ") {
@@ -89,25 +96,24 @@ const AgentManagementCardItem = memo(function AgentManagementCardItem({
         event.stopPropagation();
         void onToggle(candidate);
       }}
-      aria-disabled={isImporting || (!isReady && !isImported)}
+      aria-disabled={isImporting || !canToggle}
       className={cn(
-        "bg-card w-full rounded-lg border p-2 text-left transition-all",
-        isImported || isReady
-          ? "hover:border-border hover:bg-accent/20 focus-visible:ring-ring cursor-pointer focus-visible:ring-2 focus-visible:outline-none"
-          : "cursor-default",
-        isImported || isReady ? "border-border bg-card" : "border-border bg-muted/60"
+        "w-full rounded-lg border p-2 text-left transition-all",
+        canToggle
+          ? "border-border bg-card hover:border-border hover:bg-accent/20 focus-visible:ring-ring cursor-pointer focus-visible:ring-2 focus-visible:outline-none"
+          : "border-border bg-muted/60 cursor-default"
       )}
     >
       <div className="flex items-stretch gap-2.5">
-        <div className="bg-background flex h-9 w-9 shrink-0 items-center justify-center rounded-lg border self-start">
+        <div className="bg-background flex h-9 w-9 shrink-0 items-center justify-center self-start rounded-lg border">
           <AgentIcon agentType={candidate.agentType} size={18} />
         </div>
         <div className="min-w-0 flex-1">
-          <div className="truncate text-sm font-medium leading-5">{candidate.displayName}</div>
+          <div className="truncate text-sm leading-5 font-medium">{candidate.displayName}</div>
           <div className="text-muted-foreground mt-1 text-[11px]">{candidate.rootPath}</div>
           <div className="text-muted-foreground mt-1 flex flex-wrap items-center gap-1.5 text-xs">
             <span className="bg-muted rounded px-1.5 py-0.5 text-[10px]">
-              {candidate.resourceCounts.skill} Skills
+              {candidateSkillResourceCount(candidate)} Skills
             </span>
             <span className="bg-muted rounded px-1.5 py-0.5 text-[10px]">
               {candidate.resourceCounts.mcp} MCP
@@ -134,7 +140,7 @@ const AgentManagementCardItem = memo(function AgentManagementCardItem({
                 type="button"
                 variant="ghost"
                 size="icon-sm"
-                className="text-red-600 hover:text-red-600 dark:text-red-400 dark:hover:text-red-400 border-red-500/50 dark:border-red-400/60 h-7 w-7 shrink-0 rounded-md border p-0"
+                className="h-7 w-7 shrink-0 rounded-md border border-red-500/50 p-0 text-red-600 hover:text-red-600 dark:border-red-400/60 dark:text-red-400 dark:hover:text-red-400"
                 onClick={(event) => {
                   event.preventDefault();
                   event.stopPropagation();

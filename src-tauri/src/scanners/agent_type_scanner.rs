@@ -1,4 +1,7 @@
-use std::{env, fs, path::{Path, PathBuf}};
+use std::{
+    env, fs,
+    path::{Path, PathBuf},
+};
 
 use crate::dto::agents::{AgentResourceCountsDto, DiscoveredAgentDto, ScanTargetDto};
 
@@ -31,7 +34,7 @@ fn user_home_dir() -> PathBuf {
         .unwrap_or_else(current_dir)
 }
 
-fn display_path(relative_path: &PathBuf) -> String {
+fn display_path(relative_path: &Path) -> String {
     PathBuf::from("~")
         .join(relative_path)
         .to_string_lossy()
@@ -50,54 +53,26 @@ fn trim_leading_slashes(value: &str) -> &str {
     value.trim_start_matches(['/', '\\'])
 }
 
+fn normalized_join(root_path: &Path, relative_path: &str) -> PathBuf {
+    let normalized_root =
+        PathBuf::from(trim_trailing_slashes(&root_path.to_string_lossy()).to_string());
+    let normalized_relative = trim_leading_slashes(trim_trailing_slashes(relative_path));
+    normalized_root.join(normalized_relative)
+}
+
 fn build_skill_scan_root(agent: &str, root_path: &Path) -> Option<PathBuf> {
     let relative_skills_path = match agent {
-        "adal"
-        | "amp"
-        | "antigravity"
-        | "augment"
-        | "claude"
-        | "claude-plugin"
-        | "cline"
-        | "codebuddy"
-        | "codex"
-        | "command-code"
-        | "continue"
-        | "crush"
-        | "cursor"
-        | "factory"
-        | "github-copilot"
-        | "goose"
-        | "iflow"
-        | "junie"
-        | "kilo"
-        | "kimi"
-        | "kiro"
-        | "kode"
-        | "mcpjam"
-        | "mistral"
-        | "mux"
-        | "neovate"
-        | "openclaw"
-        | "opencode"
-        | "openhands"
-        | "pochi"
-        | "qoder"
-        | "qwen"
-        | "replit"
-        | "roo"
-        | "trae"
-        | "trae-cn"
-        | "warp"
-        | "windsurf"
-        | "zencoder" => "skills/",
+        "adal" | "amp" | "antigravity" | "augment" | "claude" | "claude-plugin" | "cline"
+        | "codebuddy" | "codex" | "command-code" | "continue" | "crush" | "cursor" | "factory"
+        | "github-copilot" | "goose" | "iflow" | "junie" | "kilo" | "kimi" | "kiro" | "kode"
+        | "mcpjam" | "mistral" | "mux" | "neovate" | "openclaw" | "opencode" | "openhands"
+        | "pochi" | "qoder" | "qwen" | "replit" | "roo" | "trae" | "trae-cn" | "warp"
+        | "windsurf" | "zencoder" => "skills/",
         "pi-mono" => "agent/skills/",
         _ => return None,
     };
 
-    let normalized_root = PathBuf::from(trim_trailing_slashes(&root_path.to_string_lossy()).to_string());
-    let normalized_relative = trim_leading_slashes(trim_trailing_slashes(relative_skills_path));
-    Some(normalized_root.join(normalized_relative))
+    Some(normalized_join(root_path, relative_skills_path))
 }
 
 fn count_skill_directories(skills_root: &Path) -> u32 {
@@ -116,9 +91,53 @@ fn count_skill_directories(skills_root: &Path) -> u32 {
         .count() as u32
 }
 
+fn build_commands_scan_root(agent: &str, root_path: &Path) -> Option<PathBuf> {
+    let relative_commands_path = match agent {
+        "antigravity" | "kilo" => "workflows/",
+        "augment" | "claude" | "claude-plugin" | "command-code" | "factory" | "iflow" => {
+            "commands/"
+        }
+        "codex" | "continue" => "prompts/",
+        "cursor" => "commands/",
+        _ => return None,
+    };
+
+    Some(normalized_join(root_path, relative_commands_path))
+}
+
+fn count_command_markdown_files(commands_root: &Path) -> u32 {
+    if !commands_root.exists() || !commands_root.is_dir() {
+        return 0;
+    }
+
+    let Ok(entries) = fs::read_dir(commands_root) else {
+        return 0;
+    };
+
+    let mut count = 0;
+    for entry in entries.filter_map(Result::ok) {
+        let path = entry.path();
+        if path.is_dir() {
+            count += count_command_markdown_files(&path);
+            continue;
+        }
+
+        let is_markdown_file =
+            path.is_file() && path.extension().and_then(|extension| extension.to_str()) == Some("md");
+        if is_markdown_file {
+            count += 1;
+        }
+    }
+
+    count
+}
+
 fn agent_resource_counts(agent: &str, absolute_root: &Path) -> AgentResourceCountsDto {
     let skill = build_skill_scan_root(agent, absolute_root)
         .map(|skills_root| count_skill_directories(&skills_root))
+        .unwrap_or(0);
+    let command = build_commands_scan_root(agent, absolute_root)
+        .map(|commands_root| count_command_markdown_files(&commands_root))
         .unwrap_or(0);
 
     let (mcp, subagent) = match agent {
@@ -131,12 +150,13 @@ fn agent_resource_counts(agent: &str, absolute_root: &Path) -> AgentResourceCoun
 
     AgentResourceCountsDto {
         skill,
+        command,
         mcp,
         subagent,
     }
 }
 
-fn detect_status(target: &AgentScanTarget, absolute_root: &PathBuf) -> (String, Option<String>) {
+fn detect_status(target: &AgentScanTarget, absolute_root: &Path) -> (String, Option<String>) {
     if target.agent_type == "antigravity" {
         let workflows_path = absolute_root.join("workflows");
         if workflows_path.exists() {
@@ -216,7 +236,11 @@ pub fn scan_discovered_agents(scan_targets: Vec<ScanTargetDto>) -> Vec<Discovere
 #[cfg(test)]
 mod tests {
     use super::{agent_resource_counts, build_skill_scan_root};
-    use std::{fs, path::PathBuf, time::{SystemTime, UNIX_EPOCH}};
+    use std::{
+        fs,
+        path::PathBuf,
+        time::{SystemTime, UNIX_EPOCH},
+    };
 
     fn temp_dir(name: &str) -> PathBuf {
         let unique = SystemTime::now()
@@ -250,11 +274,13 @@ mod tests {
 
         fs::create_dir_all(&valid_skill).expect("create valid skill dir");
         fs::create_dir_all(&invalid_skill).expect("create invalid skill dir");
-        fs::write(valid_skill.join("SKILL.md"), "# Release checklist").expect("write skill markdown");
+        fs::write(valid_skill.join("SKILL.md"), "# Release checklist")
+            .expect("write skill markdown");
         fs::write(invalid_skill.join("README.md"), "not a skill").expect("write non skill file");
 
         let counts = agent_resource_counts("claude", &root);
         assert_eq!(counts.skill, 1);
+        assert_eq!(counts.command, 0);
         assert_eq!(counts.mcp, 1);
         assert_eq!(counts.subagent, 1);
 

@@ -83,6 +83,7 @@
       "clear": "Clear",
       "open": "Open",
       "batchSelected": "{{count}} selected",
+      "totalCount": "{{count}} total",
       "cancel": "Cancel",
       "scanSelected": "Import selected",
       "retryScan": "Scan again",

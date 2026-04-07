@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 #[serde(rename_all = "camelCase")]
 pub struct AgentResourceCountsDto {
     pub skill: u32,
+    pub command: u32,
     pub mcp: u32,
     pub subagent: u32,
 }

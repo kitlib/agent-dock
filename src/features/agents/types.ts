@@ -65,6 +65,7 @@ export type AgentImportCandidateState = "ready" | "imported" | "unreadable";
 
 export type AgentResourceCounts = {
   skill: number;
+  command: number;
   mcp: number;
   subagent: number;
 };

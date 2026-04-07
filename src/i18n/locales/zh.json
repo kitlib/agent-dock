@@ -83,6 +83,7 @@
       "clear": "清空",
       "open": "打开",
       "batchSelected": "已选 {{count}} 项",
+      "totalCount": "共 {{count}} 个",
       "cancel": "取消",
       "scanSelected": "导入所选",
       "retryScan": "重新扫描",

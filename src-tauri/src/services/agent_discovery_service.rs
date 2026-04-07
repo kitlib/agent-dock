@@ -8,6 +8,14 @@ use crate::dto::agents::{
 use crate::persistence::managed_agents_store;
 use crate::scanners::agent_type_scanner;
 
+fn matches_managed_agent(entry: &ManagedAgentDto, agent: &DiscoveredAgentDto) -> bool {
+    let same_fingerprint = entry.fingerprint == agent.fingerprint;
+    let same_agent_type = entry.agent_type.as_deref() == Some(agent.agent_type.as_str());
+    let same_root_path = entry.root_path.as_deref() == Some(agent.root_path.as_str());
+
+    same_fingerprint || (same_agent_type && same_root_path)
+}
+
 fn role_for_agent_type(agent_type: &str) -> String {
     match agent_type {
         "cursor" => "AI coding assistant",
@@ -22,9 +30,13 @@ fn role_for_agent_type(agent_type: &str) -> String {
 fn discovered_summary(agent_type: &str) -> String {
     match agent_type {
         "cursor" => "Detected Cursor in the user directory and ready to import into AgentDock.",
-        "claude" => "Detected Claude Code in the user directory and ready to import into AgentDock.",
+        "claude" => {
+            "Detected Claude Code in the user directory and ready to import into AgentDock."
+        }
         "codex" => "Detected Codex CLI in the user directory and ready to import into AgentDock.",
-        "antigravity" => "Detected Antigravity in the user directory and ready to import into AgentDock.",
+        "antigravity" => {
+            "Detected Antigravity in the user directory and ready to import into AgentDock."
+        }
         _ => "Detected in the user directory and ready to import into AgentDock.",
     }
     .into()
@@ -86,6 +98,7 @@ fn manual_resolved_agent(entry: &ManagedAgentDto) -> ResolvedAgentDto {
         group_id: "assistant".into(),
         resource_counts: AgentResourceCountsDto {
             skill: 0,
+            command: 0,
             mcp: 0,
             subagent: 0,
         },
@@ -104,11 +117,9 @@ fn merge_resolved_agents(
     let mut resolved_agents: Vec<_> = discovered_agents
         .iter()
         .map(|agent| {
-            let managed = managed_agents.iter().find(|entry| {
-                entry.fingerprint == agent.fingerprint
-                    || (entry.agent_type.as_deref() == Some(agent.agent_type.as_str())
-                        && entry.root_path.as_deref() == Some(agent.root_path.as_str()))
-            });
+            let managed = managed_agents
+                .iter()
+                .find(|entry| matches_managed_agent(entry, agent));
 
             ResolvedAgentDto {
                 id: agent.discovery_id.replacen("discovery-", "agent-", 1),
@@ -151,11 +162,9 @@ fn merge_resolved_agents(
         .collect();
 
     for entry in managed_agents {
-        let already_resolved = discovered_agents.iter().any(|agent| {
-            entry.fingerprint == agent.fingerprint
-                || (entry.agent_type.as_deref() == Some(agent.agent_type.as_str())
-                    && entry.root_path.as_deref() == Some(agent.root_path.as_str()))
-        });
+        let already_resolved = discovered_agents
+            .iter()
+            .any(|agent| matches_managed_agent(entry, agent));
         if discovered_fingerprints.contains(entry.fingerprint.as_str()) || already_resolved {
             continue;
         }

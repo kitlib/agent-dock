@@ -4,7 +4,7 @@ import { AgentResourceDetail } from "@/features/resources/core/components/resour
 import { installStateKey } from "@/features/shared/constants";
 import type { AgentDiscoveryItem, AgentSummary } from "@/features/agents/types";
 
-function compactHomePath(path: string | undefined) {
+function compactHomePath(path: string | undefined): string | undefined {
   if (!path) {
     return path;
   }
@@ -12,8 +12,12 @@ function compactHomePath(path: string | undefined) {
   return path.replace(/^[A-Za-z]:[\\/]Users[\\/][^\\/]+/i, "~");
 }
 
-function getSkillTitle(selectedResource: AgentDiscoveryItem | null) {
-  if (!selectedResource || selectedResource.kind !== "skill" || selectedResource.origin !== "local") {
+function getSkillTitle(selectedResource: AgentDiscoveryItem | null): string | undefined {
+  if (
+    !selectedResource ||
+    selectedResource.kind !== "skill" ||
+    selectedResource.origin !== "local"
+  ) {
     return selectedResource?.name;
   }
 
@@ -24,8 +28,12 @@ function getSkillTitle(selectedResource: AgentDiscoveryItem | null) {
   );
 }
 
-function getOpenPath(selectedResource: AgentDiscoveryItem | null) {
-  if (!selectedResource || selectedResource.kind !== "skill" || selectedResource.origin !== "local") {
+function getOpenPath(selectedResource: AgentDiscoveryItem | null): string {
+  if (
+    !selectedResource ||
+    selectedResource.kind !== "skill" ||
+    selectedResource.origin !== "local"
+  ) {
     return "";
   }
 
@@ -43,6 +51,14 @@ type AgentDetailPanelProps = {
   t: (key: string, options?: Record<string, unknown>) => string;
 };
 
+function getAgentSkillResourceCount(selectedAgent: AgentSummary | null): number {
+  if (!selectedAgent) {
+    return 0;
+  }
+
+  return selectedAgent.resourceCounts.skill + selectedAgent.resourceCounts.command;
+}
+
 export function AgentDetailPanel({
   emptyDescription,
   emptyTitle,
@@ -54,6 +70,7 @@ export function AgentDetailPanel({
   t,
 }: AgentDetailPanelProps) {
   const openPath = getOpenPath(selectedResource);
+  const skillResourceCount = getAgentSkillResourceCount(selectedAgent);
 
   return (
     <div className="bg-muted/20 flex h-full min-w-0 flex-col overflow-hidden">
@@ -137,9 +154,7 @@ export function AgentDetailPanel({
             <div className="grid grid-cols-3 gap-3 text-xs">
               <div className="bg-background rounded-lg border p-3">
                 <div className="text-muted-foreground">{t("prototype.tabs.skill")}</div>
-                <div className="mt-1 text-lg font-semibold">
-                  {selectedAgent.resourceCounts.skill}
-                </div>
+                <div className="mt-1 text-lg font-semibold">{skillResourceCount}</div>
               </div>
               <div className="bg-background rounded-lg border p-3">
                 <div className="text-muted-foreground">{t("prototype.tabs.mcp")}</div>

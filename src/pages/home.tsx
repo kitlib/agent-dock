@@ -17,7 +17,7 @@ import { AgentDetailPanel } from "@/features/home/components/detail-panel";
 
 const SHORTCUT_KEY = "global-shortcut-show-main";
 
-async function registerMainWindowShortcut(shortcut: string) {
+async function registerMainWindowShortcut(shortcut: string): Promise<void> {
   await registerShortcut(shortcut, async () => {
     await toggleWindow("main");
   });
@@ -57,7 +57,7 @@ export default function HomePage() {
   const leftPanelRef = useRef<PanelImperativeHandle | null>(null);
   const leftPanelCollapsedSize = 56;
 
-  const toggleRailCollapsed = () => {
+  function toggleRailCollapsed(): void {
     const nextCollapsed = !isRailCollapsed;
     setIsRailCollapsed(nextCollapsed);
 
@@ -67,11 +67,11 @@ export default function HomePage() {
     }
 
     leftPanelRef.current?.expand();
-  };
+  }
 
-  const handleDragStart = (event: DragEvent<HTMLDivElement>, resourceId: string) => {
+  function handleDragStart(event: DragEvent<HTMLDivElement>, resourceId: string): void {
     event.dataTransfer.setData("text/plain", resourceId);
-  };
+  }
 
   useEffect(() => {
     const unlistenShortcutChanged = listen<{ shortcut: string }>(
@@ -155,7 +155,6 @@ export default function HomePage() {
                   activeKind={activeKind}
                   checkedIds={checkedIds}
                   filteredResources={filteredResources}
-                  isRailCollapsed={isRailCollapsed}
                   onClearChecked={clearChecked}
                   onDragStart={handleDragStart}
                   onSearchChange={setSearch}
@@ -165,7 +164,7 @@ export default function HomePage() {
                   onUpdateMarketplaceInstallState={updateMarketplaceInstallState}
                   onOpenSkillFolder={onOpenSkillFolder}
                   search={search}
-                  selectedAgentName={selectedAgent?.alias ?? selectedAgent?.name}
+                  totalCount={filteredResources.length}
                   selectedResourceId={selectedResourceId}
                   t={t}
                 />
