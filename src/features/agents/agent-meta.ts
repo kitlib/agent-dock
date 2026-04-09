@@ -56,17 +56,6 @@ export const agentTypeMeta: AgentTypeMetaMap = {
     skills: "skills/",
     mcp: ".mcp.json (root)",
   },
-  "claude-plugin": {
-    agentType: "claude-plugin",
-    name: "Claude Code Plugin",
-    directory: ".claude-plugin/",
-    rootFile: null,
-    rules: "rules/",
-    commands: "commands/",
-    agents: "agents/",
-    skills: "skills/",
-    mcp: ".mcp.json (root)",
-  },
   cline: {
     agentType: "cline",
     name: "Cline",

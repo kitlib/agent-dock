@@ -102,6 +102,14 @@ export async function getLocalSkillDetail(scanTargets: SkillScanTarget[], skillI
   return detail;
 }
 
+export async function setLocalSkillEnabled(
+  skillPath: string,
+  entryFilePath: string,
+  enabled: boolean
+) {
+  return invoke<void>("set_local_skill_enabled", { skillPath, entryFilePath, enabled });
+}
+
 export async function openSkillFolder(skillPath: string) {
   return invoke<void>("open_skill_folder", { skillPath });
 }

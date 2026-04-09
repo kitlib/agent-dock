@@ -9,6 +9,7 @@ use crate::dto::skills::{
 
 const COMMANDS_SOURCE: &str = "commands";
 const SKILL_ENTRY_FILE: &str = "SKILL.md";
+const DISABLED_SKILL_ENTRY_FILE: &str = "SKILL.md.disabled";
 
 #[derive(Clone)]
 pub struct ParsedSkill {
@@ -226,6 +227,7 @@ fn parse_skill(
     scan_root: &Path,
     skill_path: PathBuf,
     entry_file: PathBuf,
+    enabled: bool,
 ) -> Option<ParsedSkill> {
     if !entry_file.exists() {
         return None;
@@ -240,6 +242,10 @@ fn parse_skill(
     let updated_at = updated_at(&entry_file);
     let mut warnings = Vec::new();
     let mut errors = Vec::new();
+
+    if scan_target.source != COMMANDS_SOURCE && enabled && skill_path.join(DISABLED_SKILL_ENTRY_FILE).exists() {
+        warnings.push("Conflicting skill entry files found; using enabled SKILL.md.".into());
+    }
 
     let contents = match fs::read_to_string(&entry_file) {
         Ok(contents) => contents,
@@ -283,7 +289,7 @@ fn parse_skill(
         kind: "skill".into(),
         name: name.clone(),
         summary: summary_text.clone(),
-        enabled: true,
+        enabled,
         tags: tags.clone(),
         usage_count: 0,
         updated_at: updated_at.clone(),
@@ -305,7 +311,7 @@ fn parse_skill(
         name,
         summary: summary_text,
         description,
-        enabled: true,
+        enabled,
         tags,
         usage_count: 0,
         updated_at,
@@ -361,7 +367,7 @@ pub fn scan_skills(scan_targets: Vec<SkillScanTargetDto>) -> Vec<ParsedSkill> {
 
         if scan_target.source == COMMANDS_SOURCE {
             for path in collect_command_markdown_files(&scan_root) {
-                if let Some(skill) = parse_skill(&scan_target, &scan_root, path.clone(), path) {
+                if let Some(skill) = parse_skill(&scan_target, &scan_root, path.clone(), path, true) {
                     parsed_skills.push(skill);
                 }
             }
@@ -378,8 +384,20 @@ pub fn scan_skills(scan_targets: Vec<SkillScanTargetDto>) -> Vec<ParsedSkill> {
                 continue;
             }
 
-            if let Some(skill) = parse_skill(&scan_target, &scan_root, path.clone(), path.join(SKILL_ENTRY_FILE)) {
-                parsed_skills.push(skill);
+            let enabled_entry = path.join(SKILL_ENTRY_FILE);
+            let disabled_entry = path.join(DISABLED_SKILL_ENTRY_FILE);
+            let preferred_entry = if enabled_entry.exists() {
+                Some((enabled_entry, true))
+            } else if disabled_entry.exists() {
+                Some((disabled_entry, false))
+            } else {
+                None
+            };
+
+            if let Some((entry_file, enabled)) = preferred_entry {
+                if let Some(skill) = parse_skill(&scan_target, &scan_root, path.clone(), entry_file, enabled) {
+                    parsed_skills.push(skill);
+                }
             }
         }
     }
@@ -390,7 +408,9 @@ pub fn scan_skills(scan_targets: Vec<SkillScanTargetDto>) -> Vec<ParsedSkill> {
 
 #[cfg(test)]
 mod tests {
-    use super::{resolve_scan_root, scan_skills, COMMANDS_SOURCE};
+    use super::{
+        resolve_scan_root, scan_skills, COMMANDS_SOURCE, DISABLED_SKILL_ENTRY_FILE, SKILL_ENTRY_FILE,
+    };
     use crate::dto::skills::SkillScanTargetDto;
     use std::{env, fs, path::PathBuf, time::{SystemTime, UNIX_EPOCH}};
 
@@ -402,15 +422,23 @@ mod tests {
         std::env::temp_dir().join(format!("agent-dock-{name}-{unique}"))
     }
 
-    fn write_skill(skill_dir: &PathBuf, contents: &str) {
+    fn write_skill_entry(skill_dir: &PathBuf, entry_name: &str, contents: &str) {
         fs::create_dir_all(skill_dir).expect("create skill dir");
-        fs::write(skill_dir.join("SKILL.md"), contents).expect("write skill markdown");
+        fs::write(skill_dir.join(entry_name), contents).expect("write skill markdown");
     }
 
     fn scan_test_skill(skill_name: &str, contents: &str) -> crate::scanners::skill_scanner::ParsedSkill {
+        scan_test_skill_with_entry(skill_name, SKILL_ENTRY_FILE, contents)
+    }
+
+    fn scan_test_skill_with_entry(
+        skill_name: &str,
+        entry_name: &str,
+        contents: &str,
+    ) -> crate::scanners::skill_scanner::ParsedSkill {
         let root = temp_dir(skill_name);
         let skill_dir = root.join(skill_name);
-        write_skill(&skill_dir, contents);
+        write_skill_entry(&skill_dir, entry_name, contents);
 
         let mut skills = scan_skills(vec![SkillScanTargetDto {
             agent_id: "agent-claude".into(),
@@ -488,6 +516,45 @@ mod tests {
         ]);
 
         fs::remove_dir_all(&home).expect("cleanup temp dir");
+    }
+
+    #[test]
+    fn scan_skills_reads_disabled_skill_entry_when_enabled_entry_is_missing() {
+        let skill = scan_test_skill_with_entry(
+            "disabled-entry-skill",
+            DISABLED_SKILL_ENTRY_FILE,
+            "# Disabled skill\n\nStill readable.\n",
+        );
+
+        assert!(!skill.summary.enabled);
+        assert!(!skill.detail.enabled);
+        assert!(skill.detail.entry_file_path.ends_with(DISABLED_SKILL_ENTRY_FILE));
+    }
+
+    #[test]
+    fn scan_skills_warns_when_both_enabled_and_disabled_entries_exist() {
+        let root = temp_dir("conflicting-skill-entries");
+        let skill_dir = root.join("demo-skill");
+        write_skill_entry(&skill_dir, SKILL_ENTRY_FILE, "# Enabled skill\n\nBody.\n");
+        write_skill_entry(&skill_dir, DISABLED_SKILL_ENTRY_FILE, "# Disabled skill\n\nBody.\n");
+
+        let skills = scan_skills(vec![SkillScanTargetDto {
+            agent_id: "agent-claude".into(),
+            agent_type: "claude".into(),
+            root_path: root.to_string_lossy().to_string(),
+            display_name: "Claude Main".into(),
+            source: "skills".into(),
+        }]);
+
+        let skill = skills.first().expect("skill should be parsed");
+        assert!(skill.summary.enabled);
+        assert!(skill
+            .detail
+            .warnings
+            .iter()
+            .any(|warning| warning == "Conflicting skill entry files found; using enabled SKILL.md."));
+
+        fs::remove_dir_all(&root).expect("cleanup temp dir");
     }
 
     #[test]

@@ -1,5 +1,6 @@
 import React, { lazy, Suspense, useEffect } from "react";
 import ReactDOM from "react-dom/client";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { getCurrentWindow } from "@tauri-apps/api/window";
 import "./index.css";
 import "./i18n";
@@ -14,12 +15,24 @@ const pageMap = {
   "/settings": SettingsPage,
 };
 
+function getPageComponent(pathname: string) {
+  return pageMap[pathname as keyof typeof pageMap] ?? HomePage;
+}
+
 const pathname = window.location.pathname;
-const PageComponent = pageMap[pathname as keyof typeof pageMap] ?? HomePage;
+const PageComponent = getPageComponent(pathname);
+
+const queryClient = new QueryClient({
+  defaultOptions: {
+    queries: {
+      refetchOnWindowFocus: false,
+      retry: 0,
+    },
+  },
+});
 
 function AppWrapper() {
   useEffect(() => {
-    // Show window after React is ready
     getCurrentWindow().show();
   }, []);
 
@@ -28,8 +41,10 @@ function AppWrapper() {
 
 ReactDOM.createRoot(document.getElementById("root") as HTMLElement).render(
   <React.StrictMode>
-    <Suspense fallback={null}>
-      <AppWrapper />
-    </Suspense>
+    <QueryClientProvider client={queryClient}>
+      <Suspense fallback={null}>
+        <AppWrapper />
+      </Suspense>
+    </QueryClientProvider>
   </React.StrictMode>
 );

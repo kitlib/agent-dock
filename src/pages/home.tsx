@@ -5,6 +5,8 @@ import { WindowFrame } from "@/components/window-frame";
 import { MainTitleBar } from "@/components/main-title-bar";
 import { UpdaterDialog } from "@/components/updater-dialog";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
+import { setLocalSkillEnabled } from "@/features/agents/api";
+import { getLocalSkillToggleTarget } from "@/features/home/local-skill-toggle";
 import type { PanelImperativeHandle } from "react-resizable-panels";
 import { registerShortcut } from "@/lib/shortcut";
 import { toggleWindow } from "@/lib/window";
@@ -40,9 +42,11 @@ export default function HomePage() {
     selectResource,
     checkedIds,
     toggleChecked,
+    toggleAllChecked,
     clearChecked,
     updateMarketplaceInstallState,
     onOpenSkillFolder,
+    refreshSkills,
     managedAgentsForView,
     workspaceMode,
     enterAddingMode,
@@ -71,6 +75,40 @@ export default function HomePage() {
 
   function handleDragStart(event: DragEvent<HTMLDivElement>, resourceId: string): void {
     event.dataTransfer.setData("text/plain", resourceId);
+  }
+
+  async function handleSetLocalSkillEnabled(
+    skillPath: string,
+    entryFilePath: string,
+    enabled: boolean,
+    skillId?: string
+  ): Promise<void> {
+    await setLocalSkillEnabled(skillPath, entryFilePath, enabled);
+    refreshSkills(skillId);
+  }
+
+  async function handleDisableCheckedSkills(): Promise<void> {
+    const selectedSkillResources = filteredResources.flatMap((resource) => {
+      if (!checkedIds.includes(resource.id)) {
+        return [];
+      }
+
+      const toggleTarget = getLocalSkillToggleTarget(resource);
+      return toggleTarget?.enabled ? [toggleTarget] : [];
+    });
+
+    await Promise.all(
+      selectedSkillResources.map((resource) =>
+        handleSetLocalSkillEnabled(
+          resource.skillPath,
+          resource.entryFilePath,
+          false,
+          resource.id
+        )
+      )
+    );
+
+    clearChecked();
   }
 
   useEffect(() => {
@@ -156,13 +194,16 @@ export default function HomePage() {
                   checkedIds={checkedIds}
                   filteredResources={filteredResources}
                   onClearChecked={clearChecked}
+                  onDisableCheckedSkills={handleDisableCheckedSkills}
                   onDragStart={handleDragStart}
+                  onOpenSkillFolder={onOpenSkillFolder}
                   onSearchChange={setSearch}
                   onSelectKind={selectKind}
                   onSelectResource={selectResource}
+                  onSetLocalSkillEnabled={handleSetLocalSkillEnabled}
                   onToggleChecked={toggleChecked}
+                  onToggleAllChecked={toggleAllChecked}
                   onUpdateMarketplaceInstallState={updateMarketplaceInstallState}
-                  onOpenSkillFolder={onOpenSkillFolder}
                   search={search}
                   totalCount={filteredResources.length}
                   selectedResourceId={selectedResourceId}
@@ -176,6 +217,7 @@ export default function HomePage() {
                 <AgentDetailPanel
                   onOpenSkillFolder={onOpenSkillFolder}
                   onRefreshAgents={refreshAgents}
+                  onSetLocalSkillEnabled={handleSetLocalSkillEnabled}
                   selectedAgent={selectedAgent}
                   selectedResource={selectedResource}
                   onUpdateMarketplaceInstallState={updateMarketplaceInstallState}

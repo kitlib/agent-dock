@@ -9,8 +9,9 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import { installStateKey, kindIcons } from "@/features/shared/constants";
 import type { AgentDiscoveryItem } from "@/features/agents/types";
+import { getLocalSkillToggleTarget } from "@/features/home/local-skill-toggle";
+import { installStateKey } from "@/features/shared/constants";
 
 type AgentResourceListProps = {
   checkedIds: string[];
@@ -18,6 +19,12 @@ type AgentResourceListProps = {
   onDragStart: (event: DragEvent<HTMLDivElement>, resourceId: string) => void;
   onOpenSkillFolder: (skillPath: string) => void;
   onSelectResource: (resource: AgentDiscoveryItem) => void;
+  onSetLocalSkillEnabled: (
+    skillPath: string,
+    entryFilePath: string,
+    enabled: boolean,
+    skillId?: string
+  ) => Promise<void>;
   onToggleChecked: (id: string) => void;
   onUpdateMarketplaceInstallState: (id: string) => void;
   selectedResourceId: string;
@@ -29,10 +36,13 @@ function renderDiscoveryMeta(
   t: AgentResourceListProps["t"],
   active: boolean
 ) {
-  const shouldShowInstallState = !(resource.origin === "local" && resource.kind === "skill");
+  const isLocalSkill = resource.origin === "local" && resource.kind === "skill";
+  const shouldShowInstallState = !isLocalSkill;
   const badgeClassName = active
-    ? "bg-background/85 text-foreground border-border/70 border"
-    : "bg-muted text-muted-foreground";
+    ? "border border-border/70 bg-background/85 px-1.5 py-0.5 text-[9px] leading-3 text-foreground"
+    : "bg-muted px-1.5 py-0.5 text-[9px] leading-3 text-muted-foreground";
+  const originLabel =
+    resource.origin === "local" ? t("prototype.badges.local") : t("prototype.badges.marketplace");
 
   return (
     <div
@@ -41,18 +51,23 @@ function renderDiscoveryMeta(
         active ? "text-foreground/75" : "text-muted-foreground"
       )}
     >
-      <span className={cn("rounded px-2 py-1", badgeClassName)}>
-        {resource.origin === "local"
-          ? t("prototype.badges.local")
-          : t("prototype.badges.marketplace")}
-      </span>
-      {shouldShowInstallState ? (
-        <span className={cn("rounded px-2 py-1", badgeClassName)}>
-          {t(installStateKey[resource.installState])}
+      <span className={badgeClassName}>{originLabel}</span>
+      {isLocalSkill ? (
+        <span
+          className={cn(
+            "rounded border px-1.5 py-0.5 text-[9px] leading-3",
+            resource.enabled
+              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+              : "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
+          )}
+        >
+          {resource.enabled ? t("prototype.actions.enabled") : t("prototype.actions.disabled")}
         </span>
       ) : null}
-      {resource.origin === "local" && resource.usageLabel !== undefined ? (
-        <span>{t("prototype.detail.usedBy", { count: resource.usageLabel })}</span>
+      {shouldShowInstallState ? (
+        <span className={cn("rounded", badgeClassName)}>
+          {t(installStateKey[resource.installState])}
+        </span>
       ) : null}
       {resource.origin === "marketplace" ? (
         <>
@@ -67,12 +82,105 @@ function renderDiscoveryMeta(
   );
 }
 
+function getSkillFolderPath(resource: AgentDiscoveryItem): string {
+  if (resource.origin !== "local" || resource.kind !== "skill") {
+    return "";
+  }
+
+  return resource.skillPath?.trim() ?? "";
+}
+
+function renderResourceAction(
+  resource: AgentDiscoveryItem,
+  onOpenSkillFolder: AgentResourceListProps["onOpenSkillFolder"],
+  onSetLocalSkillEnabled: AgentResourceListProps["onSetLocalSkillEnabled"],
+  onUpdateMarketplaceInstallState: AgentResourceListProps["onUpdateMarketplaceInstallState"],
+  t: AgentResourceListProps["t"]
+) {
+  if (resource.origin === "marketplace") {
+    return (
+      <DropdownMenuItem onClick={() => onUpdateMarketplaceInstallState(resource.id)}>
+        {t(installStateKey[resource.installState])}
+      </DropdownMenuItem>
+    );
+  }
+
+  const skillPath = getSkillFolderPath(resource);
+  const canOpenSkillFolder = skillPath.length > 0;
+  const skillToggleTarget = getLocalSkillToggleTarget(resource);
+
+  return (
+    <>
+      {resource.kind === "skill" ? (
+        <DropdownMenuItem
+          disabled={!canOpenSkillFolder}
+          onClick={() => {
+            if (canOpenSkillFolder) {
+              onOpenSkillFolder(skillPath);
+            }
+          }}
+        >
+          {t("prototype.actions.open")}
+        </DropdownMenuItem>
+      ) : null}
+      {skillToggleTarget ? (
+        <DropdownMenuItem
+          onClick={() =>
+            void onSetLocalSkillEnabled(
+              skillToggleTarget.skillPath,
+              skillToggleTarget.entryFilePath,
+              !skillToggleTarget.enabled,
+              skillToggleTarget.id
+            )
+          }
+        >
+          {skillToggleTarget.enabled
+            ? t("prototype.actions.disable")
+            : t("prototype.actions.enable")}
+        </DropdownMenuItem>
+      ) : null}
+    </>
+  );
+}
+
+function isLocalResource(resource: AgentDiscoveryItem): boolean {
+  return resource.origin === "local";
+}
+
+function isSelectedResource(resourceId: string, selectedResourceId: string): boolean {
+  return resourceId === selectedResourceId;
+}
+
+function getCheckboxClassName(active: boolean): string {
+  return cn(
+    "mt-1",
+    active &&
+      "border-foreground/50 data-[state=checked]:border-foreground data-[state=checked]:bg-foreground data-[state=checked]:text-background"
+  );
+}
+
+function getCardClassName(active: boolean): string {
+  return cn(
+    "group rounded-lg border border-border/70 px-3 py-2 transition-colors hover:bg-accent/40",
+    active ? "border-primary/40 bg-accent/80 text-accent-foreground" : "bg-background"
+  );
+}
+
+function getSummaryClassName(active: boolean): string {
+  return cn("mt-1 line-clamp-1 text-xs", active ? "text-foreground/80" : "text-muted-foreground");
+}
+
+function getActionButtonClassName(active: boolean): string {
+  return cn(active && "text-foreground/80 hover:text-foreground");
+}
+
 export function AgentResourceList({
   checkedIds,
   filteredResources,
   onDragStart,
   onOpenSkillFolder,
   onSelectResource,
+  onSetLocalSkillEnabled,
   onToggleChecked,
   onUpdateMarketplaceInstallState,
   selectedResourceId,
@@ -81,60 +189,31 @@ export function AgentResourceList({
   return (
     <div className="space-y-1">
       {filteredResources.map((resource) => {
-        const Icon = kindIcons[resource.kind];
-        const active = resource.id === selectedResourceId;
-        const shouldShowOpenSkillFolder = resource.origin === "local" && resource.kind === "skill";
-        const skillPath = shouldShowOpenSkillFolder ? resource.skillPath?.trim() ?? "" : "";
-        const disableOpenSkillFolder = skillPath.length === 0;
+        const active = isSelectedResource(resource.id, selectedResourceId);
 
         return (
           <div
             key={resource.id}
-            draggable={resource.origin === "local"}
+            draggable={isLocalResource(resource)}
             onDragStart={(event) => onDragStart(event, resource.id)}
             onClick={() => onSelectResource(resource)}
-            className={cn(
-              "group border-border/70 hover:bg-accent/40 rounded-lg border px-3 py-2 transition-colors",
-              active ? "bg-accent/80 border-primary/40 text-accent-foreground" : "bg-background"
-            )}
+            className={getCardClassName(active)}
           >
             <div className="flex items-start gap-3">
-              {resource.origin === "local" ? (
+              {isLocalResource(resource) ? (
                 <Checkbox
                   checked={checkedIds.includes(resource.id)}
                   onCheckedChange={() => onToggleChecked(resource.id)}
                   onClick={(event) => event.stopPropagation()}
-                  className={cn(
-                    "mt-1",
-                    active &&
-                      "border-foreground/50 data-[state=checked]:border-foreground data-[state=checked]:bg-foreground data-[state=checked]:text-background"
-                  )}
+                  className={getCheckboxClassName(active)}
                   aria-label={resource.name}
                 />
               ) : null}
-              <Icon
-                className={cn(
-                  "mt-0.5 h-4 w-4 shrink-0",
-                  active ? "text-foreground/80" : "text-muted-foreground"
-                )}
-              />
               <div className="min-w-0 flex-1">
-                <div className="flex items-center justify-between gap-3">
-                  <div className={cn("truncate text-sm font-medium", active && "text-foreground")}>
-                    {resource.name}
-                  </div>
-                  <div className={cn("text-xs", active ? "text-foreground/70" : "text-muted-foreground")}>
-                    {resource.updatedAt}
-                  </div>
+                <div className={cn("truncate text-sm font-medium", active && "text-foreground")}>
+                  {resource.name}
                 </div>
-                <div
-                  className={cn(
-                    "mt-1 line-clamp-1 text-xs",
-                    active ? "text-foreground/80" : "text-muted-foreground"
-                  )}
-                >
-                  {resource.summary}
-                </div>
+                <div className={getSummaryClassName(active)}>{resource.summary}</div>
                 {renderDiscoveryMeta(resource, t, active)}
               </div>
               <DropdownMenu>
@@ -142,34 +221,19 @@ export function AgentResourceList({
                   <Button
                     variant="ghost"
                     size="icon-xs"
-                    className={cn(active && "text-foreground/80 hover:text-foreground")}
+                    className={getActionButtonClassName(active)}
                     onClick={(event) => event.stopPropagation()}
                   >
                     <MoreHorizontal className="h-4 w-4" />
                   </Button>
                 </DropdownMenuTrigger>
                 <DropdownMenuContent align="end">
-                  {resource.origin === "local" ? (
-                    <>
-                      {shouldShowOpenSkillFolder ? (
-                        <DropdownMenuItem
-                          disabled={disableOpenSkillFolder}
-                          onClick={() => {
-                            if (!disableOpenSkillFolder) {
-                              onOpenSkillFolder(skillPath);
-                            }
-                          }}
-                        >
-                          {t("prototype.actions.open")}
-                        </DropdownMenuItem>
-                      ) : null}
-                      <DropdownMenuItem>{t("prototype.actions.enable")}</DropdownMenuItem>
-                      <DropdownMenuItem>{t("prototype.actions.disable")}</DropdownMenuItem>
-                    </>
-                  ) : (
-                    <DropdownMenuItem onClick={() => onUpdateMarketplaceInstallState(resource.id)}>
-                      {t(installStateKey[resource.installState])}
-                    </DropdownMenuItem>
+                  {renderResourceAction(
+                    resource,
+                    onOpenSkillFolder,
+                    onSetLocalSkillEnabled,
+                    onUpdateMarketplaceInstallState,
+                    t
                   )}
                 </DropdownMenuContent>
               </DropdownMenu>

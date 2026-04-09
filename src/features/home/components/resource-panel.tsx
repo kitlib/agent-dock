@@ -3,6 +3,7 @@ import { Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import type { AgentDiscoveryItem, ResourceKind } from "@/features/agents/types";
+import { getLocalSkillToggleTarget } from "@/features/home/local-skill-toggle";
 import { kindIcons } from "@/features/shared/constants";
 import { AgentResourceList } from "@/features/resources/core/components/resource-list";
 
@@ -23,12 +24,20 @@ type AgentResourcePanelProps = {
   checkedIds: string[];
   filteredResources: AgentDiscoveryItem[];
   onClearChecked: () => void;
+  onToggleCheckedSkills: () => Promise<void>;
   onDragStart: (event: DragEvent<HTMLDivElement>, resourceId: string) => void;
   onOpenSkillFolder: (skillPath: string) => void;
   onSearchChange: (value: string) => void;
   onSelectKind: (kind: ResourceKind) => void;
   onSelectResource: (resource: AgentDiscoveryItem) => void;
+  onSetLocalSkillEnabled: (
+    skillPath: string,
+    entryFilePath: string,
+    enabled: boolean,
+    skillId?: string
+  ) => Promise<void>;
   onToggleChecked: (id: string) => void;
+  onToggleAllChecked: (ids: string[]) => void;
   onUpdateMarketplaceInstallState: (id: string) => void;
   search: string;
   totalCount: number;
@@ -41,18 +50,28 @@ export function AgentResourcePanel({
   checkedIds,
   filteredResources,
   onClearChecked,
+  onToggleCheckedSkills,
   onDragStart,
   onOpenSkillFolder,
   onSearchChange,
   onSelectKind,
   onSelectResource,
+  onSetLocalSkillEnabled,
   onToggleChecked,
+  onToggleAllChecked,
   onUpdateMarketplaceInstallState,
   search,
   totalCount,
   selectedResourceId,
   t,
 }: AgentResourcePanelProps) {
+  const hasEnabledSkill = filteredResources.some((resource) => {
+    if (!checkedIds.includes(resource.id)) {
+      return false;
+    }
+
+    return getLocalSkillToggleTarget(resource)?.enabled ?? false;
+  });
   return (
     <section className="flex h-full min-w-0 flex-col overflow-hidden">
       <div className="border-b p-3">
@@ -94,10 +113,27 @@ export function AgentResourcePanel({
 
       {checkedIds.length > 0 ? (
         <div className="bg-muted/50 flex items-center justify-between border-b px-3 py-2 text-sm">
-          <span>{t("prototype.actions.batchSelected", { count: checkedIds.length })}</span>
           <div className="flex items-center gap-2">
-            <Button variant="outline" size="xs">
-              {t("prototype.actions.disable")}
+            <span>{t("prototype.actions.batchSelected", { count: checkedIds.length })}</span>
+            <Button
+              variant="ghost"
+              size="xs"
+              className="h-auto p-0 text-xs text-muted-foreground underline hover:text-foreground"
+              onClick={() => onToggleAllChecked(filteredResources.map((r) => r.id))}
+            >
+              {t("prototype.actions.selectAll")}
+            </Button>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant="outline"
+              size="xs"
+              disabled={!hasEnabledSkill}
+              onClick={() => void onToggleCheckedSkills()}
+            >
+              {hasEnabledSkill
+                ? t("prototype.actions.disable")
+                : t("prototype.actions.enable")}
             </Button>
             <Button variant="outline" size="xs" onClick={onClearChecked}>
               {t("prototype.actions.clear")}
@@ -118,6 +154,7 @@ export function AgentResourcePanel({
             onDragStart={onDragStart}
             onOpenSkillFolder={onOpenSkillFolder}
             onSelectResource={onSelectResource}
+            onSetLocalSkillEnabled={onSetLocalSkillEnabled}
             onToggleChecked={onToggleChecked}
             onUpdateMarketplaceInstallState={onUpdateMarketplaceInstallState}
             selectedResourceId={selectedResourceId}

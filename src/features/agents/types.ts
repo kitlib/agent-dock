@@ -9,7 +9,6 @@ export type AgentTypeId =
   | "antigravity"
   | "augment"
   | "claude"
-  | "claude-plugin"
   | "cline"
   | "codebuddy"
   | "codex"

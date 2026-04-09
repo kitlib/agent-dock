@@ -42,6 +42,7 @@ pub fn run() {
             commands::agents::refresh_agent_discovery,
             commands::skills::list_local_skills,
             commands::skills::get_local_skill_detail,
+            commands::skills::set_local_skill_enabled,
             commands::skills::open_skill_folder
         ]);
 
