@@ -87,6 +87,27 @@ export default function HomePage() {
     refreshSkills(skillId);
   }
 
+  async function handleToggleCheckedSkills(): Promise<void> {
+    const selectedSkillResources = filteredResources
+      .filter((resource) => checkedIds.includes(resource.id))
+      .map((resource) => getLocalSkillToggleTarget(resource))
+      .filter((target): target is NonNullable<typeof target> => target != null);
+
+    const hasEnabled = selectedSkillResources.some((target) => target.enabled);
+    const newEnabled = !hasEnabled;
+
+    await Promise.all(
+      selectedSkillResources.map((resource) =>
+        handleSetLocalSkillEnabled(
+          resource.skillPath,
+          resource.entryFilePath,
+          newEnabled,
+          resource.id
+        )
+      )
+    );
+  }
+
   async function handleDisableCheckedSkills(): Promise<void> {
     const selectedSkillResources = filteredResources.flatMap((resource) => {
       if (!checkedIds.includes(resource.id)) {
@@ -194,7 +215,7 @@ export default function HomePage() {
                   checkedIds={checkedIds}
                   filteredResources={filteredResources}
                   onClearChecked={clearChecked}
-                  onDisableCheckedSkills={handleDisableCheckedSkills}
+                  onToggleCheckedSkills={handleToggleCheckedSkills}
                   onDragStart={handleDragStart}
                   onOpenSkillFolder={onOpenSkillFolder}
                   onSearchChange={setSearch}

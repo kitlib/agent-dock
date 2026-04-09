@@ -65,6 +65,12 @@ export function AgentResourcePanel({
   selectedResourceId,
   t,
 }: AgentResourcePanelProps) {
+  const hasToggleableSkill = filteredResources.some((resource) => {
+    if (!checkedIds.includes(resource.id)) {
+      return false;
+    }
+    return getLocalSkillToggleTarget(resource) != null;
+  });
   const hasEnabledSkill = filteredResources.some((resource) => {
     if (!checkedIds.includes(resource.id)) {
       return false;
@@ -116,9 +122,8 @@ export function AgentResourcePanel({
           <div className="flex items-center gap-2">
             <span>{t("prototype.actions.batchSelected", { count: checkedIds.length })}</span>
             <Button
-              variant="ghost"
+              variant="outline"
               size="xs"
-              className="h-auto p-0 text-xs text-muted-foreground underline hover:text-foreground"
               onClick={() => onToggleAllChecked(filteredResources.map((r) => r.id))}
             >
               {t("prototype.actions.selectAll")}
@@ -128,7 +133,7 @@ export function AgentResourcePanel({
             <Button
               variant="outline"
               size="xs"
-              disabled={!hasEnabledSkill}
+              disabled={!hasToggleableSkill}
               onClick={() => void onToggleCheckedSkills()}
             >
               {hasEnabledSkill

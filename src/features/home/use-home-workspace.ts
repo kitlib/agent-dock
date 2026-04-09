@@ -231,6 +231,7 @@ export function useHomeWorkspace() {
     setSearch,
     setSelectedAgentId: selectAgent,
     toggleChecked: resourceBrowser.toggleChecked,
+    toggleAllChecked: resourceBrowser.toggleAllChecked,
     updateMarketplaceInstallState: resourceBrowser.updateMarketplaceInstallState,
     workspaceMode,
     enterAddingMode,
