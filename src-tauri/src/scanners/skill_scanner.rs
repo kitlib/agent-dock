@@ -1,4 +1,4 @@
-use std::{env, fs, path::{Path, PathBuf}};
+use std::{collections::BTreeMap, env, fs, path::{Path, PathBuf}};
 
 use chrono::{DateTime, Utc};
 use serde_json::Value;
@@ -10,6 +10,7 @@ use crate::dto::skills::{
 const COMMANDS_SOURCE: &str = "commands";
 const SKILL_ENTRY_FILE: &str = "SKILL.md";
 const DISABLED_SKILL_ENTRY_FILE: &str = "SKILL.md.disabled";
+const DISABLED_SUFFIX: &str = ".disabled";
 
 #[derive(Clone)]
 pub struct ParsedSkill {
@@ -19,6 +20,26 @@ pub struct ParsedSkill {
 
 fn normalize_path(path: &Path) -> String {
     path.to_string_lossy().replace('\\', "/")
+}
+
+fn entry_file_name(path: &Path) -> Option<String> {
+    path.file_name()
+        .and_then(|name| name.to_str())
+        .map(str::to_string)
+}
+
+fn is_disabled_entry(path: &Path) -> bool {
+    entry_file_name(path)
+        .map(|name| name.ends_with(DISABLED_SUFFIX))
+        .unwrap_or(false)
+}
+
+fn enabled_entry_path(path: &Path) -> PathBuf {
+    let Some(entry_name) = entry_file_name(path) else {
+        return path.to_path_buf();
+    };
+    let enabled_name = entry_name.strip_suffix(DISABLED_SUFFIX).unwrap_or(&entry_name);
+    path.with_file_name(enabled_name)
 }
 
 fn skill_id(agent_id: &str, skill_name: &str, source: &str) -> String {
@@ -213,7 +234,8 @@ fn resolve_scan_root(root_path: &str) -> PathBuf {
 }
 
 fn command_name(scan_root: &Path, entry_file: &Path) -> Option<String> {
-    let relative_path = entry_file.strip_prefix(scan_root).ok()?;
+    let canonical_entry_file = enabled_entry_path(entry_file);
+    let relative_path = canonical_entry_file.strip_prefix(scan_root).ok()?;
     let without_extension = relative_path.with_extension("");
     Some(normalize_path(&without_extension))
 }
@@ -233,6 +255,8 @@ fn parse_skill(
         return None;
     }
 
+    let canonical_entry_file = enabled_entry_path(&entry_file);
+    let entry_file_name = entry_file.file_name()?.to_str()?;
     let skill_name = if scan_target.source == COMMANDS_SOURCE {
         command_name(scan_root, &entry_file)?
     } else {
@@ -298,7 +322,7 @@ fn parse_skill(
         description: description.clone(),
         status: status.clone(),
         skill_path: normalize_path(&skill_path),
-        entry_file_path: normalize_path(&entry_file),
+        entry_file_path: normalize_path(&canonical_entry_file),
         agent_type: scan_target.agent_type.clone(),
         agent_name: scan_target.display_name.clone(),
         warnings: warnings.clone(),
@@ -320,14 +344,14 @@ fn parse_skill(
         source_label: format!("{} local", scan_target.display_name),
         status,
         skill_path: normalize_path(&skill_path),
-        entry_file_path: normalize_path(&entry_file),
+        entry_file_path: normalize_path(&canonical_entry_file),
         agent_type: scan_target.agent_type.clone(),
         agent_name: scan_target.display_name.clone(),
         warnings,
         errors,
         frontmatter,
         frontmatter_raw,
-        supporting_files: supporting_files(&skill_path, entry_file.file_name()?.to_str()?),
+        supporting_files: supporting_files(&skill_path, entry_file_name),
         allowed_tools,
     };
 
@@ -347,13 +371,41 @@ fn collect_command_markdown_files(scan_root: &Path) -> Vec<PathBuf> {
             continue;
         }
 
-        if path.is_file() && path.extension().and_then(|extension| extension.to_str()) == Some("md") {
+        if !path.is_file() {
+            continue;
+        }
+
+        let Some(file_name) = entry_file_name(&path) else {
+            continue;
+        };
+        if path.extension().and_then(|extension| extension.to_str()) == Some("md")
+            || file_name.ends_with(".md.disabled")
+        {
             files.push(path);
         }
     }
 
     files.sort();
     files
+}
+
+fn collect_command_entries(scan_root: &Path) -> Vec<(PathBuf, bool)> {
+    let mut command_entries = BTreeMap::<PathBuf, (PathBuf, bool)>::new();
+
+    for path in collect_command_markdown_files(scan_root) {
+        let canonical_entry_path = enabled_entry_path(&path);
+        let enabled = !is_disabled_entry(&path);
+        command_entries
+            .entry(canonical_entry_path)
+            .and_modify(|entry| {
+                if enabled {
+                    *entry = (path.clone(), true);
+                }
+            })
+            .or_insert((path, enabled));
+    }
+
+    command_entries.into_values().collect()
 }
 
 pub fn scan_skills(scan_targets: Vec<SkillScanTargetDto>) -> Vec<ParsedSkill> {
@@ -366,8 +418,8 @@ pub fn scan_skills(scan_targets: Vec<SkillScanTargetDto>) -> Vec<ParsedSkill> {
         }
 
         if scan_target.source == COMMANDS_SOURCE {
-            for path in collect_command_markdown_files(&scan_root) {
-                if let Some(skill) = parse_skill(&scan_target, &scan_root, path.clone(), path, true) {
+            for (entry_file, enabled) in collect_command_entries(&scan_root) {
+                if let Some(skill) = parse_skill(&scan_target, &scan_root, entry_file.clone(), entry_file, enabled) {
                     parsed_skills.push(skill);
                 }
             }
@@ -409,10 +461,16 @@ pub fn scan_skills(scan_targets: Vec<SkillScanTargetDto>) -> Vec<ParsedSkill> {
 #[cfg(test)]
 mod tests {
     use super::{
-        resolve_scan_root, scan_skills, COMMANDS_SOURCE, DISABLED_SKILL_ENTRY_FILE, SKILL_ENTRY_FILE,
+        normalize_path, resolve_scan_root, scan_skills, COMMANDS_SOURCE, DISABLED_SKILL_ENTRY_FILE,
+        SKILL_ENTRY_FILE,
     };
     use crate::dto::skills::SkillScanTargetDto;
-    use std::{env, fs, path::PathBuf, time::{SystemTime, UNIX_EPOCH}};
+    use std::{
+        env, fs,
+        path::{Path, PathBuf},
+        sync::{Mutex, OnceLock},
+        time::{SystemTime, UNIX_EPOCH},
+    };
 
     fn temp_dir(name: &str) -> PathBuf {
         let unique = SystemTime::now()
@@ -425,6 +483,49 @@ mod tests {
     fn write_skill_entry(skill_dir: &PathBuf, entry_name: &str, contents: &str) {
         fs::create_dir_all(skill_dir).expect("create skill dir");
         fs::write(skill_dir.join(entry_name), contents).expect("write skill markdown");
+    }
+
+    fn user_home_lock() -> &'static Mutex<()> {
+        static LOCK: OnceLock<Mutex<()>> = OnceLock::new();
+        LOCK.get_or_init(|| Mutex::new(()))
+    }
+
+    struct UserHomeEnvGuard {
+        previous_userprofile: Option<std::ffi::OsString>,
+        previous_home: Option<std::ffi::OsString>,
+        _lock: std::sync::MutexGuard<'static, ()>,
+    }
+
+    impl UserHomeEnvGuard {
+        fn set(home: &Path) -> Self {
+            let lock = user_home_lock().lock().expect("lock user home env");
+            let previous_userprofile = env::var_os("USERPROFILE");
+            let previous_home = env::var_os("HOME");
+            env::set_var("USERPROFILE", home);
+            env::set_var("HOME", home);
+
+            Self {
+                previous_userprofile,
+                previous_home,
+                _lock: lock,
+            }
+        }
+    }
+
+    impl Drop for UserHomeEnvGuard {
+        fn drop(&mut self) {
+            if let Some(value) = self.previous_userprofile.as_ref() {
+                env::set_var("USERPROFILE", value);
+            } else {
+                env::remove_var("USERPROFILE");
+            }
+
+            if let Some(value) = self.previous_home.as_ref() {
+                env::set_var("HOME", value);
+            } else {
+                env::remove_var("HOME");
+            }
+        }
     }
 
     fn scan_test_skill(skill_name: &str, contents: &str) -> crate::scanners::skill_scanner::ParsedSkill {
@@ -487,8 +588,7 @@ mod tests {
         fs::write(second_skill.join("SKILL.md"), "# Peon ping log\nInspect ping logs.")
             .expect("write second skill markdown");
 
-        let previous_userprofile = env::var_os("USERPROFILE");
-        env::set_var("USERPROFILE", &home);
+        let _user_home = UserHomeEnvGuard::set(&home);
 
         let skills = scan_skills(vec![SkillScanTargetDto {
             agent_id: "agent-claude".into(),
@@ -497,12 +597,6 @@ mod tests {
             display_name: "Claude Main".into(),
             source: "skills".into(),
         }]);
-
-        if let Some(value) = previous_userprofile {
-            env::set_var("USERPROFILE", value);
-        } else {
-            env::remove_var("USERPROFILE");
-        }
 
         let mut ids = skills
             .iter()
@@ -528,7 +622,8 @@ mod tests {
 
         assert!(!skill.summary.enabled);
         assert!(!skill.detail.enabled);
-        assert!(skill.detail.entry_file_path.ends_with(DISABLED_SKILL_ENTRY_FILE));
+        assert!(skill.detail.entry_file_path.ends_with(SKILL_ENTRY_FILE));
+        assert!(skill.detail.skill_path.ends_with("disabled-entry-skill"));
     }
 
     #[test]
@@ -574,8 +669,7 @@ mod tests {
         )
         .expect("write workflow markdown");
 
-        let previous_userprofile = env::var_os("USERPROFILE");
-        env::set_var("USERPROFILE", &home);
+        let _user_home = UserHomeEnvGuard::set(&home);
 
         let skills = scan_skills(vec![SkillScanTargetDto {
             agent_id: "agent-claude".into(),
@@ -584,12 +678,6 @@ mod tests {
             display_name: "Claude Main".into(),
             source: COMMANDS_SOURCE.into(),
         }]);
-
-        if let Some(value) = previous_userprofile {
-            env::set_var("USERPROFILE", value);
-        } else {
-            env::remove_var("USERPROFILE");
-        }
 
         let mut ids = skills
             .iter()
@@ -603,9 +691,43 @@ mod tests {
         ]);
         assert!(skills.iter().all(|skill| skill.summary.kind == "skill"));
         assert!(skills.iter().all(|skill| skill.detail.entry_file_path.ends_with(".md")));
+        assert!(skills
+            .iter()
+            .all(|skill| skill.detail.skill_path == skill.detail.entry_file_path));
 
         fs::remove_dir_all(&home).expect("cleanup temp dir");
     }
+    #[test]
+    fn scan_skills_reads_disabled_command_entry_with_canonical_entry_path() {
+        let home = temp_dir("claude-commands-disabled");
+        let commands_root = home.join(".claude").join("commands");
+
+        fs::create_dir_all(&commands_root).expect("create commands dir");
+        fs::write(
+            commands_root.join("feat.md.disabled"),
+            "# Feature command\n\nRun feature flow.\n",
+        )
+        .expect("write disabled command markdown");
+
+        let _user_home = UserHomeEnvGuard::set(&home);
+
+        let skills = scan_skills(vec![SkillScanTargetDto {
+            agent_id: "agent-claude".into(),
+            agent_type: "claude".into(),
+            root_path: "~/.claude/commands".into(),
+            display_name: "Claude Main".into(),
+            source: COMMANDS_SOURCE.into(),
+        }]);
+
+        let skill = skills.first().expect("skill should be parsed");
+        assert_eq!(skill.summary.id, "agent-claude::commands::feat");
+        assert!(!skill.summary.enabled);
+        assert_eq!(skill.detail.entry_file_path.replace('\\', "/"), normalize_path(&commands_root.join("feat.md")));
+        assert_eq!(skill.detail.skill_path.replace('\\', "/"), normalize_path(&commands_root.join("feat.md.disabled")));
+
+        fs::remove_dir_all(&home).expect("cleanup temp dir");
+    }
+
     #[test]
     fn scan_skills_reads_nested_claude_commands_markdown_files_from_tilde_root() {
         let home = temp_dir("claude-commands-nested-tilde");
@@ -617,8 +739,7 @@ mod tests {
         fs::write(nested_commands_root.join("workflow.md"), "# Workflow\n\nNested workflow.")
             .expect("write nested workflow markdown");
 
-        let previous_userprofile = env::var_os("USERPROFILE");
-        env::set_var("USERPROFILE", &home);
+        let _user_home = UserHomeEnvGuard::set(&home);
 
         let skills = scan_skills(vec![SkillScanTargetDto {
             agent_id: "agent-claude".into(),
@@ -627,12 +748,6 @@ mod tests {
             display_name: "Claude Main".into(),
             source: COMMANDS_SOURCE.into(),
         }]);
-
-        if let Some(value) = previous_userprofile {
-            env::set_var("USERPROFILE", value);
-        } else {
-            env::remove_var("USERPROFILE");
-        }
 
         let mut ids = skills
             .iter()

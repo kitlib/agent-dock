@@ -11,14 +11,6 @@ export type LocalSkillToggleTarget = {
   skillPath: string;
 };
 
-function getSkillEntryFileName(path: string | undefined): string {
-  if (!path) {
-    return "";
-  }
-
-  return path.split(/[\\/]/).pop() ?? "";
-}
-
 export function getLocalSkillToggleTarget(
   resource: AgentDiscoveryItem | null | undefined
 ): LocalSkillToggleTarget | null {
@@ -29,14 +21,8 @@ export function getLocalSkillToggleTarget(
   const localSkill = resource as LocalDiscoveryItem & SkillResource;
   const entryFilePath = localSkill.entryFilePath?.trim() ?? "";
   const skillPath = localSkill.skillPath?.trim() ?? "";
-  const entryFileName = getSkillEntryFileName(entryFilePath);
 
-  if (
-    !skillPath ||
-    !entryFilePath ||
-    skillPath === entryFilePath ||
-    (entryFileName !== "SKILL.md" && entryFileName !== "SKILL.md.disabled")
-  ) {
+  if (!skillPath || !entryFilePath) {
     return null;
   }
 

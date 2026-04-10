@@ -108,29 +108,6 @@ export default function HomePage() {
     );
   }
 
-  async function handleDisableCheckedSkills(): Promise<void> {
-    const selectedSkillResources = filteredResources.flatMap((resource) => {
-      if (!checkedIds.includes(resource.id)) {
-        return [];
-      }
-
-      const toggleTarget = getLocalSkillToggleTarget(resource);
-      return toggleTarget?.enabled ? [toggleTarget] : [];
-    });
-
-    await Promise.all(
-      selectedSkillResources.map((resource) =>
-        handleSetLocalSkillEnabled(
-          resource.skillPath,
-          resource.entryFilePath,
-          false,
-          resource.id
-        )
-      )
-    );
-
-    clearChecked();
-  }
 
   useEffect(() => {
     const unlistenShortcutChanged = listen<{ shortcut: string }>(
@@ -194,7 +171,7 @@ export default function HomePage() {
             />
           </ResizablePanel>
 
-          <ResizableHandle withHandle />
+          <ResizableHandle />
 
           {workspaceMode === "adding" ? (
             <ResizablePanel defaultSize="82%" minSize={420}>
@@ -232,7 +209,7 @@ export default function HomePage() {
                 />
               </ResizablePanel>
 
-              <ResizableHandle withHandle />
+              <ResizableHandle />
 
               <ResizablePanel defaultSize="52%" minSize={200}>
                 <AgentDetailPanel

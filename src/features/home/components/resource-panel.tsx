@@ -128,6 +128,9 @@ export function AgentResourcePanel({
             >
               {t("prototype.actions.selectAll")}
             </Button>
+            <Button variant="outline" size="xs" onClick={onClearChecked}>
+              {t("prototype.actions.clear")}
+            </Button>
           </div>
           <div className="flex items-center gap-2">
             <Button
@@ -139,9 +142,6 @@ export function AgentResourcePanel({
               {hasEnabledSkill
                 ? t("prototype.actions.disable")
                 : t("prototype.actions.enable")}
-            </Button>
-            <Button variant="outline" size="xs" onClick={onClearChecked}>
-              {t("prototype.actions.clear")}
             </Button>
           </div>
         </div>

@@ -39,7 +39,7 @@ function getOpenPath(selectedResource: AgentDiscoveryItem | null): string {
     return "";
   }
 
-  return selectedResource.entryFilePath ?? selectedResource.skillPath ?? "";
+  return selectedResource.skillPath ?? selectedResource.entryFilePath ?? "";
 }
 
 
