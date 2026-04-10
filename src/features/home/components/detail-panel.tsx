@@ -27,10 +27,11 @@ function getSkillTitle(selectedResource: AgentDiscoveryItem | null): string | un
     return selectedResource?.name;
   }
 
+  const skill = selectedResource as Record<string, any>;
   return (
-    selectedResource.frontmatter?.name?.toString() ??
-    selectedResource.frontmatter?.title?.toString() ??
-    selectedResource.name
+    skill.frontmatter?.name?.toString() ??
+    skill.frontmatter?.title?.toString() ??
+    selectedResource?.name
   );
 }
 
@@ -39,7 +40,8 @@ function getOpenPath(selectedResource: AgentDiscoveryItem | null): string {
     return "";
   }
 
-  return selectedResource.skillPath ?? selectedResource.entryFilePath ?? "";
+  const skill = selectedResource as Record<string, any>;
+  return skill.skillPath ?? skill.entryFilePath ?? "";
 }
 
 

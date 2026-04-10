@@ -37,19 +37,6 @@ function isManagedVisibleAgent(agent: ResolvedAgentView) {
   return agent.managed && !agent.hidden;
 }
 
-function matchesAgentSearch(agent: ResolvedAgentView, normalizedSearch: string) {
-  if (normalizedSearch.length === 0) {
-    return true;
-  }
-
-  return (
-    agent.name.toLowerCase().includes(normalizedSearch) ||
-    agent.role.toLowerCase().includes(normalizedSearch) ||
-    agent.summary.toLowerCase().includes(normalizedSearch) ||
-    agent.rootPath.toLowerCase().includes(normalizedSearch)
-  );
-}
-
 function getSelectedAgent(
   filteredAgents: ResolvedAgentView[],
   managedVisibleAgents: ResolvedAgentView[],
@@ -117,18 +104,12 @@ export function useHomeWorkspace() {
     }
   };
 
-  const normalizedSearch = search.trim().toLowerCase();
-
   const managedVisibleAgents = useMemo(
     () => resolvedAgents.filter(isManagedVisibleAgent),
     [resolvedAgents]
   );
 
-  const filteredAgents = useMemo(() => {
-    return managedVisibleAgents.filter((agent) => matchesAgentSearch(agent, normalizedSearch));
-  }, [managedVisibleAgents, normalizedSearch]);
-
-  const selectedAgent = getSelectedAgent(filteredAgents, managedVisibleAgents, selectedAgentId);
+  const selectedAgent = getSelectedAgent(managedVisibleAgents, managedVisibleAgents, selectedAgentId);
 
   const currentSelectedAgentId = selectedAgent?.id ?? "";
   const selectedAgentSkillScanTargets = useMemo(
@@ -143,10 +124,10 @@ export function useHomeWorkspace() {
       selectedAgentId,
       resolvedAgentIds: resolvedAgents.map((agent) => agent.id),
       managedVisibleAgentIds: managedVisibleAgents.map((agent) => agent.id),
-      railAgentIds: filteredAgents.map((agent) => agent.id),
+      railAgentIds: managedVisibleAgents.map((agent) => agent.id),
       effectiveSelectedAgentId: currentSelectedAgentId || null,
     });
-  }, [currentSelectedAgentId, filteredAgents, managedVisibleAgents, resolvedAgents, selectedAgentId]);
+  }, [currentSelectedAgentId, managedVisibleAgents, resolvedAgents, selectedAgentId]);
 
   useEffect(() => {
     console.log("[skills] visible skills snapshot", {
@@ -209,7 +190,7 @@ export function useHomeWorkspace() {
     clearChecked: resourceBrowser.clearChecked,
     discoveredAgents,
     discoveryState,
-    filteredAgents,
+    filteredAgents: managedVisibleAgents,
     filteredResources: resourceBrowser.filteredResources,
     managedAgents,
     managedAgentsForView: resolvedAgents,
