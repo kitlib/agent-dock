@@ -55,7 +55,9 @@
   },
   "prototype": {
     "agents": {
-      "agents": "Agents"
+      "agents": "Agents",
+      "all": "All",
+      "allSkills": "All local skills"
     },
     "badges": {
       "local": "Local",
@@ -83,6 +85,14 @@
       "add": "Manage",
       "clear": "Clear",
       "open": "Open",
+      "edit": "Edit",
+      "delete": "Delete",
+      "copy": "Copy",
+      "copyToAgent": "Copy to Agent",
+      "overwrite": "Overwrite",
+      "skip": "Skip",
+      "overwriteAll": "Overwrite all",
+      "skipAll": "Skip all",
       "batchSelected": "{{count}} selected",
       "selectAll": "Select all",
       "totalCount": "{{count}} total",
@@ -92,6 +102,27 @@
       "manualAdd": "Create manually",
       "selectAllReady": "Select all ready",
       "notAdded": "Not managed"
+    },
+    "deleteSkill": {
+      "title": "Delete skill",
+      "description": "Delete \"{{name}}\" from disk? This action cannot be undone."
+    },
+    "copySkill": {
+      "title": "Copy Skill",
+      "selectTarget": "Select target Agent",
+      "conflictTitle": "Skill name conflict",
+      "conflictDescription": "\"{{skillName}}\" already exists in \"{{agentName}}\". Do you want to overwrite it?",
+      "conflictCount": "Found {{count}} conflicts",
+      "noConflicts": "No conflicts, ready to copy",
+      "copying": "Copying {{count}} skills to {{agentName}}...",
+      "copied": "Copied {{count}} skills",
+      "skipped": "Skipped {{count}} skills"
+    },
+    "feedback": {
+      "deleteSuccess": "Skill deleted.",
+      "deleteFailed": "Failed to delete skill.",
+      "copySuccess": "Skills copied successfully.",
+      "copyFailed": "Failed to copy skills."
     },
     "detail": {
       "title": "Details",
@@ -104,6 +135,7 @@
       "source": "Source",
       "version": "Version",
       "author": "Author",
+      "agent": "Agent",
       "downloads": "Downloads",
       "updatedAt": "Updated",
       "highlights": "Highlights",
@@ -121,7 +153,8 @@
       "skills": "Skills",
       "subagents": "Subagents",
       "addingTitle": "Manage agent",
-      "addingEmpty": "Select an agent from the left list to return to the three-column workspace."
+      "addingEmpty": "Select an agent from the left list to return to the three-column workspace.",
+      "allAgentsDescription": "Browse skills aggregated from all managed agents."
     },
     "emptyList": "No items yet.",
     "noResults": "No matching results.",

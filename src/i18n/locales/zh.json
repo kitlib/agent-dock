@@ -55,7 +55,9 @@
   },
   "prototype": {
     "agents": {
-      "agents": "Agent 列表"
+      "agents": "Agent 列表",
+      "all": "全部",
+      "allSkills": "全部本地 Skills"
     },
     "badges": {
       "local": "本地",
@@ -83,6 +85,14 @@
       "add": "管理",
       "clear": "清空",
       "open": "打开",
+      "edit": "编辑",
+      "delete": "删除",
+      "copy": "复制",
+      "copyToAgent": "复制到 Agent",
+      "overwrite": "覆盖",
+      "skip": "跳过",
+      "overwriteAll": "全部覆盖",
+      "skipAll": "全部跳过",
       "batchSelected": "已选 {{count}} 项",
       "selectAll": "全选",
       "totalCount": "共 {{count}} 个",
@@ -92,6 +102,27 @@
       "manualAdd": "手动创建",
       "selectAllReady": "全选可导入项",
       "notAdded": "未管理"
+    },
+    "deleteSkill": {
+      "title": "删除 Skill",
+      "description": "确定要从磁盘删除 \"{{name}}\" 吗？此操作不可撤销。"
+    },
+    "copySkill": {
+      "title": "复制 Skill",
+      "selectTarget": "选择目标 Agent",
+      "conflictTitle": "Skill 名称冲突",
+      "conflictDescription": "{{agentName}} 中已存在 \"{{skillName}}\"，是否覆盖？",
+      "conflictCount": "发现 {{count}} 个冲突",
+      "noConflicts": "无冲突，可以复制",
+      "copying": "正在复制 {{count}} 个 Skills 到 {{agentName}}...",
+      "copied": "已复制 {{count}} 个 Skills",
+      "skipped": "已跳过 {{count}} 个 Skills"
+    },
+    "feedback": {
+      "deleteSuccess": "Skill 已删除。",
+      "deleteFailed": "删除 Skill 失败。",
+      "copySuccess": "Skills 复制成功。",
+      "copyFailed": "复制 Skills 失败。"
     },
     "detail": {
       "title": "详情",
@@ -104,6 +135,7 @@
       "source": "来源",
       "version": "版本",
       "author": "作者",
+      "agent": "Agent",
       "downloads": "下载量",
       "updatedAt": "更新时间",
       "highlights": "亮点",
@@ -121,7 +153,8 @@
       "skills": "Skills",
       "subagents": "Subagents",
       "addingTitle": "管理 Agent",
-      "addingEmpty": "点击左侧任意 Agent 后，将返回三栏管理视图。"
+      "addingEmpty": "点击左侧任意 Agent 后，将返回三栏管理视图。",
+      "allAgentsDescription": "查看从所有已管理 Agent 聚合的 Skills。"
     },
     "emptyList": "当前没有可显示的内容。",
     "noResults": "没有匹配结果。",

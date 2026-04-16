@@ -21,11 +21,13 @@ export function toLocalDiscoveryItem(
   ownerAgentId: string | null,
   managed: boolean
 ): AgentResourceView {
+  const sourceLabel = "sourceLabel" in resource ? resource.sourceLabel : undefined;
+
   return {
     ...resource,
     origin: "local",
     installState: getInstallState(resource),
-    sourceLabel: "local",
+    sourceLabel: sourceLabel ?? "local",
     version: undefined,
     author: undefined,
     downloads: undefined,

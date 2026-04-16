@@ -179,6 +179,8 @@ export type CreateAgentResult = {
 
 export type AgentSummary = ResolvedAgentView;
 
+export type AgentSelectionScope = "all" | "agent";
+
 export type SkillScanTarget = {
   agentId: string;
   agentType: AgentTypeId;
@@ -203,6 +205,8 @@ export type SkillResource = {
   markdown: string;
   ownerAgentId?: string | null;
   sourceLabel?: string;
+  sourceKind?: "skills" | "commands";
+  relativePath?: string;
   description?: string;
   status?: string;
   skillPath?: string;
@@ -215,6 +219,48 @@ export type SkillResource = {
   frontmatterRaw?: string | null;
   supportingFiles?: SkillSupportingFile[];
   allowedTools?: string[];
+};
+
+export type LocalSkillCopySource = {
+  id: string;
+  name: string;
+  ownerAgentId: string;
+  sourceKind: "skills" | "commands";
+  relativePath: string;
+  skillPath: string;
+  entryFilePath: string;
+};
+
+export type LocalSkillCopyTargetAgent = {
+  agentId: string;
+  agentType: AgentTypeId;
+  agentName: string;
+  rootPath: string;
+};
+
+export type LocalSkillCopyConflict = {
+  skillId: string;
+  skillName: string;
+  sourceKind: "skills" | "commands";
+  destinationPath: string;
+  existingPath: string;
+};
+
+export type PreviewLocalSkillCopyResult = {
+  targetAgentName: string;
+  totalCount: number;
+  conflictCount: number;
+  conflicts: LocalSkillCopyConflict[];
+};
+
+export type LocalSkillConflictResolution = {
+  skillId: string;
+  action: "overwrite" | "skip";
+};
+
+export type CopyLocalSkillsResult = {
+  copiedCount: number;
+  skippedCount: number;
 };
 
 export type McpResource = {

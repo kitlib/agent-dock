@@ -1,12 +1,20 @@
 import { useEffect, useRef, useState, type DragEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { listen } from "@tauri-apps/api/event";
+import { toast } from "sonner";
 import { WindowFrame } from "@/components/window-frame";
 import { MainTitleBar } from "@/components/main-title-bar";
 import { UpdaterDialog } from "@/components/updater-dialog";
+import { Toaster } from "@/components/ui/sonner";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { setLocalSkillEnabled } from "@/features/agents/api";
 import { getLocalSkillToggleTarget } from "@/features/home/local-skill-toggle";
+import { CopySkillDialog } from "@/features/home/components/copy-skill-dialog";
+import type {
+  LocalSkillCopySource,
+  LocalSkillCopyTargetAgent,
+  LocalSkillConflictResolution,
+} from "@/features/agents/types";
 import type { PanelImperativeHandle } from "react-resizable-panels";
 import { registerShortcut } from "@/lib/shortcut";
 import { toggleWindow } from "@/lib/window";
@@ -45,9 +53,15 @@ export default function HomePage() {
     toggleAllChecked,
     clearChecked,
     updateMarketplaceInstallState,
+    onDeleteLocalSkill,
+    onOpenSkillEntryFile,
     onOpenSkillFolder,
+    onPreviewCopy,
+    onExecuteCopy,
     refreshSkills,
     managedAgentsForView,
+    selectAllAgents,
+    selectedScope,
     workspaceMode,
     enterAddingMode,
     onImportAgentsSuccess,
@@ -58,6 +72,8 @@ export default function HomePage() {
   } = useAgentsPrototype();
 
   const [isRailCollapsed, setIsRailCollapsed] = useState(false);
+  const [isCopyDialogOpen, setIsCopyDialogOpen] = useState(false);
+  const [copySources, setCopySources] = useState<LocalSkillCopySource[]>([]);
   const leftPanelRef = useRef<PanelImperativeHandle | null>(null);
   const leftPanelCollapsedSize = 56;
 
@@ -108,6 +124,41 @@ export default function HomePage() {
     );
   }
 
+  async function handleDeleteLocalSkill(
+    skillPath: string,
+    entryFilePath: string,
+    skillId?: string
+  ): Promise<void> {
+    try {
+      await onDeleteLocalSkill(skillPath, entryFilePath);
+      refreshSkills(skillId);
+      toast.success(t("prototype.feedback.deleteSuccess"));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : t("prototype.feedback.deleteFailed");
+      toast.error(message);
+      throw error;
+    }
+  }
+
+  function openCopyDialog(sources: LocalSkillCopySource[]): void {
+    setCopySources(sources);
+    setIsCopyDialogOpen(true);
+  }
+
+  async function handleCopySkills(
+    sources: LocalSkillCopySource[],
+    targetAgent: LocalSkillCopyTargetAgent,
+    resolutions: LocalSkillConflictResolution[]
+  ): Promise<void> {
+    try {
+      await onExecuteCopy(sources, targetAgent, resolutions);
+      toast.success(t("prototype.feedback.copySuccess"));
+    } catch (error) {
+      const message = error instanceof Error ? error.message : t("prototype.feedback.copyFailed");
+      toast.error(message);
+      throw error;
+    }
+  }
 
   useEffect(() => {
     const unlistenShortcutChanged = listen<{ shortcut: string }>(
@@ -149,7 +200,17 @@ export default function HomePage() {
 
   return (
     <WindowFrame titleBar={<MainTitleBar />} contentClassName="flex flex-1 overflow-hidden">
+      <Toaster />
       <UpdaterDialog />
+      <CopySkillDialog
+        open={isCopyDialogOpen}
+        onOpenChange={setIsCopyDialogOpen}
+        sources={copySources}
+        targetAgents={managedAgentsForView.filter((agent) => agent.managed)}
+        onPreview={onPreviewCopy}
+        onCopy={handleCopySkills}
+        t={t}
+      />
       <div className="h-full w-full overflow-hidden">
         <ResizablePanelGroup orientation="horizontal" className="h-full w-full">
           <ResizablePanel
@@ -164,9 +225,11 @@ export default function HomePage() {
               filteredAgents={filteredAgents}
               isCollapsed={isRailCollapsed}
               onAddAgent={enterAddingMode}
+              onSelectAll={selectAllAgents}
+              onSelectAgent={setSelectedAgentId}
               onToggleCollapsed={toggleRailCollapsed}
+              selectedScope={selectedScope}
               selectedAgentId={selectedAgentId}
-              setSelectedAgentId={setSelectedAgentId}
               t={t}
             />
           </ResizablePanel>
@@ -191,9 +254,13 @@ export default function HomePage() {
                   activeKind={activeKind}
                   checkedIds={checkedIds}
                   filteredResources={filteredResources}
+                  isAllAgentsView={selectedScope === "all"}
                   onClearChecked={clearChecked}
+                  onCopySkills={openCopyDialog}
+                  onDeleteLocalSkill={handleDeleteLocalSkill}
                   onToggleCheckedSkills={handleToggleCheckedSkills}
                   onDragStart={handleDragStart}
+                  onOpenSkillEntryFile={onOpenSkillEntryFile}
                   onOpenSkillFolder={onOpenSkillFolder}
                   onSearchChange={setSearch}
                   onSelectKind={selectKind}
@@ -213,6 +280,12 @@ export default function HomePage() {
 
               <ResizablePanel defaultSize="52%" minSize={200}>
                 <AgentDetailPanel
+                  allAgentsDescription={t("prototype.detail.allAgentsDescription")}
+                  allAgentsSkillCount={filteredResources.filter((resource) => resource.kind === "skill").length}
+                  allAgentsTitle={t("prototype.agents.all")}
+                  isAllAgentsView={selectedScope === "all"}
+                  onDeleteLocalSkill={handleDeleteLocalSkill}
+                  onOpenSkillEntryFile={onOpenSkillEntryFile}
                   onOpenSkillFolder={onOpenSkillFolder}
                   onRefreshAgents={refreshAgents}
                   onSetLocalSkillEnabled={handleSetLocalSkillEnabled}

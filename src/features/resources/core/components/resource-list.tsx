@@ -9,14 +9,17 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import type { AgentDiscoveryItem } from "@/features/agents/types";
+import type { AgentDiscoveryItem, SkillResource } from "@/features/agents/types";
 import { getLocalSkillToggleTarget } from "@/features/home/local-skill-toggle";
 import { installStateKey } from "@/features/shared/constants";
 
 type AgentResourceListProps = {
   checkedIds: string[];
   filteredResources: AgentDiscoveryItem[];
+  isAllAgentsView: boolean;
+  onDeleteLocalSkill: (skillPath: string, entryFilePath: string, skillId?: string) => Promise<void>;
   onDragStart: (event: DragEvent<HTMLDivElement>, resourceId: string) => void;
+  onOpenSkillEntryFile: (skillPath: string, entryFilePath: string) => Promise<void>;
   onOpenSkillFolder: (skillPath: string) => void;
   onSelectResource: (resource: AgentDiscoveryItem) => void;
   onSetLocalSkillEnabled: (
@@ -33,6 +36,7 @@ type AgentResourceListProps = {
 
 function renderDiscoveryMeta(
   resource: AgentDiscoveryItem,
+  isAllAgentsView: boolean,
   t: AgentResourceListProps["t"],
   active: boolean
 ) {
@@ -52,6 +56,9 @@ function renderDiscoveryMeta(
       )}
     >
       <span className={badgeClassName}>{originLabel}</span>
+      {isAllAgentsView && isLocalSkill && resource.agentName ? (
+        <span className={cn("rounded", badgeClassName)}>{resource.agentName}</span>
+      ) : null}
       {isLocalSkill ? (
         <span
           className={cn(
@@ -81,17 +88,10 @@ function renderDiscoveryMeta(
     </div>
   );
 }
-
-function getSkillFolderPath(resource: AgentDiscoveryItem): string {
-  if (resource.origin !== "local" || resource.kind !== "skill") {
-    return "";
-  }
-
-  return resource.skillPath?.trim() ?? "";
-}
-
 function renderResourceAction(
   resource: AgentDiscoveryItem,
+  onDeleteLocalSkill: AgentResourceListProps["onDeleteLocalSkill"],
+  onOpenSkillEntryFile: AgentResourceListProps["onOpenSkillEntryFile"],
   onOpenSkillFolder: AgentResourceListProps["onOpenSkillFolder"],
   onSetLocalSkillEnabled: AgentResourceListProps["onSetLocalSkillEnabled"],
   onUpdateMarketplaceInstallState: AgentResourceListProps["onUpdateMarketplaceInstallState"],
@@ -105,13 +105,24 @@ function renderResourceAction(
     );
   }
 
-  const skillPath = getSkillFolderPath(resource);
+  const isSkill = resource.kind === "skill";
+  // Type assertion for skill-specific properties
+  const skillResource = resource as SkillResource & { origin: "local" };
+  const skillPath = isSkill ? (skillResource.skillPath?.trim() ?? "") : "";
+  const entryFilePath = isSkill ? (skillResource.entryFilePath ?? "") : "";
   const canOpenSkillFolder = skillPath.length > 0;
+  const canEditSkill = isSkill && skillPath.length > 0 && entryFilePath.length > 0;
+  const canDeleteSkill = isSkill && skillPath.length > 0;
   const skillToggleTarget = getLocalSkillToggleTarget(resource);
 
   return (
     <>
-      {resource.kind === "skill" ? (
+      {isSkill && canEditSkill ? (
+        <DropdownMenuItem onClick={() => void onOpenSkillEntryFile(skillPath, entryFilePath)}>
+          {t("prototype.actions.edit")}
+        </DropdownMenuItem>
+      ) : null}
+      {isSkill ? (
         <DropdownMenuItem
           disabled={!canOpenSkillFolder}
           onClick={() => {
@@ -121,6 +132,14 @@ function renderResourceAction(
           }}
         >
           {t("prototype.actions.open")}
+        </DropdownMenuItem>
+      ) : null}
+      {isSkill && canDeleteSkill ? (
+        <DropdownMenuItem
+          className="text-destructive focus:text-destructive"
+          onClick={() => void onDeleteLocalSkill(skillPath, entryFilePath, skillResource.id)}
+        >
+          {t("prototype.actions.delete")}
         </DropdownMenuItem>
       ) : null}
       {skillToggleTarget ? (
@@ -177,7 +196,10 @@ function getActionButtonClassName(active: boolean): string {
 export function AgentResourceList({
   checkedIds,
   filteredResources,
+  isAllAgentsView,
+  onDeleteLocalSkill,
   onDragStart,
+  onOpenSkillEntryFile,
   onOpenSkillFolder,
   onSelectResource,
   onSetLocalSkillEnabled,
@@ -214,7 +236,7 @@ export function AgentResourceList({
                   {resource.name}
                 </div>
                 <div className={getSummaryClassName(active)}>{resource.summary}</div>
-                {renderDiscoveryMeta(resource, t, active)}
+                {renderDiscoveryMeta(resource, isAllAgentsView, t, active)}
               </div>
               <DropdownMenu>
                 <DropdownMenuTrigger asChild>
@@ -230,6 +252,8 @@ export function AgentResourceList({
                 <DropdownMenuContent align="end">
                   {renderResourceAction(
                     resource,
+                    onDeleteLocalSkill,
+                    onOpenSkillEntryFile,
                     onOpenSkillFolder,
                     onSetLocalSkillEnabled,
                     onUpdateMarketplaceInstallState,

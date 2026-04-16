@@ -1,16 +1,31 @@
 import { useEffect, useMemo, useState } from "react";
 import { useAgentDiscovery } from "@/features/agents/use-agent-discovery";
 import { useAgentManagement } from "@/features/agents/use-agent-management";
-import { openSkillFolder } from "@/features/agents/api";
+import {
+  deleteLocalSkill,
+  openSkillEntryFile,
+  openSkillFolder,
+  previewLocalSkillCopy,
+  copyLocalSkills,
+} from "@/features/agents/api";
 import type {
+  AgentSelectionScope,
   CreateAgentResult,
   DeleteAgentResult,
   ImportAgentsResult,
+  LocalSkillCopySource,
+  LocalSkillCopyTargetAgent,
+  LocalSkillConflictResolution,
+  PreviewLocalSkillCopyResult,
   RemoveAgentResult,
   ResolvedAgentView,
 } from "@/features/agents/types";
-import { toSkillScanTargets } from "@/features/home/skill-targets";
-import { useAgentSkillDetailQuery, useAgentSkillsQuery, useRefreshAgentSkills } from "@/features/home/queries";
+import { toSkillScanTargets, toSkillScanTargetsForAgents } from "@/features/home/skill-targets";
+import {
+  useAgentSkillDetailQuery,
+  useAgentSkillsQuery,
+  useRefreshAgentSkills,
+} from "@/features/home/queries";
 import { useResourceBrowser } from "@/features/home/use-resource-browser";
 
 type WorkspaceMode = "browse" | "adding";
@@ -54,6 +69,7 @@ function getSelectedAgent(
 export function useHomeWorkspace() {
   const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>("browse");
   const [search, setSearch] = useState("");
+  const [selectedScope, setSelectedScope] = useState<AgentSelectionScope>("all");
   const [selectedAgentId, setSelectedAgentId] = useState("");
 
   const {
@@ -90,14 +106,20 @@ export function useHomeWorkspace() {
     syncManagedState(nextResolvedAgents);
   };
 
-  const syncRemovedAgent = ({ removedAgentId, resolvedAgents: nextResolvedAgents }: RemoveAgentResult) => {
+  const syncRemovedAgent = ({
+    removedAgentId,
+    resolvedAgents: nextResolvedAgents,
+  }: RemoveAgentResult) => {
     syncManagedState(nextResolvedAgents);
     if (removedAgentId && selectedAgentId === removedAgentId) {
       setSelectedAgentId(findFirstVisibleManagedAgentId(nextResolvedAgents));
     }
   };
 
-  const syncDeletedAgent = ({ deletedAgentId, resolvedAgents: nextResolvedAgents }: DeleteAgentResult) => {
+  const syncDeletedAgent = ({
+    deletedAgentId,
+    resolvedAgents: nextResolvedAgents,
+  }: DeleteAgentResult) => {
     syncManagedState(nextResolvedAgents);
     if (deletedAgentId && selectedAgentId === deletedAgentId) {
       setSelectedAgentId(findFirstVisibleManagedAgentId(nextResolvedAgents));
@@ -109,28 +131,63 @@ export function useHomeWorkspace() {
     [resolvedAgents]
   );
 
-  const selectedAgent = getSelectedAgent(managedVisibleAgents, managedVisibleAgents, selectedAgentId);
+  useEffect(() => {
+    if (managedVisibleAgents.length === 0) {
+      setSelectedAgentId("");
+      return;
+    }
+
+    if (selectedScope === "all") {
+      return;
+    }
+
+    if (!managedVisibleAgents.some((agent) => agent.id === selectedAgentId)) {
+      setSelectedAgentId(managedVisibleAgents[0]?.id ?? "");
+    }
+  }, [managedVisibleAgents, selectedAgentId, selectedScope]);
+
+  const selectedAgent =
+    selectedScope === "all"
+      ? null
+      : getSelectedAgent(managedVisibleAgents, managedVisibleAgents, selectedAgentId);
 
   const currentSelectedAgentId = selectedAgent?.id ?? "";
+  const scopeKey = selectedScope === "all" ? "all" : `agent:${currentSelectedAgentId}`;
+  const allVisibleManagedAgentSkillScanTargets = useMemo(
+    () => toSkillScanTargetsForAgents(managedVisibleAgents),
+    [managedVisibleAgents]
+  );
   const selectedAgentSkillScanTargets = useMemo(
     () => (selectedAgent ? toSkillScanTargets(selectedAgent) : []),
     [selectedAgent]
   );
+  const effectiveSkillScanTargets =
+    selectedScope === "all" ? allVisibleManagedAgentSkillScanTargets : selectedAgentSkillScanTargets;
 
-  const { skills } = useAgentSkillsQuery(currentSelectedAgentId, selectedAgentSkillScanTargets);
+  const { skills } = useAgentSkillsQuery(scopeKey, effectiveSkillScanTargets);
 
   useEffect(() => {
     console.log("[skills] workspace selection snapshot", {
+      selectedScope,
       selectedAgentId,
       resolvedAgentIds: resolvedAgents.map((agent) => agent.id),
       managedVisibleAgentIds: managedVisibleAgents.map((agent) => agent.id),
       railAgentIds: managedVisibleAgents.map((agent) => agent.id),
       effectiveSelectedAgentId: currentSelectedAgentId || null,
+      skillTargetCount: effectiveSkillScanTargets.length,
     });
-  }, [currentSelectedAgentId, managedVisibleAgents, resolvedAgents, selectedAgentId]);
+  }, [
+    currentSelectedAgentId,
+    effectiveSkillScanTargets.length,
+    managedVisibleAgents,
+    resolvedAgents,
+    selectedAgentId,
+    selectedScope,
+  ]);
 
   useEffect(() => {
     console.log("[skills] visible skills snapshot", {
+      selectedScope,
       selectedAgentId: currentSelectedAgentId || null,
       localSkillOwners: skills.map((skill) => ({
         id: skill.id,
@@ -138,7 +195,7 @@ export function useHomeWorkspace() {
       })),
       visibleSkillIds: skills.map((skill) => skill.id),
     });
-  }, [currentSelectedAgentId, skills]);
+  }, [currentSelectedAgentId, selectedScope, skills]);
 
   const resourceBrowser = useResourceBrowser(search, selectedAgent, skills);
 
@@ -149,19 +206,19 @@ export function useHomeWorkspace() {
       : "";
 
   const selectedSkillDetailQuery = useAgentSkillDetailQuery(
-    currentSelectedAgentId,
+    scopeKey,
     selectedSkillId,
-    selectedAgentSkillScanTargets,
+    effectiveSkillScanTargets,
     resourceBrowser.activeKind === "skill"
   );
 
   const selectedResource =
     resourceBrowser.selectedResourceBase?.kind === "skill" &&
     resourceBrowser.selectedResourceBase.origin === "local"
-      ? ({
+      ? {
           ...resourceBrowser.selectedResourceBase,
           ...selectedSkillDetailQuery.data,
-        })
+        }
       : resourceBrowser.selectedResource;
 
   const refreshSkills = useRefreshAgentSkills();
@@ -170,8 +227,22 @@ export function useHomeWorkspace() {
     void openSkillFolder(skillPath).catch(() => undefined);
   };
 
+  const openSelectedSkillEntryFile = async (skillPath: string, entryFilePath: string) => {
+    await openSkillEntryFile(skillPath, entryFilePath).catch(() => undefined);
+  };
+
+  const deleteSelectedLocalSkill = async (skillPath: string, entryFilePath: string) => {
+    await deleteLocalSkill(skillPath, entryFilePath);
+  };
+
+  const selectAllAgents = () => {
+    setSelectedScope("all");
+    setWorkspaceMode("browse");
+  };
+
   const selectAgent = (id: string) => {
     console.log("[skills] user selected agent", { nextSelectedAgentId: id });
+    setSelectedScope("agent");
     setSelectedAgentId(id);
     setWorkspaceMode("browse");
   };
@@ -182,6 +253,23 @@ export function useHomeWorkspace() {
 
   const exitAddingMode = () => {
     setWorkspaceMode("browse");
+  };
+
+  const previewCopy = async (
+    sources: LocalSkillCopySource[],
+    targetAgent: LocalSkillCopyTargetAgent
+  ): Promise<PreviewLocalSkillCopyResult> => {
+    return previewLocalSkillCopy(sources, targetAgent);
+  };
+
+  const executeCopy = async (
+    sources: LocalSkillCopySource[],
+    targetAgent: LocalSkillCopyTargetAgent,
+    resolutions: LocalSkillConflictResolution[]
+  ): Promise<void> => {
+    await copyLocalSkills(sources, targetAgent, resolutions);
+    refreshSkills(scopeKey);
+    refreshAgents();
   };
 
   return {
@@ -196,17 +284,23 @@ export function useHomeWorkspace() {
     managedAgentsForView: resolvedAgents,
     onCreateAgentSuccess: syncCreatedAgent,
     onDeleteAgentSuccess: syncDeletedAgent,
+    onDeleteLocalSkill: deleteSelectedLocalSkill,
     onImportAgentsSuccess: syncImportedAgents,
+    onOpenSkillEntryFile: openSelectedSkillEntryFile,
     onOpenSkillFolder: openSelectedSkillFolder,
     onRemoveAgentSuccess: syncRemovedAgent,
+    onPreviewCopy: previewCopy,
+    onExecuteCopy: executeCopy,
     search,
     refreshAgents,
     refreshSkills: (skillId?: string) =>
-      refreshSkills(currentSelectedAgentId, skillId ?? selectedSkillId),
+      refreshSkills(scopeKey, skillId ?? selectedSkillId),
+    selectAllAgents,
     selectKind: resourceBrowser.selectKind,
     selectResource: resourceBrowser.selectResource,
     selectedAgent,
     selectedAgentId: currentSelectedAgentId || selectedAgentId,
+    selectedScope,
     selectedResource,
     selectedResourceId: resourceBrowser.selectedResourceId,
     setSearch,

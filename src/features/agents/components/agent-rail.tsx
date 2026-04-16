@@ -1,16 +1,18 @@
-import { ChevronLeft, ChevronRight, Plus } from "lucide-react";
+import { Boxes, ChevronLeft, ChevronRight, Plus } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { AgentIcon } from "./agent-icon";
-import type { AgentSummary } from "../types";
+import type { AgentSelectionScope, AgentSummary } from "../types";
 
 type AgentRailProps = {
   filteredAgents: AgentSummary[];
   isCollapsed: boolean;
   onAddAgent?: () => void;
+  onSelectAll: () => void;
+  onSelectAgent: (id: string) => void;
   onToggleCollapsed: () => void;
+  selectedScope: AgentSelectionScope;
   selectedAgentId: string;
-  setSelectedAgentId: (id: string) => void;
   t: (key: string) => string;
 };
 
@@ -18,9 +20,11 @@ export function AgentRail({
   filteredAgents,
   isCollapsed,
   onAddAgent,
+  onSelectAll,
+  onSelectAgent,
   onToggleCollapsed,
+  selectedScope,
   selectedAgentId,
-  setSelectedAgentId,
   t,
 }: AgentRailProps) {
   return (
@@ -41,16 +45,37 @@ export function AgentRail({
 
       <div className="flex-1 overflow-auto p-2">
         <div className="space-y-1">
+          <button
+            onClick={onSelectAll}
+            className={cn(
+              "flex w-full items-center rounded-lg px-2 py-2 text-left text-sm transition-colors",
+              isCollapsed && "mx-auto h-9 w-9 justify-center p-0",
+              selectedScope === "all"
+                ? "border-border bg-accent text-foreground border shadow-xs"
+                : "text-muted-foreground hover:bg-accent/50 hover:text-foreground border border-transparent"
+            )}
+            title={t("prototype.agents.all")}
+          >
+            <div className={cn("mr-2 flex items-center gap-2", isCollapsed && "mr-0")}>
+              <Boxes className="h-[18px] w-[18px] shrink-0" />
+            </div>
+            {!isCollapsed ? (
+              <div className="min-w-0 flex-1">
+                <div className="truncate font-medium">{t("prototype.agents.all")}</div>
+              </div>
+            ) : null}
+          </button>
+          <div className="border-border/70 my-2 border-t" />
           {filteredAgents.map((agent) => (
             <button
               key={agent.id}
-              onClick={() => setSelectedAgentId(agent.id)}
+              onClick={() => onSelectAgent(agent.id)}
               className={cn(
                 "flex w-full items-center rounded-lg px-2 py-2 text-left text-sm transition-colors",
                 isCollapsed && "mx-auto h-9 w-9 justify-center p-0",
-                selectedAgentId === agent.id
-                  ? "border border-border bg-accent text-foreground shadow-xs"
-                  : "border border-transparent text-muted-foreground hover:bg-accent/50 hover:text-foreground"
+                selectedScope === "agent" && selectedAgentId === agent.id
+                  ? "border-border bg-accent text-foreground border shadow-xs"
+                  : "text-muted-foreground hover:bg-accent/50 hover:text-foreground border border-transparent"
               )}
               title={agent.name}
             >

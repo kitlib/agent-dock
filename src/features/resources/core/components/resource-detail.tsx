@@ -13,13 +13,7 @@ type ResourceDetailContentProps = {
 type MarketplaceResource = AgentDiscoveryItem & MarketplaceDiscoveryFields;
 type LocalResource = Exclude<AgentDiscoveryItem, MarketplaceResource>;
 
-function StatCard({
-  label,
-  value,
-}: {
-  label: string;
-  value: string | number;
-}) {
+function StatCard({ label, value }: { label: string; value: string | number }) {
   return (
     <div className="bg-background rounded-lg border p-3">
       <div className="text-muted-foreground text-xs">{label}</div>
@@ -28,13 +22,7 @@ function StatCard({
   );
 }
 
-function TextSection({
-  title,
-  children,
-}: {
-  title: string;
-  children: ReactNode;
-}) {
+function TextSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="space-y-2">
       <h3 className="text-sm font-semibold">{title}</h3>
@@ -43,13 +31,7 @@ function TextSection({
   );
 }
 
-function ListSection({
-  title,
-  items,
-}: {
-  title: string;
-  items: string[];
-}) {
+function ListSection({ title, items }: { title: string; items: string[] }) {
   return (
     <section className="space-y-2">
       <h3 className="text-sm font-semibold">{title}</h3>
@@ -95,7 +77,9 @@ function MarketplaceResourceDetail({
             <div className="text-sm font-medium">{installStateLabel}</div>
             <div className="text-muted-foreground mt-1 text-xs">{resource.sourceLabel}</div>
           </div>
-          <Button onClick={() => onUpdateMarketplaceInstallState(resource.id)}>{installStateLabel}</Button>
+          <Button onClick={() => onUpdateMarketplaceInstallState(resource.id)}>
+            {installStateLabel}
+          </Button>
         </div>
       </div>
     </div>
@@ -119,6 +103,16 @@ function LocalResourceDetail({
             {resource.description ?? resource.summary}
           </div>
         </TextSection>
+        {resource.agentName || resource.sourceLabel ? (
+          <section className="grid grid-cols-2 gap-3 text-sm">
+            {resource.agentName ? (
+              <StatCard label={t("prototype.detail.agent")} value={resource.agentName} />
+            ) : null}
+            {resource.sourceLabel ? (
+              <StatCard label={t("prototype.detail.source")} value={resource.sourceLabel} />
+            ) : null}
+          </section>
+        ) : null}
         <TextSection title="Markdown">
           {markdownContent.trim() ? (
             <div className="bg-muted/40 rounded-lg border p-3 text-sm">
@@ -130,11 +124,14 @@ function LocalResourceDetail({
             </div>
           )}
         </TextSection>
-        {(resource.warnings?.length || resource.errors?.length) ? (
+        {resource.warnings?.length || resource.errors?.length ? (
           <TextSection title="Diagnostics">
             <div className="space-y-2 text-sm">
               {resource.warnings?.map((warning) => (
-                <div key={warning} className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3">
+                <div
+                  key={warning}
+                  className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3"
+                >
                   {warning}
                 </div>
               ))}

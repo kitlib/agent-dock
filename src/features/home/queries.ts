@@ -10,15 +10,17 @@ function normalizeSkills(skills: SkillResource[]): SkillResource[] {
 }
 
 function buildSkillTargetKey(targets: SkillScanTarget[]): string {
-  return targets.map((target) => `${target.source}:${target.rootPath}`).join("|");
+  return targets
+    .map((target) => `${target.agentId}:${target.source}:${target.rootPath}`)
+    .join("|");
 }
 
-export function useAgentSkillsQuery(agentId: string, targets: SkillScanTarget[]) {
+export function useAgentSkillsQuery(scopeKey: string, targets: SkillScanTarget[]) {
   const targetKey = buildSkillTargetKey(targets);
 
   const query = useQuery({
-    queryKey: [AGENT_SKILLS_QUERY_KEY, agentId, targetKey],
-    enabled: agentId.length > 0,
+    queryKey: [AGENT_SKILLS_QUERY_KEY, scopeKey, targetKey],
+    enabled: scopeKey.length > 0,
     queryFn: async () => {
       if (targets.length === 0) {
         return [] as SkillResource[];
@@ -40,7 +42,7 @@ export function useAgentSkillsQuery(agentId: string, targets: SkillScanTarget[])
 }
 
 export function useAgentSkillDetailQuery(
-  agentId: string,
+  scopeKey: string,
   skillId: string,
   targets: SkillScanTarget[],
   enabled: boolean
@@ -48,8 +50,8 @@ export function useAgentSkillDetailQuery(
   const targetKey = buildSkillTargetKey(targets);
 
   return useQuery({
-    queryKey: [AGENT_SKILL_DETAIL_QUERY_KEY, agentId, skillId, targetKey],
-    enabled: enabled && agentId.length > 0 && skillId.length > 0,
+    queryKey: [AGENT_SKILL_DETAIL_QUERY_KEY, scopeKey, skillId, targetKey],
+    enabled: enabled && scopeKey.length > 0 && skillId.length > 0,
     queryFn: async () => {
       return getLocalSkillDetail(targets, skillId);
     },
@@ -63,18 +65,18 @@ export function useAgentSkillDetailQuery(
 export function useRefreshAgentSkills() {
   const queryClient = useQueryClient();
 
-  return (agentId: string, skillId?: string) => {
-    if (!agentId) {
+  return (scopeKey: string, skillId?: string) => {
+    if (!scopeKey) {
       return;
     }
 
     void queryClient.invalidateQueries({
-      queryKey: [AGENT_SKILLS_QUERY_KEY, agentId],
+      queryKey: [AGENT_SKILLS_QUERY_KEY, scopeKey],
     });
 
     if (skillId) {
       void queryClient.invalidateQueries({
-        queryKey: [AGENT_SKILL_DETAIL_QUERY_KEY, agentId, skillId],
+        queryKey: [AGENT_SKILL_DETAIL_QUERY_KEY, scopeKey, skillId],
       });
     }
   };

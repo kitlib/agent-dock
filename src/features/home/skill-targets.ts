@@ -1,5 +1,10 @@
 import { agentTypeMeta } from "@/features/agents/agent-meta";
-import type { AgentTypeId, ResolvedAgentView, SkillResource, SkillScanTarget } from "@/features/agents/types";
+import type {
+  AgentTypeId,
+  ResolvedAgentView,
+  SkillResource,
+  SkillScanTarget,
+} from "@/features/agents/types";
 
 function trimTrailingSlash(value: string) {
   return value.replace(/\/+$/, "");
@@ -43,6 +48,25 @@ export function toSkillScanTargets(agent: ResolvedAgentView): SkillScanTarget[] 
       source: "commands",
     });
   }
+
+  return targets;
+}
+
+export function toSkillScanTargetsForAgents(agents: ResolvedAgentView[]): SkillScanTarget[] {
+  const seenKeys = new Set<string>();
+  const targets: SkillScanTarget[] = [];
+
+  agents.forEach((agent) => {
+    toSkillScanTargets(agent).forEach((target) => {
+      const key = `${target.agentId}:${target.source}:${target.rootPath}`;
+      if (seenKeys.has(key)) {
+        return;
+      }
+
+      seenKeys.add(key);
+      targets.push(target);
+    });
+  });
 
   return targets;
 }

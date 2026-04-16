@@ -1,8 +1,13 @@
 import type { DragEvent } from "react";
-import { Search } from "lucide-react";
+import { Copy, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
-import type { AgentDiscoveryItem, ResourceKind } from "@/features/agents/types";
+import type {
+  AgentDiscoveryItem,
+  LocalSkillCopySource,
+  ResourceKind,
+  SkillResource,
+} from "@/features/agents/types";
 import { getLocalSkillToggleTarget } from "@/features/home/local-skill-toggle";
 import { kindIcons } from "@/features/shared/constants";
 import { AgentResourceList } from "@/features/resources/core/components/resource-list";
@@ -23,9 +28,13 @@ type AgentResourcePanelProps = {
   activeKind: ResourceKind;
   checkedIds: string[];
   filteredResources: AgentDiscoveryItem[];
+  isAllAgentsView: boolean;
   onClearChecked: () => void;
+  onCopySkills: (sources: LocalSkillCopySource[]) => void;
+  onDeleteLocalSkill: (skillPath: string, entryFilePath: string, skillId?: string) => Promise<void>;
   onToggleCheckedSkills: () => Promise<void>;
   onDragStart: (event: DragEvent<HTMLDivElement>, resourceId: string) => void;
+  onOpenSkillEntryFile: (skillPath: string, entryFilePath: string) => Promise<void>;
   onOpenSkillFolder: (skillPath: string) => void;
   onSearchChange: (value: string) => void;
   onSelectKind: (kind: ResourceKind) => void;
@@ -49,9 +58,13 @@ export function AgentResourcePanel({
   activeKind,
   checkedIds,
   filteredResources,
+  isAllAgentsView,
   onClearChecked,
+  onCopySkills,
+  onDeleteLocalSkill,
   onToggleCheckedSkills,
   onDragStart,
+  onOpenSkillEntryFile,
   onOpenSkillFolder,
   onSearchChange,
   onSelectKind,
@@ -77,6 +90,10 @@ export function AgentResourcePanel({
     }
 
     return getLocalSkillToggleTarget(resource)?.enabled ?? false;
+  });
+  const hasCopyableSkills = checkedIds.some((id) => {
+    const resource = filteredResources.find((r) => r.id === id);
+    return resource?.origin === "local" && resource?.kind === "skill";
   });
   return (
     <section className="flex h-full min-w-0 flex-col overflow-hidden">
@@ -136,12 +153,39 @@ export function AgentResourcePanel({
             <Button
               variant="outline"
               size="xs"
+              disabled={!hasCopyableSkills}
+              onClick={() => {
+                const sources: LocalSkillCopySource[] = checkedIds
+                  .map((id) => filteredResources.find((r) => r.id === id))
+                  .filter(
+                    (r): r is NonNullable<typeof r> =>
+                      r != null && r.origin === "local" && r.kind === "skill"
+                  )
+                  .map((r) => {
+                    const skill = r as SkillResource & { origin: "local" };
+                    return {
+                      id: skill.id,
+                      name: skill.name,
+                      ownerAgentId: skill.ownerAgentId ?? "",
+                      sourceKind: skill.sourceKind ?? "skills",
+                      relativePath: skill.relativePath ?? "",
+                      skillPath: skill.skillPath ?? "",
+                      entryFilePath: skill.entryFilePath ?? "",
+                    };
+                  });
+                onCopySkills(sources);
+              }}
+            >
+              <Copy className="h-3 w-3" />
+              {t("prototype.actions.copy")}
+            </Button>
+            <Button
+              variant="outline"
+              size="xs"
               disabled={!hasToggleableSkill}
               onClick={() => void onToggleCheckedSkills()}
             >
-              {hasEnabledSkill
-                ? t("prototype.actions.disable")
-                : t("prototype.actions.enable")}
+              {hasEnabledSkill ? t("prototype.actions.disable") : t("prototype.actions.enable")}
             </Button>
           </div>
         </div>
@@ -156,7 +200,10 @@ export function AgentResourcePanel({
           <AgentResourceList
             checkedIds={checkedIds}
             filteredResources={filteredResources}
+            isAllAgentsView={isAllAgentsView}
+            onDeleteLocalSkill={onDeleteLocalSkill}
             onDragStart={onDragStart}
+            onOpenSkillEntryFile={onOpenSkillEntryFile}
             onOpenSkillFolder={onOpenSkillFolder}
             onSelectResource={onSelectResource}
             onSetLocalSkillEnabled={onSetLocalSkillEnabled}
