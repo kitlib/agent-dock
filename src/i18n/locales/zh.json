@@ -114,6 +114,8 @@
       "conflictDescription": "{{agentName}} 中已存在 \"{{skillName}}\"，是否覆盖？",
       "conflictCount": "发现 {{count}} 个冲突",
       "noConflicts": "无冲突，可以复制",
+      "previewingTargets": "正在预览已选 Agent...",
+      "selectedTargets": "已选择 {{count}} 个 Agent",
       "copying": "正在复制 {{count}} 个 Skills 到 {{agentName}}...",
       "copied": "已复制 {{count}} 个 Skills",
       "skipped": "已跳过 {{count}} 个 Skills"

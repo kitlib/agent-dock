@@ -186,6 +186,11 @@ export function AgentDetailPanel({
             )}
           </div>
           <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+            {isLocalSkill && openPath ? (
+              <Button variant="outline" size="sm" onClick={() => onOpenSkillFolder(openPath)}>
+                {t("prototype.actions.open")}
+              </Button>
+            ) : null}
             {isLocalSkill && onOpenSkillEntryFile ? (
               <Button
                 variant="outline"
@@ -198,11 +203,6 @@ export function AgentDetailPanel({
                 {t("prototype.actions.edit")}
               </Button>
             ) : null}
-            {skillDeleteTarget ? (
-              <Button variant="destructive" size="sm" onClick={() => setIsDeleteDialogOpen(true)}>
-                {t("prototype.actions.delete")}
-              </Button>
-            ) : null}
             {skillToggleTarget ? (
               <Button
                 variant="outline"
@@ -213,6 +213,11 @@ export function AgentDetailPanel({
                 {skillToggleTarget.enabled
                   ? t("prototype.actions.disable")
                   : t("prototype.actions.enable")}
+              </Button>
+            ) : null}
+            {skillDeleteTarget ? (
+              <Button variant="destructive" size="sm" onClick={() => setIsDeleteDialogOpen(true)}>
+                {t("prototype.actions.delete")}
               </Button>
             ) : null}
           </div>

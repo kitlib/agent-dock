@@ -9,7 +9,11 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { cn } from "@/lib/utils";
-import type { AgentDiscoveryItem, SkillResource } from "@/features/agents/types";
+import type {
+  AgentDiscoveryItem,
+  LocalSkillCopySource,
+  SkillResource,
+} from "@/features/agents/types";
 import { getLocalSkillToggleTarget } from "@/features/home/local-skill-toggle";
 import { installStateKey } from "@/features/shared/constants";
 
@@ -17,6 +21,7 @@ type AgentResourceListProps = {
   checkedIds: string[];
   filteredResources: AgentDiscoveryItem[];
   isAllAgentsView: boolean;
+  onCopySkill: (source: LocalSkillCopySource) => void;
   onDeleteLocalSkill: (skillPath: string, entryFilePath: string, skillId?: string) => Promise<void>;
   onDragStart: (event: DragEvent<HTMLDivElement>, resourceId: string) => void;
   onOpenSkillEntryFile: (skillPath: string, entryFilePath: string) => Promise<void>;
@@ -90,6 +95,7 @@ function renderDiscoveryMeta(
 }
 function renderResourceAction(
   resource: AgentDiscoveryItem,
+  onCopySkill: AgentResourceListProps["onCopySkill"],
   onDeleteLocalSkill: AgentResourceListProps["onDeleteLocalSkill"],
   onOpenSkillEntryFile: AgentResourceListProps["onOpenSkillEntryFile"],
   onOpenSkillFolder: AgentResourceListProps["onOpenSkillFolder"],
@@ -113,15 +119,15 @@ function renderResourceAction(
   const canOpenSkillFolder = skillPath.length > 0;
   const canEditSkill = isSkill && skillPath.length > 0 && entryFilePath.length > 0;
   const canDeleteSkill = isSkill && skillPath.length > 0;
+  const canCopySkill =
+    isSkill &&
+    skillPath.length > 0 &&
+    entryFilePath.length > 0 &&
+    (skillResource.ownerAgentId?.length ?? 0) > 0;
   const skillToggleTarget = getLocalSkillToggleTarget(resource);
 
   return (
     <>
-      {isSkill && canEditSkill ? (
-        <DropdownMenuItem onClick={() => void onOpenSkillEntryFile(skillPath, entryFilePath)}>
-          {t("prototype.actions.edit")}
-        </DropdownMenuItem>
-      ) : null}
       {isSkill ? (
         <DropdownMenuItem
           disabled={!canOpenSkillFolder}
@@ -134,12 +140,26 @@ function renderResourceAction(
           {t("prototype.actions.open")}
         </DropdownMenuItem>
       ) : null}
-      {isSkill && canDeleteSkill ? (
+      {isSkill && canEditSkill ? (
+        <DropdownMenuItem onClick={() => void onOpenSkillEntryFile(skillPath, entryFilePath)}>
+          {t("prototype.actions.edit")}
+        </DropdownMenuItem>
+      ) : null}
+      {isSkill && canCopySkill ? (
         <DropdownMenuItem
-          className="text-destructive focus:text-destructive"
-          onClick={() => void onDeleteLocalSkill(skillPath, entryFilePath, skillResource.id)}
+          onClick={() =>
+            onCopySkill({
+              id: skillResource.id,
+              name: skillResource.name,
+              ownerAgentId: skillResource.ownerAgentId ?? "",
+              sourceKind: skillResource.sourceKind ?? "skills",
+              relativePath: skillResource.relativePath ?? "",
+              skillPath,
+              entryFilePath,
+            })
+          }
         >
-          {t("prototype.actions.delete")}
+          {t("prototype.actions.copy")}
         </DropdownMenuItem>
       ) : null}
       {skillToggleTarget ? (
@@ -156,6 +176,14 @@ function renderResourceAction(
           {skillToggleTarget.enabled
             ? t("prototype.actions.disable")
             : t("prototype.actions.enable")}
+        </DropdownMenuItem>
+      ) : null}
+      {isSkill && canDeleteSkill ? (
+        <DropdownMenuItem
+          className="text-destructive focus:text-destructive"
+          onClick={() => void onDeleteLocalSkill(skillPath, entryFilePath, skillResource.id)}
+        >
+          {t("prototype.actions.delete")}
         </DropdownMenuItem>
       ) : null}
     </>
@@ -197,6 +225,7 @@ export function AgentResourceList({
   checkedIds,
   filteredResources,
   isAllAgentsView,
+  onCopySkill,
   onDeleteLocalSkill,
   onDragStart,
   onOpenSkillEntryFile,
@@ -252,6 +281,7 @@ export function AgentResourceList({
                 <DropdownMenuContent align="end">
                   {renderResourceAction(
                     resource,
+                    onCopySkill,
                     onDeleteLocalSkill,
                     onOpenSkillEntryFile,
                     onOpenSkillFolder,

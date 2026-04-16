@@ -145,6 +145,10 @@ export default function HomePage() {
     setIsCopyDialogOpen(true);
   }
 
+  function openSingleCopyDialog(source: LocalSkillCopySource): void {
+    openCopyDialog([source]);
+  }
+
   async function handleCopySkills(
     sources: LocalSkillCopySource[],
     targetAgent: LocalSkillCopyTargetAgent,
@@ -256,6 +260,7 @@ export default function HomePage() {
                   filteredResources={filteredResources}
                   isAllAgentsView={selectedScope === "all"}
                   onClearChecked={clearChecked}
+                  onCopySkill={openSingleCopyDialog}
                   onCopySkills={openCopyDialog}
                   onDeleteLocalSkill={handleDeleteLocalSkill}
                   onToggleCheckedSkills={handleToggleCheckedSkills}

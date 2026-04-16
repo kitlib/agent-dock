@@ -30,6 +30,7 @@ type AgentResourcePanelProps = {
   filteredResources: AgentDiscoveryItem[];
   isAllAgentsView: boolean;
   onClearChecked: () => void;
+  onCopySkill: (source: LocalSkillCopySource) => void;
   onCopySkills: (sources: LocalSkillCopySource[]) => void;
   onDeleteLocalSkill: (skillPath: string, entryFilePath: string, skillId?: string) => Promise<void>;
   onToggleCheckedSkills: () => Promise<void>;
@@ -60,6 +61,7 @@ export function AgentResourcePanel({
   filteredResources,
   isAllAgentsView,
   onClearChecked,
+  onCopySkill,
   onCopySkills,
   onDeleteLocalSkill,
   onToggleCheckedSkills,
@@ -201,6 +203,7 @@ export function AgentResourcePanel({
             checkedIds={checkedIds}
             filteredResources={filteredResources}
             isAllAgentsView={isAllAgentsView}
+            onCopySkill={onCopySkill}
             onDeleteLocalSkill={onDeleteLocalSkill}
             onDragStart={onDragStart}
             onOpenSkillEntryFile={onOpenSkillEntryFile}

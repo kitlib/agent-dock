@@ -22,6 +22,7 @@ export function toLocalDiscoveryItem(
   managed: boolean
 ): AgentResourceView {
   const sourceLabel = "sourceLabel" in resource ? resource.sourceLabel : undefined;
+  const resolvedOwnerAgentId = "ownerAgentId" in resource ? resource.ownerAgentId : undefined;
 
   return {
     ...resource,
@@ -34,7 +35,7 @@ export function toLocalDiscoveryItem(
     description: resource.summary,
     highlights: [],
     usageLabel: resource.usageCount,
-    ownerAgentId,
+    ownerAgentId: resolvedOwnerAgentId ?? ownerAgentId,
     managed,
   };
 }

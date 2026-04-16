@@ -114,6 +114,8 @@
       "conflictDescription": "\"{{skillName}}\" already exists in \"{{agentName}}\". Do you want to overwrite it?",
       "conflictCount": "Found {{count}} conflicts",
       "noConflicts": "No conflicts, ready to copy",
+      "previewingTargets": "Previewing selected agents...",
+      "selectedTargets": "{{count}} agent(s) selected",
       "copying": "Copying {{count}} skills to {{agentName}}...",
       "copied": "Copied {{count}} skills",
       "skipped": "Skipped {{count}} skills"
