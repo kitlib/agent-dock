@@ -11,6 +11,11 @@ import type {
   ScannedAgentCandidate,
   SkillResource,
   SkillScanTarget,
+  LocalSkillCopySource,
+  LocalSkillCopyTargetAgent,
+  PreviewLocalSkillCopyResult,
+  LocalSkillConflictResolution,
+  CopyLocalSkillsResult,
 } from "./types";
 
 export async function listManagedAgents() {
@@ -114,9 +119,39 @@ export async function openSkillFolder(skillPath: string) {
   return invoke<void>("open_skill_folder", { skillPath });
 }
 
+export async function openSkillEntryFile(skillPath: string, entryFilePath: string) {
+  return invoke<void>("open_skill_entry_file", { skillPath, entryFilePath });
+}
+
+export async function deleteLocalSkill(skillPath: string, entryFilePath: string) {
+  return invoke<void>("delete_local_skill", { skillPath, entryFilePath });
+}
+
 export async function deleteAgent(managedAgentId: string, scanTargets: ScanTarget[]) {
   return invoke<DeleteAgentResult>("delete_agent", {
     managedAgentId,
     scanTargets,
+  });
+}
+
+export async function previewLocalSkillCopy(
+  sources: LocalSkillCopySource[],
+  targetAgent: LocalSkillCopyTargetAgent
+) {
+  return invoke<PreviewLocalSkillCopyResult>("preview_local_skill_copy", {
+    sources,
+    targetAgent,
+  });
+}
+
+export async function copyLocalSkills(
+  sources: LocalSkillCopySource[],
+  targetAgent: LocalSkillCopyTargetAgent,
+  resolutions: LocalSkillConflictResolution[]
+) {
+  return invoke<CopyLocalSkillsResult>("copy_local_skills", {
+    sources,
+    targetAgent,
+    resolutions,
   });
 }

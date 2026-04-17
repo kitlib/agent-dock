@@ -60,7 +60,7 @@ fn normalized_join(root_path: &Path, relative_path: &str) -> PathBuf {
     normalized_root.join(normalized_relative)
 }
 
-fn build_skill_scan_root(agent: &str, root_path: &Path) -> Option<PathBuf> {
+pub fn build_skill_scan_root(agent: &str, root_path: &Path) -> Option<PathBuf> {
     let relative_skills_path = match agent {
         "adal" | "amp" | "antigravity" | "augment" | "claude" | "claude-plugin" | "cline"
         | "codebuddy" | "codex" | "command-code" | "continue" | "crush" | "cursor" | "factory"
@@ -91,14 +91,21 @@ fn count_skill_directories(skills_root: &Path) -> u32 {
         .count() as u32
 }
 
-fn build_commands_scan_root(agent: &str, root_path: &Path) -> Option<PathBuf> {
+pub fn build_commands_scan_root(agent: &str, root_path: &Path) -> Option<PathBuf> {
     let relative_commands_path = match agent {
         "antigravity" | "kilo" => "workflows/",
-        "augment" | "claude" | "claude-plugin" | "command-code" | "factory" | "iflow" => {
-            "commands/"
-        }
+        "augment"
+        | "claude"
+        | "claude-plugin"
+        | "command-code"
+        | "cursor"
+        | "factory"
+        | "iflow"
+        | "opencode"
+        | "qoder"
+        | "roo" => "commands/",
         "codex" | "continue" => "prompts/",
-        "cursor" => "commands/",
+        "pi-mono" => "agent/prompts/",
         _ => return None,
     };
 

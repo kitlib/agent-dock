@@ -50,7 +50,13 @@ export function useResourceBrowser(
       selectedAgent?.id ?? null,
       selectedAgent?.managed ?? false
     );
-  }, [activeKind, localResources, marketplaceInstallStates, selectedAgent?.id, selectedAgent?.managed]);
+  }, [
+    activeKind,
+    localResources,
+    marketplaceInstallStates,
+    selectedAgent?.id,
+    selectedAgent?.managed,
+  ]);
 
   const filteredResources = useMemo(() => {
     const includeMarketplaceWhenEmpty = activeKind !== "skill" || normalizedSearch.length > 0;

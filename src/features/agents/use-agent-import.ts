@@ -264,8 +264,7 @@ export function useAgentImport({
   };
 
   const canSubmitManual =
-    manualDraft.name.trim().length > 0 &&
-    manualDraft.rootPath.trim().length > 0;
+    manualDraft.name.trim().length > 0 && manualDraft.rootPath.trim().length > 0;
 
   return {
     canSubmitManual,

@@ -1,7 +1,12 @@
 import { useEffect, useState } from "react";
 import { agentTypeMeta } from "./agent-meta";
 import { listManagedAgents, listResolvedAgents } from "./api";
-import type { AgentDiscoveryState, DiscoveredAgent, ManagedAgent, ResolvedAgentView } from "./types";
+import type {
+  AgentDiscoveryState,
+  DiscoveredAgent,
+  ManagedAgent,
+  ResolvedAgentView,
+} from "./types";
 
 const scanTargets = Object.values(agentTypeMeta).map((meta) => ({
   agentType: meta.agentType,

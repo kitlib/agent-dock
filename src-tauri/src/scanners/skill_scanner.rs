@@ -244,6 +244,18 @@ fn display_name_from_path(path: &str) -> String {
     path.replace('/', ":")
 }
 
+fn relative_skill_path(scan_target: &SkillScanTargetDto, scan_root: &Path, skill_path: &Path) -> Option<String> {
+    if scan_target.source == COMMANDS_SOURCE {
+        let canonical_entry_file = enabled_entry_path(skill_path);
+        return canonical_entry_file
+            .strip_prefix(scan_root)
+            .ok()
+            .map(normalize_path);
+    }
+
+    skill_path.strip_prefix(scan_root).ok().map(normalize_path)
+}
+
 fn parse_skill(
     scan_target: &SkillScanTargetDto,
     scan_root: &Path,
@@ -263,6 +275,7 @@ fn parse_skill(
         skill_path.file_name()?.to_string_lossy().to_string()
     };
     let id = skill_id(&scan_target.agent_id, &skill_name, &scan_target.source);
+    let relative_path = relative_skill_path(scan_target, scan_root, &skill_path)?;
     let updated_at = updated_at(&entry_file);
     let mut warnings = Vec::new();
     let mut errors = Vec::new();
@@ -319,6 +332,8 @@ fn parse_skill(
         updated_at: updated_at.clone(),
         owner_agent_id: scan_target.agent_id.clone(),
         source_label: format!("{} local", scan_target.display_name),
+        source_kind: scan_target.source.clone(),
+        relative_path: relative_path.clone(),
         description: description.clone(),
         status: status.clone(),
         skill_path: normalize_path(&skill_path),
@@ -342,6 +357,8 @@ fn parse_skill(
         markdown,
         owner_agent_id: scan_target.agent_id.clone(),
         source_label: format!("{} local", scan_target.display_name),
+        source_kind: scan_target.source.clone(),
+        relative_path,
         status,
         skill_path: normalize_path(&skill_path),
         entry_file_path: normalize_path(&canonical_entry_file),

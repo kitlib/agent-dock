@@ -47,7 +47,11 @@ export function useAgentManagement({
   };
 
   const handleRefresh = async () => {
-    setDiscoveryState((current: AgentDiscoveryState) => ({ ...current, refreshing: true, error: null }));
+    setDiscoveryState((current: AgentDiscoveryState) => ({
+      ...current,
+      refreshing: true,
+      error: null,
+    }));
 
     try {
       const nextAgents = await refreshAgentDiscovery(scanTargets);

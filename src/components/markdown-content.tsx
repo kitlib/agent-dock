@@ -29,7 +29,7 @@ export function MarkdownContent({ content, className }: MarkdownContentProps) {
   return (
     <div
       className={cn(
-        "prose prose-sm max-w-none prose-neutral dark:prose-invert",
+        "prose prose-sm prose-neutral dark:prose-invert max-w-none",
         "prose-headings:text-foreground prose-p:text-foreground prose-strong:text-foreground",
         "prose-a:text-primary prose-a:break-all",
         "prose-blockquote:border-border prose-blockquote:text-muted-foreground",
@@ -41,9 +41,9 @@ export function MarkdownContent({ content, className }: MarkdownContentProps) {
         "[&_pre]:rounded-lg [&_pre]:border [&_pre]:px-3 [&_pre]:py-3 [&_pre]:text-xs",
         "[&_table]:block [&_table]:w-full [&_table]:overflow-x-auto",
         "[&_tbody]:table-row-group [&_thead]:table-header-group [&_tr]:table-row",
-        "[&_th]:table-cell [&_td]:table-cell",
+        "[&_td]:table-cell [&_th]:table-cell",
         "[&_code:not(pre_*)]:bg-muted [&_code:not(pre_*)]:rounded [&_code:not(pre_*)]:px-1 [&_code:not(pre_*)]:py-0.5 [&_code:not(pre_*)]:text-[0.85em]",
-        className,
+        className
       )}
     >
       <ReactMarkdown

@@ -43,7 +43,11 @@ pub fn run() {
             commands::skills::list_local_skills,
             commands::skills::get_local_skill_detail,
             commands::skills::set_local_skill_enabled,
-            commands::skills::open_skill_folder
+            commands::skills::open_skill_folder,
+            commands::skills::open_skill_entry_file,
+            commands::skills::delete_local_skill,
+            commands::skills::preview_local_skill_copy,
+            commands::skills::copy_local_skills
         ]);
 
     // Only enable updater in release mode
