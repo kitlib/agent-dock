@@ -189,10 +189,6 @@ export type SkillScanTarget = {
   source: "skills" | "commands";
 };
 
-export type SkillSupportingFile = {
-  path: string;
-};
-
 export type SkillResource = {
   id: string;
   kind: "skill";
@@ -215,10 +211,6 @@ export type SkillResource = {
   agentName?: string;
   warnings?: string[];
   errors?: string[];
-  frontmatter?: Record<string, unknown> | null;
-  frontmatterRaw?: string | null;
-  supportingFiles?: SkillSupportingFile[];
-  allowedTools?: string[];
   marketplaceSource?: string;
   marketplaceRemoteId?: string;
   marketplaceHasUpdate?: boolean;

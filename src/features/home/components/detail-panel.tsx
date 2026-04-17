@@ -56,7 +56,7 @@ function getSkillTitle(selectedResource: AgentDiscoveryItem | null): string | un
     return selectedResource?.name;
   }
 
-  return skill.frontmatter?.name?.toString() ?? skill.frontmatter?.title?.toString() ?? skill.name;
+  return skill.name;
 }
 
 function getOpenPath(selectedResource: AgentDiscoveryItem | null): string {

@@ -1,6 +1,4 @@
 use serde::{Deserialize, Serialize};
-use serde_json::Value;
-
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct SkillScanTargetDto {
@@ -9,12 +7,6 @@ pub struct SkillScanTargetDto {
     pub root_path: String,
     pub display_name: String,
     pub source: String,
-}
-
-#[derive(Clone, Serialize, Deserialize)]
-#[serde(rename_all = "camelCase")]
-pub struct SkillSupportingFileDto {
-    pub path: String,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -40,7 +32,6 @@ pub struct LocalSkillSummaryDto {
     pub agent_name: String,
     pub warnings: Vec<String>,
     pub errors: Vec<String>,
-    pub frontmatter: Option<Value>,
     pub marketplace_source: Option<String>,
     pub marketplace_skill_id: Option<String>,
 }
@@ -69,10 +60,6 @@ pub struct LocalSkillDetailDto {
     pub agent_name: String,
     pub warnings: Vec<String>,
     pub errors: Vec<String>,
-    pub frontmatter: Option<Value>,
-    pub frontmatter_raw: Option<String>,
-    pub supporting_files: Vec<SkillSupportingFileDto>,
-    pub allowed_tools: Vec<String>,
     pub marketplace_source: Option<String>,
     pub marketplace_skill_id: Option<String>,
 }

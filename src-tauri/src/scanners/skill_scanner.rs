@@ -7,9 +7,7 @@ use std::{
 use chrono::{DateTime, Utc};
 use serde_json::Value;
 
-use crate::dto::skills::{
-    LocalSkillDetailDto, LocalSkillSummaryDto, SkillScanTargetDto, SkillSupportingFileDto,
-};
+use crate::dto::skills::{LocalSkillDetailDto, LocalSkillSummaryDto, SkillScanTargetDto};
 use crate::scanners::skill_markdown::{
     resolved_description, split_frontmatter, summary_from_markdown,
 };
@@ -68,23 +66,6 @@ fn tags_from_frontmatter(frontmatter: Option<&Value>) -> Vec<String> {
         .unwrap_or_default()
 }
 
-fn allowed_tools_from_frontmatter(frontmatter: Option<&Value>) -> Vec<String> {
-    frontmatter
-        .and_then(|value| {
-            value
-                .get("allowed_tools")
-                .or_else(|| value.get("allowedTools"))
-        })
-        .and_then(|value| value.as_array())
-        .map(|items| {
-            items
-                .iter()
-                .filter_map(|item| item.as_str().map(str::to_string))
-                .collect()
-        })
-        .unwrap_or_default()
-}
-
 fn name_from_frontmatter(frontmatter: Option<&Value>, fallback: &str) -> String {
     frontmatter
         .and_then(|value| value.get("name").or_else(|| value.get("title")))
@@ -100,30 +81,6 @@ fn updated_at(path: &Path) -> String {
         .map(DateTime::<Utc>::from)
         .map(|datetime| datetime.format("%Y-%m-%d").to_string())
         .unwrap_or_else(|| Utc::now().format("%Y-%m-%d").to_string())
-}
-
-fn supporting_files(path: &Path, entry_file_name: &str) -> Vec<SkillSupportingFileDto> {
-    let Ok(entries) = fs::read_dir(path) else {
-        return Vec::new();
-    };
-
-    let mut files: Vec<_> = entries
-        .filter_map(Result::ok)
-        .filter_map(|entry| {
-            let path = entry.path();
-            if !path.is_file() {
-                return None;
-            }
-            if path.file_name().and_then(|name| name.to_str()) == Some(entry_file_name) {
-                return None;
-            }
-            Some(SkillSupportingFileDto {
-                path: normalize_path(&path),
-            })
-        })
-        .collect();
-    files.sort_by(|left, right| left.path.cmp(&right.path));
-    files
 }
 
 fn user_home_dir() -> PathBuf {
@@ -188,7 +145,6 @@ fn parse_skill(
     }
 
     let canonical_entry_file = enabled_entry_path(&entry_file);
-    let entry_file_name = entry_file.file_name()?.to_str()?;
     let skill_name = if scan_target.source == COMMANDS_SOURCE {
         command_name(scan_root, &entry_file)?
     } else {
@@ -236,7 +192,6 @@ fn parse_skill(
         &summary_text,
     );
     let tags = tags_from_frontmatter(frontmatter.as_ref());
-    let allowed_tools = allowed_tools_from_frontmatter(frontmatter.as_ref());
     let status = if errors.is_empty() {
         if warnings.is_empty() {
             "ready"
@@ -269,7 +224,6 @@ fn parse_skill(
         agent_name: scan_target.display_name.clone(),
         warnings: warnings.clone(),
         errors: errors.clone(),
-        frontmatter: frontmatter.clone(),
         marketplace_source: None,
         marketplace_skill_id: None,
     };
@@ -296,10 +250,6 @@ fn parse_skill(
         agent_name: scan_target.display_name.clone(),
         warnings,
         errors,
-        frontmatter,
-        frontmatter_raw,
-        supporting_files: supporting_files(&skill_path, entry_file_name),
-        allowed_tools,
         marketplace_source: None,
         marketplace_skill_id: None,
     };
