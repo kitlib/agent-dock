@@ -10,7 +10,6 @@ interface TitleBarProps {
   showClose?: boolean;
   leftActions?: ReactNode;
   rightActions?: ReactNode;
-  onDoubleClick?: () => void;
 }
 
 export function TitleBar({
@@ -20,7 +19,6 @@ export function TitleBar({
   showClose = true,
   leftActions,
   rightActions,
-  onDoubleClick,
 }: TitleBarProps) {
   const [isMaximized, setIsMaximized] = useState(false);
 
@@ -82,14 +80,6 @@ export function TitleBar({
     };
   }, [showClose]);
 
-  const handleDragRegionDoubleClick = () => {
-    if (onDoubleClick) {
-      onDoubleClick();
-    } else if (showMaximize) {
-      handleToggleMaximize();
-    }
-  };
-
   return (
     <div
       className={cn(
@@ -100,10 +90,13 @@ export function TitleBar({
       {/* Left: Title + Drag region */}
       <div
         data-tauri-drag-region
-        onDoubleClick={handleDragRegionDoubleClick}
         className="flex grow items-center gap-2 pl-2"
       >
-        {title && <span className="text-sm font-medium text-slate-400">{title}</span>}
+        {title && (
+          <span data-tauri-drag-region className="text-sm font-medium text-slate-400">
+            {title}
+          </span>
+        )}
         {leftActions}
       </div>
 
