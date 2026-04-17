@@ -10,6 +10,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { InlineMetaBadge } from "@/components/inline-meta-badge";
 import { AgentIcon } from "@/features/agents/components/agent-icon";
 import type {
   AgentDiscoveryItem,
@@ -67,46 +68,55 @@ function getOpenPath(selectedResource: AgentDiscoveryItem | null): string {
   return skill.skillPath ?? skill.entryFilePath ?? "";
 }
 
-function InlineMetaItem({
-  label,
-  value,
-  tone = "neutral",
-}: {
-  label: string;
-  value: string | number;
-  tone?: "neutral" | "blue" | "green" | "amber";
-}) {
-  const toneClassName =
-    tone === "blue"
-      ? "border-sky-200/80 bg-sky-50/70 dark:border-sky-900/70 dark:bg-sky-950/30"
-      : tone === "green"
-        ? "border-emerald-200/80 bg-emerald-50/70 dark:border-emerald-900/70 dark:bg-emerald-950/30"
-        : tone === "amber"
-          ? "border-amber-200/80 bg-amber-50/70 dark:border-amber-900/70 dark:bg-amber-950/30"
-          : "border-border/70 bg-background";
-  const labelToneClassName =
-    tone === "blue"
-      ? "bg-sky-100/80 text-sky-700 border-sky-200/80 dark:bg-sky-900/40 dark:text-sky-200 dark:border-sky-800/70"
-      : tone === "green"
-        ? "bg-emerald-100/80 text-emerald-700 border-emerald-200/80 dark:bg-emerald-900/40 dark:text-emerald-200 dark:border-emerald-800/70"
-        : tone === "amber"
-          ? "bg-amber-100/80 text-amber-700 border-amber-200/80 dark:bg-amber-900/40 dark:text-amber-200 dark:border-amber-800/70"
-          : "bg-muted/70 text-muted-foreground border-border/70";
+function getSelectedResourceSourceValue(
+  selectedResource: AgentDiscoveryItem | null,
+  t: AgentDetailPanelProps["t"]
+): string | null {
+  if (!selectedResource || selectedResource.origin !== "local") {
+    return null;
+  }
 
-  return (
-    <span
-      className={`inline-flex items-stretch overflow-hidden rounded-md border shadow-sm ${toneClassName}`}
-    >
-      <span
-        className={`inline-flex items-center border-r px-2 py-1 text-[11px] leading-none font-medium ${labelToneClassName}`}
-      >
-        {label}
-      </span>
-      <span className="text-foreground inline-flex items-center px-2.5 py-1 text-[11px] leading-none font-semibold">
-        {value}
-      </span>
-    </span>
-  );
+  if (
+    selectedResource.kind === "skill" &&
+    "marketplaceSource" in selectedResource &&
+    selectedResource.marketplaceSource
+  ) {
+    return t("prototype.badges.marketplace");
+  }
+
+  return selectedResource.sourceLabel ?? null;
+}
+
+function getLocalMarketplaceUrl(
+  selectedResource: AgentDiscoveryItem | null
+): string | null {
+  if (
+    !selectedResource ||
+    selectedResource.origin !== "local" ||
+    selectedResource.kind !== "skill" ||
+    !("marketplaceSource" in selectedResource) ||
+    !("marketplaceRemoteId" in selectedResource) ||
+    !selectedResource.marketplaceSource ||
+    !selectedResource.marketplaceRemoteId
+  ) {
+    return null;
+  }
+
+  return `https://skills.sh/${selectedResource.marketplaceSource}/${selectedResource.marketplaceRemoteId}`;
+}
+
+function getMarketplaceRepositoryUrl(
+  selectedResource: AgentDiscoveryItem | null
+): string | null {
+  if (
+    !selectedResource ||
+    selectedResource.origin !== "marketplace" ||
+    !selectedResource.sourceLabel
+  ) {
+    return null;
+  }
+
+  return `https://github.com/${selectedResource.sourceLabel}`;
 }
 
 type AgentDetailPanelProps = {
@@ -202,6 +212,9 @@ export function AgentDetailPanel({
     selectedResource?.origin === "marketplace"
       ? formatInstallCount(selectedResource.installs, i18n.language)
       : null;
+  const localSourceValue = getSelectedResourceSourceValue(selectedResource, t);
+  const localMarketplaceUrl = getLocalMarketplaceUrl(selectedResource);
+  const marketplaceRepositoryUrl = getMarketplaceRepositoryUrl(selectedResource);
 
   const handleToggleSkill = async () => {
     if (!skillToggleTarget || !onSetLocalSkillEnabled) {
@@ -328,35 +341,75 @@ export function AgentDetailPanel({
           <div className="text-muted-foreground mt-3 flex flex-wrap items-center gap-2 text-xs">
             {selectedResource.origin === "marketplace" ? (
               <>
-                <InlineMetaItem
-                  label={t("prototype.detail.source")}
-                  value={selectedResource.sourceLabel}
-                  tone="blue"
-                />
-                <InlineMetaItem
-                  label={t("prototype.detail.version")}
-                  value={selectedResource.version}
-                  tone="green"
-                />
-                <InlineMetaItem
+                {marketplaceRepositoryUrl ? (
+                  <button
+                    type="button"
+                    className="cursor-pointer transition-opacity hover:opacity-85"
+                    onClick={() => void openUrl(marketplaceRepositoryUrl)}
+                    title={marketplaceRepositoryUrl}
+                  >
+                    <InlineMetaBadge
+                      label={t("prototype.detail.repository")}
+                      value={selectedResource.sourceLabel}
+                      tone="blue"
+                    />
+                  </button>
+                ) : (
+                  <InlineMetaBadge
+                    label={t("prototype.detail.repository")}
+                    value={selectedResource.sourceLabel}
+                    tone="blue"
+                  />
+                )}
+                <InlineMetaBadge
                   label={t("prototype.detail.installs")}
                   value={formattedMarketplaceInstalls ?? selectedResource.installs}
                   tone="amber"
                 />
               </>
             ) : null}
+            {selectedResource.origin === "local" && localSourceValue ? (
+              localMarketplaceUrl ? (
+                <button
+                  type="button"
+                  className="cursor-pointer transition-opacity hover:opacity-85"
+                  onClick={() => void openUrl(localMarketplaceUrl)}
+                  title={localMarketplaceUrl}
+                >
+                  <InlineMetaBadge
+                    label={t("prototype.detail.source")}
+                    value={localSourceValue}
+                    tone="blue"
+                  />
+                </button>
+              ) : (
+                <InlineMetaBadge
+                  label={t("prototype.detail.source")}
+                  value={localSourceValue}
+                  tone="blue"
+                />
+              )
+            ) : null}
             {selectedResource.origin === "local" ? (
-              <span className="bg-muted rounded px-2 py-1">
-                {t("prototype.detail.updatedAt")}: {selectedResource.updatedAt}
-              </span>
+              <InlineMetaBadge
+                label={t("prototype.detail.updatedAt")}
+                value={selectedResource.updatedAt}
+                tone="green"
+              />
             ) : null}
             {isLocalSkill ? (
               <button
                 type="button"
-                className="bg-muted hover:bg-accent hover:text-accent-foreground cursor-pointer rounded px-2 py-1 break-all transition-colors"
+                className="cursor-pointer break-all transition-opacity hover:opacity-85"
                 onClick={() => onOpenSkillFolder(openPath)}
+                title={openPath}
               >
-                {compactHomePath(openPath)}
+                <InlineMetaBadge
+                  label={t("prototype.detail.rootPath")}
+                  value={compactHomePath(openPath) ?? openPath}
+                  tone="amber"
+                  className="max-w-full"
+                />
               </button>
             ) : null}
           </div>

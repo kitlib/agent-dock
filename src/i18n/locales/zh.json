@@ -149,6 +149,7 @@
       "capabilities": "能力",
       "tags": "标签",
       "source": "来源",
+      "repository": "仓库",
       "version": "版本",
       "author": "作者",
       "agent": "Agent",

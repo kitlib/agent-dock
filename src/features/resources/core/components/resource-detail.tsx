@@ -11,15 +11,6 @@ type ResourceDetailContentProps = {
 type MarketplaceResource = AgentDiscoveryItem & MarketplaceDiscoveryFields;
 type LocalResource = Exclude<AgentDiscoveryItem, MarketplaceResource>;
 
-function StatCard({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="bg-background rounded-lg border px-3 py-2">
-      <div className="text-muted-foreground text-[11px] leading-4">{label}</div>
-      <div className="mt-0.5 text-sm leading-5 font-medium">{value}</div>
-    </div>
-  );
-}
-
 function TextSection({ title, children }: { title: string; children: ReactNode }) {
   return (
     <section className="space-y-2">
@@ -125,16 +116,6 @@ function LocalResourceDetail({
             {resource.description ?? resource.summary}
           </div>
         </TextSection>
-        {resource.agentName || resource.sourceLabel ? (
-          <section className="grid grid-cols-2 gap-3 text-sm">
-            {resource.agentName ? (
-              <StatCard label={t("prototype.detail.agent")} value={resource.agentName} />
-            ) : null}
-            {resource.sourceLabel ? (
-              <StatCard label={t("prototype.detail.source")} value={resource.sourceLabel} />
-            ) : null}
-          </section>
-        ) : null}
         <TextSection title="SKILL.md">
           {markdownContent.trim() ? (
             <div className="bg-muted/40 rounded-lg border p-3 text-sm">

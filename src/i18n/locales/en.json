@@ -149,6 +149,7 @@
       "capabilities": "Capabilities",
       "tags": "Tags",
       "source": "Source",
+      "repository": "Repository",
       "version": "Version",
       "author": "Author",
       "agent": "Agent",
