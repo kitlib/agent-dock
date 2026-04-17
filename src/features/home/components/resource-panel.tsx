@@ -1,4 +1,4 @@
-import { useMemo, useRef, useState, type DragEvent } from "react";
+import { useEffect, useMemo, useRef, useState, type DragEvent } from "react";
 import { Copy, Loader2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
@@ -18,6 +18,32 @@ const sourceFilters = ["all", "local", "marketplace"] as const;
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 type ResourceSourceFilter = (typeof sourceFilters)[number];
+
+function MarketplaceListSkeleton() {
+  return (
+    <div className="space-y-1">
+      {Array.from({ length: 8 }, (_, index) => (
+        <div
+          key={index}
+          className="rounded-lg border border-border/70 bg-background px-3 py-2 animate-pulse"
+        >
+          <div className="flex items-start gap-3">
+            <div className="mt-1 h-4 w-4 rounded-sm bg-muted" />
+            <div className="min-w-0 flex-1">
+              <div className="h-4 w-2/5 rounded bg-muted" />
+              <div className="mt-2 flex items-center gap-2">
+                <div className="h-3 w-20 rounded bg-muted" />
+                <div className="h-3 w-24 rounded bg-muted" />
+                <div className="h-3 w-16 rounded bg-muted" />
+              </div>
+            </div>
+            <div className="h-7 w-16 rounded-md bg-muted" />
+          </div>
+        </div>
+      ))}
+    </div>
+  );
+}
 
 function getSearchPlaceholder(activeKind: ResourceKind, t: Translate): string {
   if (activeKind === "skill") {
@@ -53,7 +79,11 @@ type AgentResourcePanelProps = {
   onToggleAllChecked: (ids: string[]) => void;
   onInstallMarketplaceItem: (resource: AgentDiscoveryItem) => Promise<void>;
   isMarketplaceLoading: boolean;
+  isMarketplaceLoadingMore: boolean;
+  hasMoreMarketplaceItems: boolean;
+  onLoadMoreMarketplaceItems: () => Promise<void>;
   marketplaceError: string | null;
+  marketplaceTotalSkills: number | null;
   search: string;
   selectedResourceId: string;
   t: (key: string, options?: Record<string, unknown>) => string;
@@ -80,7 +110,11 @@ export function AgentResourcePanel({
   onToggleAllChecked,
   onInstallMarketplaceItem,
   isMarketplaceLoading,
+  isMarketplaceLoadingMore,
+  hasMoreMarketplaceItems,
+  onLoadMoreMarketplaceItems,
   marketplaceError,
+  marketplaceTotalSkills,
   search,
   selectedResourceId,
   t,
@@ -88,7 +122,7 @@ export function AgentResourcePanel({
   const [sourceFilter, setSourceFilter] = useState<ResourceSourceFilter>("all");
   const scrollContainerRef = useRef<HTMLDivElement | null>(null);
   const sourceCounts = useMemo(() => {
-    return filteredResources.reduce<Record<ResourceSourceFilter, number>>(
+    const counts = filteredResources.reduce<Record<ResourceSourceFilter, number>>(
       (counts, resource) => {
         counts.all += 1;
         counts[resource.origin] += 1;
@@ -96,7 +130,14 @@ export function AgentResourcePanel({
       },
       { all: 0, local: 0, marketplace: 0 }
     );
-  }, [filteredResources]);
+
+    if (activeKind === "skill" && marketplaceTotalSkills != null) {
+      counts.marketplace = marketplaceTotalSkills;
+      counts.all = counts.local + marketplaceTotalSkills;
+    }
+
+    return counts;
+  }, [activeKind, filteredResources, marketplaceTotalSkills]);
 
   const visibleResources = useMemo(
     () =>
@@ -134,6 +175,62 @@ export function AgentResourcePanel({
     (resource) => getLocalSkillToggleTarget(resource)?.enabled ?? false
   );
   const hasCopyableSkills = selectedCheckedResources.some((resource) => resource.kind === "skill");
+  const shouldShowMarketplaceSkeleton = activeKind === "skill" && isMarketplaceLoading;
+  const shouldHideSourceCount = (filter: ResourceSourceFilter) =>
+    activeKind === "skill" &&
+    isMarketplaceLoading &&
+    (filter === "all" || filter === "marketplace") &&
+    sourceCounts[filter] === 0;
+
+  useEffect(() => {
+    const container = scrollContainerRef.current;
+    if (!container) {
+      return;
+    }
+
+    const handleScroll = () => {
+      if (
+        activeKind !== "skill" ||
+        sourceFilter === "local" ||
+        !hasMoreMarketplaceItems ||
+        isMarketplaceLoadingMore
+      ) {
+        return;
+      }
+
+      const remaining = container.scrollHeight - container.scrollTop - container.clientHeight;
+      if (remaining > 240) {
+        return;
+      }
+
+      void onLoadMoreMarketplaceItems();
+    };
+
+    container.addEventListener("scroll", handleScroll, { passive: true });
+    handleScroll();
+
+    return () => container.removeEventListener("scroll", handleScroll);
+  }, [
+    activeKind,
+    hasMoreMarketplaceItems,
+    isMarketplaceLoadingMore,
+    onLoadMoreMarketplaceItems,
+    sourceFilter,
+    visibleResources.length,
+  ]);
+
+  useEffect(() => {
+    if (visibleResources.length === 0) {
+      return;
+    }
+
+    const selectedVisible = visibleResources.some((resource) => resource.id === selectedResourceId);
+    if (selectedVisible) {
+      return;
+    }
+
+    onSelectResource(visibleResources[0]!);
+  }, [onSelectResource, selectedResourceId, visibleResources]);
 
   return (
     <section className="flex h-full min-w-0 flex-col overflow-hidden">
@@ -189,7 +286,9 @@ export function AgentResourcePanel({
               onClick={() => setSourceFilter(filter)}
             >
               {filter === "all" ? t("prototype.tabs.all") : t(`prototype.badges.${filter}`)}
-              <span className="ml-1 text-xs opacity-80">{sourceCounts[filter]}</span>
+              {shouldHideSourceCount(filter) ? null : (
+                <span className="ml-1 text-xs opacity-80">{sourceCounts[filter]}</span>
+              )}
             </Button>
           ))}
         </ButtonGroup>
@@ -257,7 +356,11 @@ export function AgentResourcePanel({
       ) : null}
 
       <div ref={scrollContainerRef} className="flex-1 overflow-auto px-3 py-2">
-        {visibleResources.length === 0 ? (
+        {shouldShowMarketplaceSkeleton ? (
+          <div className="bg-background rounded-lg pb-2">
+            <MarketplaceListSkeleton />
+          </div>
+        ) : visibleResources.length === 0 ? (
           <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
             {search ? t("prototype.noResults") : t("prototype.emptyList")}
           </div>
@@ -281,6 +384,16 @@ export function AgentResourcePanel({
               selectedResourceId={selectedResourceId}
               t={t}
             />
+            {activeKind === "skill" && (isMarketplaceLoadingMore || hasMoreMarketplaceItems) ? (
+              <div className="text-muted-foreground flex items-center justify-center gap-2 px-3 py-3 text-xs">
+                {isMarketplaceLoadingMore ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : null}
+                <span>
+                  {isMarketplaceLoadingMore
+                    ? t("prototype.actions.loadingMore")
+                    : t("prototype.actions.scrollToLoadMore")}
+                </span>
+              </div>
+            ) : null}
           </div>
         )}
       </div>

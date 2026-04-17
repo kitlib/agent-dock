@@ -41,15 +41,16 @@ export function useResourceBrowser(
     normalizedSearch,
     activeKind === "skill"
   );
+  const skillMarketplaceItems = skillMarketplaceQuery.data?.items ?? [];
   const effectiveMarketplaceItems = useMemo(() => {
     const nonSkillItems = mockMarketplaceItems.filter((item) => item.kind !== "skill");
     const skillItems =
       activeKind === "skill"
-        ? (skillMarketplaceQuery.data ?? [])
+        ? skillMarketplaceItems
         : mockMarketplaceItems.filter((item) => item.kind === "skill");
 
     return [...skillItems, ...nonSkillItems];
-  }, [activeKind, skillMarketplaceQuery.data]);
+  }, [activeKind, skillMarketplaceItems]);
 
   useEffect(() => {
     const defaultStates = createMarketplaceInstallStateMap(effectiveMarketplaceItems);
@@ -167,7 +168,19 @@ export function useResourceBrowser(
     toggleChecked,
     toggleAllChecked,
     updateMarketplaceInstallState,
-    isMarketplaceLoading: skillMarketplaceQuery.isFetching,
+    isMarketplaceLoading:
+      skillMarketplaceQuery.isLoading ||
+      (skillMarketplaceQuery.isFetching && !skillMarketplaceQuery.isFetchingNextPage),
+    isMarketplaceLoadingMore: skillMarketplaceQuery.isFetchingNextPage,
+    hasMoreMarketplaceItems: skillMarketplaceQuery.hasNextPage ?? false,
+    loadMoreMarketplaceItems: async () => {
+      if (!skillMarketplaceQuery.hasNextPage || skillMarketplaceQuery.isFetchingNextPage) {
+        return;
+      }
+
+      await skillMarketplaceQuery.fetchNextPage();
+    },
+    marketplaceTotalSkills: skillMarketplaceQuery.data?.totalSkills ?? null,
     marketplaceError:
       skillMarketplaceQuery.error instanceof Error ? skillMarketplaceQuery.error.message : null,
   };
