@@ -1,6 +1,6 @@
 use std::{collections::HashSet, path::Path, time::Duration};
 
-use regex::Regex;
+use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, REFERER};
 use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
@@ -8,6 +8,7 @@ use serde_json::Value;
 use crate::persistence::marketplace_cache_store;
 
 const SKILL_DETAIL_CACHE_TTL_SECS: u64 = 60 * 60 * 24;
+const MARKETPLACE_PAGE_SIZE: usize = 200;
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 pub struct SkillsShSkillRecord {
@@ -16,6 +17,14 @@ pub struct SkillsShSkillRecord {
     pub name: String,
     pub source: String,
     pub installs: u64,
+}
+
+#[derive(Debug, Clone, Serialize, Deserialize)]
+pub struct SkillsShSkillListRecord {
+    pub items: Vec<SkillsShSkillRecord>,
+    pub total_skills: Option<u64>,
+    pub has_more: bool,
+    pub page: usize,
 }
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
@@ -36,11 +45,32 @@ pub struct SkillsShSkillBundleRecord {
     pub files: Vec<SkillsShSkillFileRecord>,
 }
 
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SkillsShDownloadFileRecord {
+    path: String,
+    contents: String,
+}
+
+#[derive(Debug, Deserialize)]
+#[serde(rename_all = "camelCase")]
+struct SkillsShDownloadResponse {
+    files: Vec<SkillsShDownloadFileRecord>,
+    #[allow(dead_code)]
+    hash: String,
+}
+
 #[derive(Debug, Clone, Copy)]
 pub enum LeaderboardType {
     AllTime,
     Trending,
     Hot,
+}
+
+#[derive(Debug, Clone, Copy, PartialEq, Eq)]
+pub enum MarketplaceInstallMethod {
+    SkillsSh,
+    GitHub,
 }
 
 #[derive(Debug, Deserialize)]
@@ -76,38 +106,61 @@ impl LeaderboardType {
         }
     }
 
-    fn url(self) -> &'static str {
+    fn api_path(self) -> &'static str {
         match self {
-            Self::AllTime => "https://skills.sh/",
-            Self::Trending => "https://skills.sh/trending",
-            Self::Hot => "https://skills.sh/hot",
+            Self::AllTime => "all-time",
+            Self::Trending => "trending",
+            Self::Hot => "hot",
         }
     }
 }
 
 fn build_http_client() -> Result<reqwest::blocking::Client, String> {
     reqwest::blocking::Client::builder()
-        .user_agent("agent-dock")
+        .user_agent(
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 \
+             (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36",
+        )
         .timeout(Duration::from_secs(15))
         .build()
         .map_err(|error| format!("Failed to build skills.sh client: {error}"))
 }
 
-pub fn fetch_leaderboard(board: LeaderboardType) -> Result<Vec<SkillsShSkillRecord>, String> {
-    let client = build_http_client()?;
-    let html = client
-        .get(board.url())
-        .send()
-        .map_err(|error| format!("Failed to fetch skills.sh leaderboard: {error}"))?
-        .text()
-        .map_err(|error| format!("Failed to read skills.sh leaderboard response: {error}"))?;
-
-    parse_leaderboard_html(&html)
+fn build_skillssh_headers() -> Result<HeaderMap, String> {
+    let mut headers = HeaderMap::new();
+    headers.insert(ACCEPT, HeaderValue::from_static("application/json, text/plain, */*"));
+    headers.insert(REFERER, HeaderValue::from_static("https://skills.sh/"));
+    Ok(headers)
 }
 
-pub fn search_skills(query: &str, limit: usize) -> Result<Vec<SkillsShSkillRecord>, String> {
+pub fn fetch_leaderboard(
+    board: LeaderboardType,
+    page: usize,
+) -> Result<SkillsShSkillListRecord, String> {
     let client = build_http_client()?;
-    let bounded_limit = limit.clamp(1, 100);
+    let url = format!("https://skills.sh/api/skills/{}/{}", board.api_path(), page);
+    let headers = build_skillssh_headers()?;
+    let response = client
+        .get(url)
+        .headers(headers)
+        .send()
+        .map_err(|error| format!("Failed to fetch skills.sh leaderboard: {error}"))?
+        .json::<Value>()
+        .map_err(|error| format!("Failed to parse skills.sh leaderboard response: {error}"))?;
+
+    parse_skill_list_response(&response, page)
+}
+
+pub fn search_skills(
+    query: &str,
+    page_size: usize,
+    page: usize,
+) -> Result<SkillsShSkillListRecord, String> {
+    let client = build_http_client()?;
+    let bounded_page_size = page_size.clamp(1, 100);
+    let bounded_limit = ((page + 1) * bounded_page_size).clamp(1, 1000);
+    let offset = page * bounded_page_size;
+    let headers = build_skillssh_headers()?;
     let url = format!(
         "https://skills.sh/api/search?q={}&limit={}",
         urlencoding::encode(query),
@@ -116,20 +169,37 @@ pub fn search_skills(query: &str, limit: usize) -> Result<Vec<SkillsShSkillRecor
 
     let response = client
         .get(url)
+        .headers(headers)
         .send()
         .map_err(|error| format!("Failed to search skills.sh: {error}"))?
         .json::<Value>()
         .map_err(|error| format!("Failed to parse skills.sh search response: {error}"))?;
 
     if let Some(array) = response.as_array() {
-        return Ok(parse_skills_array(array));
+        let all_items = parse_skills_array(array);
+        let page_items = slice_page_items(&all_items, offset, bounded_page_size);
+        return Ok(SkillsShSkillListRecord {
+            has_more: all_items.len() > offset + page_items.len(),
+            items: page_items,
+            total_skills: None,
+            page,
+        });
     }
 
-    if let Some(array) = response.get("skills").and_then(Value::as_array) {
-        return Ok(parse_skills_array(array));
-    }
+    parse_skill_list_response(&response, page).map(|result| {
+        let page_items = slice_page_items(&result.items, offset, bounded_page_size);
+        let has_more = result
+            .total_skills
+            .map(|total| total as usize > offset + page_items.len())
+            .unwrap_or_else(|| result.items.len() > offset + page_items.len());
 
-    Ok(Vec::new())
+        SkillsShSkillListRecord {
+            items: page_items,
+            total_skills: result.total_skills,
+            has_more,
+            page,
+        }
+    })
 }
 
 pub fn fetch_skill_detail(
@@ -156,35 +226,43 @@ pub fn fetch_skill_detail(
     }
 
     let client = build_http_client()?;
+
+    if let Ok(Some(bundle)) = try_fetch_skill_bundle_from_download(&client, source, skill_id) {
+        if let Some(detail) = detail_from_bundle(&bundle) {
+            if !detail.markdown.trim().is_empty() {
+                let _ = marketplace_cache_store::save_skill_detail(
+                    cache_root_dir,
+                    source,
+                    skill_id,
+                    &detail.description,
+                    &detail.markdown,
+                    &detail.raw_markdown,
+                );
+            }
+
+            return Ok(detail);
+        }
+    }
+
     let (owner, repo) = parse_github_source(source)?;
     let branches = resolve_candidate_branches(&client, owner, repo);
 
     if let Some(raw_markdown) = try_fetch_skill_markdown(&client, owner, repo, skill_id, &branches)?
     {
-        let (frontmatter_raw, markdown_body) = split_frontmatter(&raw_markdown);
-        let frontmatter = frontmatter_raw
-            .as_ref()
-            .and_then(|raw| serde_yaml::from_str::<Value>(raw).ok());
-        let summary = summary_from_markdown(&markdown_body);
-        let description =
-            resolved_description(frontmatter.as_ref(), frontmatter_raw.as_deref(), &summary);
+        let detail = detail_from_raw_markdown(&raw_markdown);
 
-        if !markdown_body.trim().is_empty() {
+        if !detail.markdown.trim().is_empty() {
             let _ = marketplace_cache_store::save_skill_detail(
                 cache_root_dir,
                 source,
                 skill_id,
-                &description,
-                &markdown_body,
-                &raw_markdown,
+                &detail.description,
+                &detail.markdown,
+                &detail.raw_markdown,
             );
         }
 
-        return Ok(SkillsShSkillDetailRecord {
-            description,
-            markdown: markdown_body,
-            raw_markdown,
-        });
+        return Ok(detail);
     }
 
     if let Some(cached) =
@@ -214,8 +292,16 @@ pub fn fetch_skill_bundle(
     _cache_root_dir: &Path,
     source: &str,
     skill_id: &str,
+    install_method: MarketplaceInstallMethod,
 ) -> Result<SkillsShSkillBundleRecord, String> {
     let client = build_http_client()?;
+
+    if install_method == MarketplaceInstallMethod::SkillsSh {
+        if let Ok(Some(bundle)) = try_fetch_skill_bundle_from_download(&client, source, skill_id) {
+            return Ok(bundle);
+        }
+    }
+
     let (owner, repo) = parse_github_source(source)?;
     let branches = resolve_candidate_branches(&client, owner, repo);
     let resolved = resolve_skill_location(&client, owner, repo, skill_id, &branches)?
@@ -230,6 +316,83 @@ pub fn fetch_skill_bundle(
     )?;
 
     Ok(SkillsShSkillBundleRecord { files })
+}
+
+fn try_fetch_skill_bundle_from_download(
+    client: &reqwest::blocking::Client,
+    source: &str,
+    skill_id: &str,
+) -> Result<Option<SkillsShSkillBundleRecord>, String> {
+    let (owner, repo) = parse_github_source(source)?;
+    let headers = build_skillssh_headers()?;
+    let url = format!(
+        "https://skills.sh/api/download/{}/{}/{}",
+        urlencoding::encode(owner),
+        urlencoding::encode(repo),
+        urlencoding::encode(skill_id)
+    );
+
+    let response = client
+        .get(url)
+        .headers(headers)
+        .send()
+        .map_err(|error| format!("Failed to fetch skills.sh download bundle: {error}"))?;
+
+    if response.status() == StatusCode::NOT_FOUND {
+        return Ok(None);
+    }
+
+    if !response.status().is_success() {
+        return Err(format!(
+            "skills.sh download request failed with status {}",
+            response.status()
+        ));
+    }
+
+    let payload = response
+        .json::<SkillsShDownloadResponse>()
+        .map_err(|error| format!("Failed to parse skills.sh download response: {error}"))?;
+
+    let files = payload
+        .files
+        .into_iter()
+        .map(|file| SkillsShSkillFileRecord {
+            relative_path: file.path.replace('\\', "/"),
+            contents: file.contents.into_bytes(),
+        })
+        .collect::<Vec<_>>();
+
+    if files.is_empty() {
+        return Ok(None);
+    }
+
+    Ok(Some(SkillsShSkillBundleRecord { files }))
+}
+
+fn detail_from_bundle(bundle: &SkillsShSkillBundleRecord) -> Option<SkillsShSkillDetailRecord> {
+    let raw_markdown = bundle
+        .files
+        .iter()
+        .find(|file| file.relative_path == "SKILL.md" || file.relative_path.ends_with("/SKILL.md"))
+        .map(|file| String::from_utf8_lossy(&file.contents).into_owned())?;
+
+    Some(detail_from_raw_markdown(&raw_markdown))
+}
+
+fn detail_from_raw_markdown(raw_markdown: &str) -> SkillsShSkillDetailRecord {
+    let (frontmatter_raw, markdown_body) = split_frontmatter(raw_markdown);
+    let frontmatter = frontmatter_raw
+        .as_ref()
+        .and_then(|raw| serde_yaml::from_str::<Value>(raw).ok());
+    let summary = summary_from_markdown(&markdown_body);
+    let description =
+        resolved_description(frontmatter.as_ref(), frontmatter_raw.as_deref(), &summary);
+
+    SkillsShSkillDetailRecord {
+        description,
+        markdown: markdown_body,
+        raw_markdown: raw_markdown.to_string(),
+    }
 }
 
 fn parse_github_source(source: &str) -> Result<(&str, &str), String> {
@@ -677,62 +840,86 @@ fn strip_frontmatter(markdown: &str) -> String {
     content.trim().to_string()
 }
 
-fn parse_leaderboard_html(html: &str) -> Result<Vec<SkillsShSkillRecord>, String> {
-    let next_data_skills = parse_next_data(html)?;
-    if !next_data_skills.is_empty() {
-        return Ok(next_data_skills);
-    }
-
-    parse_embedded_skill_objects(html)
+fn parse_total_skills_value(value: &Value) -> Option<u64> {
+    value
+        .get("totalSkills")
+        .and_then(value_to_u64)
+        .or_else(|| value.get("total").and_then(value_to_u64))
+        .or_else(|| value.get("count").and_then(value_to_u64))
 }
 
-fn parse_next_data(html: &str) -> Result<Vec<SkillsShSkillRecord>, String> {
-    let marker = r#"<script id="__NEXT_DATA__" type="application/json">"#;
-    let Some(start) = html.find(marker).map(|index| index + marker.len()) else {
-        return Ok(Vec::new());
-    };
-    let Some(relative_end) = html[start..].find("</script>") else {
-        return Ok(Vec::new());
-    };
-
-    let json_str = &html[start..start + relative_end];
-    let data: Value = serde_json::from_str(json_str)
-        .map_err(|error| format!("Failed to parse skills.sh __NEXT_DATA__: {error}"))?;
-
-    let skills_array = data
-        .pointer("/props/pageProps/initialSkills")
-        .or_else(|| data.pointer("/props/pageProps/skills"))
-        .or_else(|| data.pointer("/props/pageProps/items"))
-        .and_then(Value::as_array);
-
-    Ok(skills_array
-        .map(|items| parse_skills_array(items))
-        .unwrap_or_default())
-}
-
-fn parse_embedded_skill_objects(html: &str) -> Result<Vec<SkillsShSkillRecord>, String> {
-    let primary_pattern = Regex::new(
-        r#"(?:\\)?\"source(?:\\)?\":(?:\\)?\"(?P<source>[^"\\]+)(?:\\)?\",(?:[^{}]|\\.)*?(?:(?:\\)?\"skillId(?:\\)?\"|(?:\\)?\"skill_id(?:\\)?\"):(?:\\)?\"(?P<skill_id>[^"\\]+)(?:\\)?\",(?:[^{}]|\\.)*?(?:\\)?\"name(?:\\)?\":(?:\\)?\"(?P<name>[^"\\]*)(?:\\)?\",(?:[^{}]|\\.)*?(?:\\)?\"installs(?:\\)?\":(?P<installs>\d+)"#,
-    )
-    .map_err(|error| format!("Failed to build skills.sh parser regex: {error}"))?;
-    let fallback_pattern = Regex::new(
-        r#"\{"source":"(?P<source>[^"]+)","skill_id":"(?P<skill_id>[^"]+)"(?:,"name":"(?P<name>[^"]*)")?(?:.*?"installs":(?P<installs>\d+))?\}"#,
-    )
-    .map_err(|error| format!("Failed to build fallback skills.sh parser regex: {error}"))?;
-
-    let mut skills = parse_embedded_with_regex(html, &primary_pattern);
-    if skills.is_empty() {
-        skills = parse_embedded_with_regex(html, &fallback_pattern);
+fn parse_skill_list_response(response: &Value, page: usize) -> Result<SkillsShSkillListRecord, String> {
+    if let Some(array) = response.get("skills").and_then(Value::as_array) {
+        let items = parse_skills_array(array);
+        let total_skills = parse_total_skills_value(response).or_else(|| Some(items.len() as u64));
+        return Ok(SkillsShSkillListRecord {
+            has_more: response
+                .get("hasMore")
+                .and_then(Value::as_bool)
+                .unwrap_or_else(|| total_skills.map(|total| total as usize > (page + 1) * MARKETPLACE_PAGE_SIZE).unwrap_or(false)),
+            items,
+            total_skills,
+            page,
+        });
     }
 
-    Ok(skills)
+    if let Some(array) = response.get("items").and_then(Value::as_array) {
+        let items = parse_skills_array(array);
+        let total_skills = parse_total_skills_value(response).or_else(|| Some(items.len() as u64));
+        return Ok(SkillsShSkillListRecord {
+            has_more: response
+                .get("hasMore")
+                .and_then(Value::as_bool)
+                .unwrap_or(false),
+            items,
+            total_skills,
+            page,
+        });
+    }
+
+    if response.is_object() {
+        return Ok(SkillsShSkillListRecord {
+            items: Vec::new(),
+            total_skills: parse_total_skills_value(response),
+            has_more: response
+                .get("hasMore")
+                .and_then(Value::as_bool)
+                .unwrap_or(false),
+            page,
+        });
+    }
+
+    Err("Unsupported skills.sh list response format.".into())
+}
+
+fn value_to_u64(value: &Value) -> Option<u64> {
+    value
+        .as_u64()
+        .or_else(|| value.as_str().and_then(parse_total_skills_text))
+}
+
+fn slice_page_items(
+    items: &[SkillsShSkillRecord],
+    offset: usize,
+    page_size: usize,
+) -> Vec<SkillsShSkillRecord> {
+    items.iter()
+        .skip(offset)
+        .take(page_size)
+        .cloned()
+        .collect()
+}
+
+fn parse_total_skills_text(value: &str) -> Option<u64> {
+    value.replace(',', "").trim().parse::<u64>().ok()
 }
 
 #[cfg(test)]
 mod tests {
     use super::{
-        parse_skills_array, resolve_skill_markdown_path_from_tree, simplify_skill_id,
-        strip_frontmatter, GitHubTreeEntry,
+        detail_from_bundle, parse_skill_list_response, parse_skills_array,
+        resolve_skill_markdown_path_from_tree, simplify_skill_id, strip_frontmatter,
+        GitHubTreeEntry, SkillsShSkillBundleRecord, SkillsShSkillFileRecord,
     };
     use serde_json::json;
 
@@ -779,6 +966,32 @@ mod tests {
     }
 
     #[test]
+    fn detail_from_bundle_reads_root_skill_markdown() {
+        let bundle = SkillsShSkillBundleRecord {
+            files: vec![SkillsShSkillFileRecord {
+                relative_path: "SKILL.md".into(),
+                contents: b"---\ndescription: Demo skill\n---\n\n# Heading\nBody".to_vec(),
+            }],
+        };
+
+        let detail = detail_from_bundle(&bundle).expect("detail from bundle");
+        assert_eq!(detail.description, "Demo skill");
+        assert_eq!(detail.markdown, "\n# Heading\nBody");
+    }
+
+    #[test]
+    fn detail_from_bundle_ignores_non_entry_files() {
+        let bundle = SkillsShSkillBundleRecord {
+            files: vec![SkillsShSkillFileRecord {
+                relative_path: "notes.txt".into(),
+                contents: b"not a skill".to_vec(),
+            }],
+        };
+
+        assert!(detail_from_bundle(&bundle).is_none());
+    }
+
+    #[test]
     fn parse_skills_array_skips_duplicate_items() {
         let items = vec![
             json!({
@@ -801,6 +1014,50 @@ mod tests {
         assert_eq!(skills.len(), 1);
         assert_eq!(skills[0].source, "skillssh/skills");
         assert_eq!(skills[0].skill_id, "ai-image-generation");
+    }
+
+    #[test]
+    fn parse_skill_list_response_reads_total_skills() {
+        let response = json!({
+            "skills": [
+                {
+                    "source": "skillssh/skills",
+                    "skillId": "demo",
+                    "name": "Demo",
+                    "installs": 12
+                }
+            ],
+            "total": 91007
+        });
+
+        let parsed =
+            parse_skill_list_response(&response, 0).expect("expected skill list response to parse");
+
+        assert_eq!(parsed.total_skills, Some(91007));
+        assert_eq!(parsed.items.len(), 1);
+        assert_eq!(parsed.items[0].skill_id, "demo");
+        assert!(parsed.has_more);
+    }
+
+    #[test]
+    fn parse_skill_list_response_supports_items_key() {
+        let response = json!({
+            "items": [
+                {
+                    "source": "skillssh/skills",
+                    "skill_id": "demo",
+                    "name": "Demo",
+                    "installs": 12
+                }
+            ],
+            "count": "91,007"
+        });
+
+        let parsed =
+            parse_skill_list_response(&response, 0).expect("expected items response to parse");
+
+        assert_eq!(parsed.total_skills, Some(91007));
+        assert_eq!(parsed.items.len(), 1);
     }
 }
 
@@ -846,47 +1103,6 @@ fn parse_skills_array(items: &[Value]) -> Vec<SkillsShSkillRecord> {
             .unwrap_or(&skill_id)
             .to_string();
         let installs = item.get("installs").and_then(Value::as_u64).unwrap_or(0);
-
-        skills.push(SkillsShSkillRecord {
-            id,
-            skill_id,
-            name,
-            source,
-            installs,
-        });
-    }
-
-    skills
-}
-
-fn parse_embedded_with_regex(html: &str, pattern: &Regex) -> Vec<SkillsShSkillRecord> {
-    let mut seen = HashSet::new();
-    let mut skills = Vec::new();
-
-    for captures in pattern.captures_iter(html) {
-        let Some(source_match) = captures.name("source") else {
-            continue;
-        };
-        let Some(skill_id_match) = captures.name("skill_id") else {
-            continue;
-        };
-
-        let source = source_match.as_str().replace(r#"\""#, "\"");
-        let skill_id = skill_id_match.as_str().replace(r#"\""#, "\"");
-        let id = format!("{source}/{skill_id}");
-        if !seen.insert(id.clone()) {
-            continue;
-        }
-
-        let name = captures
-            .name("name")
-            .map(|value| value.as_str().replace(r#"\""#, "\""))
-            .filter(|value| !value.is_empty())
-            .unwrap_or_else(|| skill_id.clone());
-        let installs = captures
-            .name("installs")
-            .and_then(|value| value.as_str().parse::<u64>().ok())
-            .unwrap_or(0);
 
         skills.push(SkillsShSkillRecord {
             id,

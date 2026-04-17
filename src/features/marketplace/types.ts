@@ -1,5 +1,6 @@
 export type MarketplaceKind = "skill" | "mcp" | "subagent";
 export type InstallState = "install" | "installed" | "update";
+export type MarketplaceInstallMethod = "skillsh" | "github";
 
 export type MarketplaceItem = {
   id: string;
@@ -16,6 +17,13 @@ export type MarketplaceItem = {
   highlights: string[];
   url?: string;
   markdown?: string;
+};
+
+export type MarketplaceQueryResult = {
+  items: MarketplaceItem[];
+  totalSkills?: number;
+  hasMore: boolean;
+  page: number;
 };
 
 export type MarketplaceSkillDetail = {

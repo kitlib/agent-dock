@@ -1,19 +1,20 @@
 import { invoke } from "@tauri-apps/api/core";
 import type { LocalSkillCopyTargetAgent } from "@/features/agents/types";
 import type {
+  MarketplaceInstallMethod,
   MarketplaceInstallPreview,
   MarketplaceInstallResult,
-  MarketplaceItem,
+  MarketplaceQueryResult,
   MarketplaceSkillDetail,
   MarketplaceSkillUpdateCheck,
 } from "./types";
 
-export async function fetchSkillsshLeaderboard(board = "all-time") {
-  return invoke<MarketplaceItem[]>("fetch_skillssh_leaderboard", { board });
+export async function fetchSkillsshLeaderboard(board = "all-time", page = 0) {
+  return invoke<MarketplaceQueryResult>("fetch_skillssh_leaderboard", { board, page });
 }
 
-export async function searchSkillsshMarketplace(query: string, limit = 60) {
-  return invoke<MarketplaceItem[]>("search_skillssh_marketplace", { query, limit });
+export async function searchSkillsshMarketplace(query: string, limit = 100, page = 0) {
+  return invoke<MarketplaceQueryResult>("search_skillssh_marketplace", { query, limit, page });
 }
 
 export async function getSkillsshMarketplaceDetail(source: string, skillId: string) {
@@ -26,6 +27,7 @@ export async function installSkillsshMarketplaceItem(
   name: string,
   description: string,
   targetAgent: LocalSkillCopyTargetAgent,
+  installMethod: MarketplaceInstallMethod,
   overwrite = false
 ) {
   return invoke<MarketplaceInstallResult>("install_skillssh_marketplace_item", {
@@ -35,6 +37,7 @@ export async function installSkillsshMarketplaceItem(
       name,
       description,
       targetAgent,
+      installMethod,
       overwrite,
     },
   });
@@ -45,7 +48,8 @@ export async function previewSkillsshMarketplaceInstall(
   skillId: string,
   name: string,
   description: string,
-  targetAgent: LocalSkillCopyTargetAgent
+  targetAgent: LocalSkillCopyTargetAgent,
+  installMethod: MarketplaceInstallMethod
 ) {
   return invoke<MarketplaceInstallPreview>("preview_skillssh_marketplace_install", {
     request: {
@@ -54,6 +58,7 @@ export async function previewSkillsshMarketplaceInstall(
       name,
       description,
       targetAgent,
+      installMethod,
       overwrite: false,
     },
   });

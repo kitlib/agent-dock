@@ -3,28 +3,46 @@ use std::{env, fs, path::PathBuf};
 use tauri::{AppHandle, Manager};
 
 use crate::dto::marketplace::{
-    InstallMarketplaceSkillRequestDto, MarketplaceInstallPreviewDto, MarketplaceInstallResultDto,
-    MarketplaceItemDto, MarketplaceSkillDetailDto, MarketplaceSkillUpdateCheckDto,
+    InstallMarketplaceSkillRequestDto, MarketplaceInstallMethodDto, MarketplaceInstallPreviewDto,
+    MarketplaceInstallResultDto, MarketplaceItemsResponseDto, MarketplaceSkillDetailDto,
+    MarketplaceSkillUpdateCheckDto,
 };
 use crate::persistence::marketplace_install_store::{self, MarketplaceInstallRecord};
 use crate::scanners::agent_type_scanner;
-use crate::scanners::skillssh_scanner::{self, LeaderboardType, SkillsShSkillFileRecord};
+use crate::scanners::skillssh_scanner::{
+    self, LeaderboardType, MarketplaceInstallMethod, SkillsShSkillFileRecord,
+};
 use crate::services::marketplace_service;
+
+fn to_install_method(method: &MarketplaceInstallMethodDto) -> MarketplaceInstallMethod {
+    match method {
+        MarketplaceInstallMethodDto::Skillsh => MarketplaceInstallMethod::SkillsSh,
+        MarketplaceInstallMethodDto::Github => MarketplaceInstallMethod::GitHub,
+    }
+}
 
 #[tauri::command]
 pub async fn fetch_skillssh_leaderboard(
     board: Option<String>,
-) -> Result<Vec<MarketplaceItemDto>, String> {
+    page: Option<usize>,
+) -> Result<MarketplaceItemsResponseDto, String> {
     let board_value = board.unwrap_or_else(|| "all-time".to_string());
+    let page_value = page.unwrap_or(0);
 
     tauri::async_runtime::spawn_blocking(move || {
-        skillssh_scanner::fetch_leaderboard(LeaderboardType::from_str(&board_value)).map(|skills| {
-            skills
-                .into_iter()
-                .map(marketplace_service::to_skillssh_skill_dto)
-                .map(marketplace_service::to_marketplace_item)
-                .collect()
-        })
+        skillssh_scanner::fetch_leaderboard(LeaderboardType::from_str(&board_value), page_value).map(
+            |skills| MarketplaceItemsResponseDto {
+                items: skills
+                    .items
+                    .into_iter()
+                    .map(marketplace_service::to_skillssh_skill_dto)
+                    .map(marketplace_service::to_marketplace_item)
+                    .collect(),
+                total_skills: skills.total_skills,
+                has_more: skills.has_more,
+                page: skills.page,
+            },
+        )
     })
     .await
     .map_err(|error| format!("Failed to join skills.sh leaderboard task: {error}"))?
@@ -34,17 +52,25 @@ pub async fn fetch_skillssh_leaderboard(
 pub async fn search_skillssh_marketplace(
     query: String,
     limit: Option<usize>,
-) -> Result<Vec<MarketplaceItemDto>, String> {
-    let bounded_limit = limit.unwrap_or(60).clamp(1, 100);
+    page: Option<usize>,
+) -> Result<MarketplaceItemsResponseDto, String> {
+    let bounded_limit = limit.unwrap_or(100).clamp(1, 100);
+    let page_value = page.unwrap_or(0);
 
     tauri::async_runtime::spawn_blocking(move || {
-        skillssh_scanner::search_skills(&query, bounded_limit).map(|skills| {
-            skills
-                .into_iter()
-                .map(marketplace_service::to_skillssh_skill_dto)
-                .map(marketplace_service::to_marketplace_item)
-                .collect()
-        })
+        skillssh_scanner::search_skills(&query, bounded_limit, page_value).map(
+            |skills| MarketplaceItemsResponseDto {
+                items: skills
+                    .items
+                    .into_iter()
+                    .map(marketplace_service::to_skillssh_skill_dto)
+                    .map(marketplace_service::to_marketplace_item)
+                    .collect(),
+                total_skills: skills.total_skills,
+                has_more: skills.has_more,
+                page: skills.page,
+            },
+        )
     })
     .await
     .map_err(|error| format!("Failed to join skills.sh search task: {error}"))?
@@ -288,6 +314,7 @@ pub async fn install_skillssh_marketplace_item(
             &cache_root_dir,
             &request.source,
             &request.skill_id,
+            to_install_method(&request.install_method),
         )?;
         let (skill_path, entry_file_path) = resolve_marketplace_install_paths(&request)?;
 
@@ -310,6 +337,10 @@ pub async fn install_skillssh_marketplace_item(
         marketplace_install_store::upsert_marketplace_install(MarketplaceInstallRecord {
             source: request.source,
             skill_id: request.skill_id,
+            install_method: match request.install_method {
+                MarketplaceInstallMethodDto::Skillsh => "skillsh".into(),
+                MarketplaceInstallMethodDto::Github => "github".into(),
+            },
             skill_path: skill_path.to_string_lossy().replace('\\', "/"),
             entry_file_path: entry_file_path.to_string_lossy().replace('\\', "/"),
             installed_at: chrono::Utc::now().to_rfc3339(),
@@ -355,6 +386,11 @@ pub async fn check_local_marketplace_skill_update(
             &cache_root_dir,
             &record.source,
             &record.skill_id,
+            if record.install_method == "github" {
+                MarketplaceInstallMethod::GitHub
+            } else {
+                MarketplaceInstallMethod::SkillsSh
+            },
         )?;
 
         Ok(MarketplaceSkillUpdateCheckDto {

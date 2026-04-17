@@ -108,7 +108,9 @@
       "retryScan": "Scan again",
       "manualAdd": "Create manually",
       "selectAllReady": "Select all ready",
-      "notAdded": "Not managed"
+      "notAdded": "Not managed",
+      "loadingMore": "Loading more...",
+      "scrollToLoadMore": "Scroll to load more"
     },
     "deleteSkill": {
       "title": "Delete skill",
@@ -174,6 +176,13 @@
       "loadFailed": "Marketplace request failed",
       "installToAgentTitle": "Install Skill",
       "installToAgentDescription": "Select the target Agent before installing this marketplace skill.",
+      "installMethodLabel": "Install source",
+      "installMethods": {
+        "skillsh": "skills.sh",
+        "github": "GitHub",
+        "skillshDescription": "Use the marketplace bundle from skills.sh first.",
+        "githubDescription": "Install directly from the GitHub-backed source."
+      },
       "installConflict": {
         "title": "Overwrite existing skill?",
         "description": "\"{{name}}\" already exists in \"{{agentName}}\". Overwrite the local files?"

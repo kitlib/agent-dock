@@ -9,15 +9,21 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import {
+  RadioGroup,
+  RadioGroupItem,
+} from "@/components/ui/radio-group";
 import { AgentIcon } from "@/features/agents/components/agent-icon";
 import type { ResolvedAgentView } from "@/features/agents/types";
+import type { MarketplaceInstallMethod } from "@/features/marketplace/types";
 import { cn } from "@/lib/utils";
 
 type MarketplaceInstallAgentDialogProps = {
   open: boolean;
   onOpenChange: (open: boolean) => void;
   targetAgents: ResolvedAgentView[];
-  onConfirm: (agent: ResolvedAgentView) => Promise<void>;
+  initialSelectedAgentId?: string | null;
+  onConfirm: (agent: ResolvedAgentView, installMethod: MarketplaceInstallMethod) => Promise<void>;
   t: (key: string, options?: Record<string, unknown>) => string;
 };
 
@@ -34,20 +40,25 @@ export function MarketplaceInstallAgentDialog({
   open,
   onOpenChange,
   targetAgents,
+  initialSelectedAgentId,
   onConfirm,
   t,
 }: MarketplaceInstallAgentDialogProps) {
   const [selectedAgentId, setSelectedAgentId] = useState<string | null>(null);
+  const [installMethod, setInstallMethod] = useState<MarketplaceInstallMethod>("skillsh");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   useEffect(() => {
     if (open) {
+      setSelectedAgentId(initialSelectedAgentId ?? null);
+      setInstallMethod("skillsh");
       return;
     }
 
     setSelectedAgentId(null);
+    setInstallMethod("skillsh");
     setIsSubmitting(false);
-  }, [open]);
+  }, [initialSelectedAgentId, open]);
 
   const selectedAgent = targetAgents.find((agent) => agent.id === selectedAgentId) ?? null;
 
@@ -58,7 +69,7 @@ export function MarketplaceInstallAgentDialog({
 
     setIsSubmitting(true);
     try {
-      await onConfirm(selectedAgent);
+      await onConfirm(selectedAgent, installMethod);
       onOpenChange(false);
     } finally {
       setIsSubmitting(false);
@@ -113,6 +124,54 @@ export function MarketplaceInstallAgentDialog({
         {targetAgents.length === 0 ? (
           <div className="text-muted-foreground text-sm">{t("prototype.emptyList")}</div>
         ) : null}
+
+        <div className="space-y-2">
+          <div className="text-sm font-medium">
+            {t("prototype.marketplace.installMethodLabel")}
+          </div>
+          <RadioGroup
+            value={installMethod}
+            onValueChange={(value) => setInstallMethod(value as MarketplaceInstallMethod)}
+            className="grid grid-cols-1 gap-2 sm:grid-cols-2"
+          >
+            <label
+              className={cn(
+                "flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-3 transition-colors",
+                installMethod === "skillsh"
+                  ? "border-primary bg-accent text-accent-foreground"
+                  : "bg-background border-border/70 hover:bg-accent hover:text-accent-foreground"
+              )}
+            >
+              <RadioGroupItem value="skillsh" />
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-medium">
+                  {t("prototype.marketplace.installMethods.skillsh")}
+                </div>
+                <div className="text-muted-foreground mt-1 text-xs">
+                  {t("prototype.marketplace.installMethods.skillshDescription")}
+                </div>
+              </div>
+            </label>
+            <label
+              className={cn(
+                "flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-3 transition-colors",
+                installMethod === "github"
+                  ? "border-primary bg-accent text-accent-foreground"
+                  : "bg-background border-border/70 hover:bg-accent hover:text-accent-foreground"
+              )}
+            >
+              <RadioGroupItem value="github" />
+              <div className="min-w-0 flex-1">
+                <div className="text-sm font-medium">
+                  {t("prototype.marketplace.installMethods.github")}
+                </div>
+                <div className="text-muted-foreground mt-1 text-xs">
+                  {t("prototype.marketplace.installMethods.githubDescription")}
+                </div>
+              </div>
+            </label>
+          </RadioGroup>
+        </div>
 
         <DialogFooter>
           <Button variant="outline" onClick={() => onOpenChange(false)}>

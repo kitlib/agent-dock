@@ -3,6 +3,13 @@ use serde::{Deserialize, Serialize};
 use crate::dto::skills::LocalSkillCopyTargetAgentDto;
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "lowercase")]
+pub enum MarketplaceInstallMethodDto {
+    Skillsh,
+    Github,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct MarketplaceItemDto {
     pub id: String,
@@ -18,6 +25,15 @@ pub struct MarketplaceItemDto {
     pub description: String,
     pub highlights: Vec<String>,
     pub url: Option<String>,
+}
+
+#[derive(Clone, Debug, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct MarketplaceItemsResponseDto {
+    pub items: Vec<MarketplaceItemDto>,
+    pub total_skills: Option<u64>,
+    pub has_more: bool,
+    pub page: usize,
 }
 
 #[derive(Clone, Debug, Serialize, Deserialize)]
@@ -46,6 +62,7 @@ pub struct InstallMarketplaceSkillRequestDto {
     pub name: String,
     pub description: String,
     pub target_agent: LocalSkillCopyTargetAgentDto,
+    pub install_method: MarketplaceInstallMethodDto,
     #[serde(default)]
     pub overwrite: bool,
 }

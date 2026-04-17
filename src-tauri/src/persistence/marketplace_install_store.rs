@@ -9,9 +9,15 @@ const STORE_FILE_NAME: &str = "marketplace-installs.json";
 pub struct MarketplaceInstallRecord {
     pub source: String,
     pub skill_id: String,
+    #[serde(default = "default_marketplace_install_method")]
+    pub install_method: String,
     pub skill_path: String,
     pub entry_file_path: String,
     pub installed_at: String,
+}
+
+fn default_marketplace_install_method() -> String {
+    "skillsh".into()
 }
 
 fn normalize_path(path: &str) -> String {

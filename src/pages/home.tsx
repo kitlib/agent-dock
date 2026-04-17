@@ -32,7 +32,10 @@ import type {
   LocalSkillCopyTargetAgent,
   LocalSkillConflictResolution,
 } from "@/features/agents/types";
-import type { MarketplaceInstallPreview } from "@/features/marketplace/types";
+import type {
+  MarketplaceInstallMethod,
+  MarketplaceInstallPreview,
+} from "@/features/marketplace/types";
 import type { PanelImperativeHandle } from "react-resizable-panels";
 import { registerShortcut } from "@/lib/shortcut";
 import { toggleWindow } from "@/lib/window";
@@ -52,6 +55,7 @@ type PendingMarketplaceInstallRequest = {
   name: string;
   description: string;
   targetAgent: LocalSkillCopyTargetAgent;
+  installMethod: MarketplaceInstallMethod;
 };
 
 async function registerMainWindowShortcut(shortcut: string): Promise<void> {
@@ -88,6 +92,10 @@ export default function HomePage() {
     refreshSkills,
     managedAgentsForView,
     isMarketplaceLoading,
+    isMarketplaceLoadingMore,
+    hasMoreMarketplaceItems,
+    loadMoreMarketplaceItems,
+    marketplaceTotalSkills,
     isMarketplaceDetailLoading,
     isLocalMarketplaceDetailLoading,
     marketplaceError,
@@ -213,7 +221,8 @@ export default function HomePage() {
 
   async function installMarketplaceItemToAgent(
     resource: MarketplaceDiscoveryItem,
-    agent: ResolvedAgentView
+    agent: ResolvedAgentView,
+    installMethod: MarketplaceInstallMethod
   ): Promise<void> {
     const installRequest: PendingMarketplaceInstallRequest = {
       resourceId: resource.id,
@@ -222,6 +231,7 @@ export default function HomePage() {
       name: resource.name,
       description: resource.description,
       targetAgent: toTargetAgent(agent),
+      installMethod,
     };
 
     try {
@@ -230,7 +240,8 @@ export default function HomePage() {
         installRequest.skillId,
         installRequest.name,
         installRequest.description,
-        installRequest.targetAgent
+        installRequest.targetAgent,
+        installRequest.installMethod
       );
       if (preview.hasConflict) {
         setPendingInstallRequest(installRequest);
@@ -244,7 +255,8 @@ export default function HomePage() {
         installRequest.skillId,
         installRequest.name,
         installRequest.description,
-        installRequest.targetAgent
+        installRequest.targetAgent,
+        installRequest.installMethod
       );
       updateMarketplaceInstallState(installRequest.resourceId);
       refreshSkills();
@@ -273,12 +285,7 @@ export default function HomePage() {
       return;
     }
 
-    if (!selectedAgent) {
-      setPendingMarketplaceInstallSelection(resource);
-      return;
-    }
-
-    await installMarketplaceItemToAgent(resource, selectedAgent);
+    setPendingMarketplaceInstallSelection(resource);
   }
 
   async function handleUpdateLocalMarketplaceSkill(
@@ -310,13 +317,15 @@ export default function HomePage() {
           agentName: targetOwner.name,
           rootPath: targetOwner.rootPath,
         },
+        installMethod: "skillsh",
       };
       const preview = await previewSkillsshMarketplaceInstall(
         installRequest.source,
         installRequest.skillId,
         installRequest.name,
         installRequest.description,
-        installRequest.targetAgent
+        installRequest.targetAgent,
+        installRequest.installMethod
       );
       if (preview.hasConflict) {
         setPendingInstallRequest(installRequest);
@@ -330,7 +339,8 @@ export default function HomePage() {
         installRequest.skillId,
         installRequest.name,
         installRequest.description,
-        installRequest.targetAgent
+        installRequest.targetAgent,
+        installRequest.installMethod
       );
       refreshSkills(resource.id);
       toast.success(t("prototype.feedback.marketplaceInstallSuccess"));
@@ -357,6 +367,7 @@ export default function HomePage() {
         pendingInstallRequest.name,
         pendingInstallRequest.description,
         pendingInstallRequest.targetAgent,
+        pendingInstallRequest.installMethod,
         true
       );
       updateMarketplaceInstallState(pendingInstallRequest.resourceId);
@@ -474,15 +485,16 @@ export default function HomePage() {
             setPendingMarketplaceInstallSelection(null);
           }
         }}
+        initialSelectedAgentId={selectedAgent?.id ?? null}
         targetAgents={managedAgentsForView.filter((agent) => agent.managed)}
-        onConfirm={async (agent) => {
+        onConfirm={async (agent, installMethod) => {
           if (!pendingMarketplaceInstallSelection) {
             return;
           }
 
           const resource = pendingMarketplaceInstallSelection;
           setPendingMarketplaceInstallSelection(null);
-          await installMarketplaceItemToAgent(resource, agent);
+          await installMarketplaceItemToAgent(resource, agent, installMethod);
         }}
         t={t}
       />
@@ -547,7 +559,11 @@ export default function HomePage() {
                   onToggleAllChecked={toggleAllChecked}
                   onInstallMarketplaceItem={handleInstallMarketplaceItem}
                   isMarketplaceLoading={isMarketplaceLoading}
+                  isMarketplaceLoadingMore={isMarketplaceLoadingMore}
+                  hasMoreMarketplaceItems={hasMoreMarketplaceItems}
+                  onLoadMoreMarketplaceItems={loadMoreMarketplaceItems}
                   marketplaceError={marketplaceError}
+                  marketplaceTotalSkills={marketplaceTotalSkills}
                   search={search}
                   selectedResourceId={selectedResourceId}
                   t={t}

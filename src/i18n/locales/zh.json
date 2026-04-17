@@ -108,7 +108,9 @@
       "retryScan": "重新扫描",
       "manualAdd": "手动创建",
       "selectAllReady": "全选可导入项",
-      "notAdded": "未管理"
+      "notAdded": "未管理",
+      "loadingMore": "正在加载更多...",
+      "scrollToLoadMore": "滚动以加载更多"
     },
     "deleteSkill": {
       "title": "删除 Skill",
@@ -174,6 +176,13 @@
       "loadFailed": "市场请求失败",
       "installToAgentTitle": "安装 Skill",
       "installToAgentDescription": "安装市场 Skill 前，请先选择目标 Agent。",
+      "installMethodLabel": "安装来源",
+      "installMethods": {
+        "skillsh": "skills.sh",
+        "github": "GitHub",
+        "skillshDescription": "优先使用 skills.sh 提供的市场快照进行安装。",
+        "githubDescription": "直接通过 GitHub 对应仓库来源安装。"
+      },
       "installConflict": {
         "title": "覆盖已有 Skill？",
         "description": "\"{{name}}\" 已存在于 \"{{agentName}}\" 中，是否覆盖本地文件？"
