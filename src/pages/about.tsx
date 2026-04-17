@@ -3,12 +3,14 @@ import { getVersion } from "@tauri-apps/api/app";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
 import { Github, RefreshCw } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { UpdaterDialog } from "@/components/updater-dialog";
 import { TitleBar } from "@/components/title-bar";
 import { WindowFrame } from "@/components/window-frame";
 import { useAppTranslation } from "@/hooks/use-app-translation";
 import { openUrl } from "@tauri-apps/plugin-opener";
 import { cancelDestroyWindow, destroyWindow } from "@/lib/window";
-import { useManualUpdateCheck } from "@/components/updater-dialog";
+import type { UpdateCheckResult } from "@/lib/updater";
+import { toast } from "sonner";
 import packageJson from "../../package.json";
 
 const techVersions = {
@@ -19,8 +21,10 @@ const techVersions = {
 
 export default function AboutPage() {
   const [appVersion, setAppVersion] = useState("");
+  const [manualCheckToken, setManualCheckToken] = useState(0);
+  const [showNoUpdate, setShowNoUpdate] = useState(false);
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const { t } = useAppTranslation();
-  const { checkUpdate, checking, showNoUpdate } = useManualUpdateCheck();
 
   useEffect(() => {
     void getVersion().then(setAppVersion);
@@ -51,11 +55,30 @@ export default function AboutPage() {
     await openUrl("https://github.com/kitlib/agent-dock");
   };
 
+  const handleCheckUpdate = () => {
+    setShowNoUpdate(false);
+    setIsCheckingUpdate(true);
+    setManualCheckToken((current) => current + 1);
+  };
+
+  const handleUpdateCheckResult = (result: UpdateCheckResult) => {
+    setIsCheckingUpdate(false);
+    if (result.status === "up-to-date") {
+      setShowNoUpdate(true);
+      return;
+    }
+
+    if (result.status === "error") {
+      toast.error(t("updater.checkFailed"));
+    }
+  };
+
   return (
     <WindowFrame
       titleBar={<TitleBar title={t("about.title")} showMinimize={false} showMaximize={false} />}
       contentClassName="flex flex-1 items-center justify-center overflow-hidden"
     >
+      <UpdaterDialog manualCheckToken={manualCheckToken} onCheckResult={handleUpdateCheckResult} />
       <div className="w-full max-w-xs space-y-6">
         <div className="text-center">
           <h2 className="text-2xl font-bold">{t("about.appName")}</h2>
@@ -85,9 +108,14 @@ export default function AboutPage() {
           GitHub
         </Button>
 
-        <Button onClick={checkUpdate} className="w-full" variant="outline" disabled={checking}>
-          <RefreshCw className={`mr-2 h-4 w-4 ${checking ? "animate-spin" : ""}`} />
-          {checking ? t("updater.checking") : t("updater.checkForUpdates")}
+        <Button
+          onClick={handleCheckUpdate}
+          className="w-full"
+          variant="outline"
+          disabled={isCheckingUpdate}
+        >
+          <RefreshCw className={`mr-2 h-4 w-4 ${isCheckingUpdate ? "animate-spin" : ""}`} />
+          {isCheckingUpdate ? t("updater.checking") : t("updater.checkForUpdates")}
         </Button>
 
         {showNoUpdate && (

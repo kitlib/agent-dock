@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { openUrl } from "@tauri-apps/plugin-opener";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -9,7 +10,12 @@ import {
   DialogTitle,
 } from "@/components/ui/dialog";
 import { AgentIcon } from "@/features/agents/components/agent-icon";
-import type { AgentDiscoveryItem, AgentSummary, SkillResource } from "@/features/agents/types";
+import type {
+  AgentDiscoveryItem,
+  AgentSummary,
+  LocalDiscoveryItem,
+  SkillResource,
+} from "@/features/agents/types";
 import {
   getLocalSkillDeleteTarget,
   getLocalSkillToggleTarget,
@@ -33,12 +39,12 @@ function isLocalSkillResource(selectedResource: AgentDiscoveryItem | null): bool
 
 function getLocalSkillResource(
   selectedResource: AgentDiscoveryItem | null
-): (SkillResource & { origin: "local" }) | null {
+): (LocalDiscoveryItem & { kind: "skill"; origin: "local" }) | null {
   if (!isLocalSkillResource(selectedResource)) {
     return null;
   }
 
-  return selectedResource as SkillResource & { origin: "local" };
+  return selectedResource as LocalDiscoveryItem & { kind: "skill"; origin: "local" };
 }
 
 function getSkillTitle(selectedResource: AgentDiscoveryItem | null): string | undefined {
@@ -59,6 +65,48 @@ function getOpenPath(selectedResource: AgentDiscoveryItem | null): string {
   return skill.skillPath ?? skill.entryFilePath ?? "";
 }
 
+function InlineMetaItem({
+  label,
+  value,
+  tone = "neutral",
+}: {
+  label: string;
+  value: string | number;
+  tone?: "neutral" | "blue" | "green" | "amber";
+}) {
+  const toneClassName =
+    tone === "blue"
+      ? "border-sky-200/80 bg-sky-50/70 dark:border-sky-900/70 dark:bg-sky-950/30"
+      : tone === "green"
+        ? "border-emerald-200/80 bg-emerald-50/70 dark:border-emerald-900/70 dark:bg-emerald-950/30"
+        : tone === "amber"
+          ? "border-amber-200/80 bg-amber-50/70 dark:border-amber-900/70 dark:bg-amber-950/30"
+          : "border-border/70 bg-background";
+  const labelToneClassName =
+    tone === "blue"
+      ? "bg-sky-100/80 text-sky-700 border-sky-200/80 dark:bg-sky-900/40 dark:text-sky-200 dark:border-sky-800/70"
+      : tone === "green"
+        ? "bg-emerald-100/80 text-emerald-700 border-emerald-200/80 dark:bg-emerald-900/40 dark:text-emerald-200 dark:border-emerald-800/70"
+        : tone === "amber"
+          ? "bg-amber-100/80 text-amber-700 border-amber-200/80 dark:bg-amber-900/40 dark:text-amber-200 dark:border-amber-800/70"
+          : "bg-muted/70 text-muted-foreground border-border/70";
+
+  return (
+    <span
+      className={`inline-flex items-stretch overflow-hidden rounded-md border shadow-sm ${toneClassName}`}
+    >
+      <span
+        className={`inline-flex items-center border-r px-2 py-1 text-[11px] leading-none font-medium ${labelToneClassName}`}
+      >
+        {label}
+      </span>
+      <span className="text-foreground inline-flex items-center px-2.5 py-1 text-[11px] leading-none font-semibold">
+        {value}
+      </span>
+    </span>
+  );
+}
+
 type AgentDetailPanelProps = {
   allAgentsDescription?: string;
   allAgentsSkillCount?: number;
@@ -66,6 +114,8 @@ type AgentDetailPanelProps = {
   emptyDescription?: string;
   emptyTitle?: string;
   isAllAgentsView?: boolean;
+  isMarketplaceDetailLoading?: boolean;
+  isLocalMarketplaceDetailLoading?: boolean;
   onDeleteLocalSkill?: (
     skillPath: string,
     entryFilePath: string,
@@ -80,7 +130,10 @@ type AgentDetailPanelProps = {
     enabled: boolean,
     skillId?: string
   ) => Promise<void>;
-  onUpdateMarketplaceInstallState: (id: string) => void;
+  onInstallMarketplaceItem: (resource: AgentDiscoveryItem) => Promise<void>;
+  onUpdateLocalMarketplaceSkill?: (
+    resource: LocalDiscoveryItem & { kind: "skill"; origin: "local" }
+  ) => Promise<void>;
   selectedAgent: AgentSummary | null;
   selectedResource: AgentDiscoveryItem | null;
   t: (key: string, options?: Record<string, unknown>) => string;
@@ -101,12 +154,15 @@ export function AgentDetailPanel({
   emptyDescription,
   emptyTitle,
   isAllAgentsView = false,
+  isMarketplaceDetailLoading = false,
+  isLocalMarketplaceDetailLoading = false,
   onDeleteLocalSkill,
   onOpenSkillEntryFile,
   onOpenSkillFolder,
   onRefreshAgents,
   onSetLocalSkillEnabled,
-  onUpdateMarketplaceInstallState,
+  onInstallMarketplaceItem,
+  onUpdateLocalMarketplaceSkill,
   selectedAgent,
   selectedResource,
   t,
@@ -116,6 +172,11 @@ export function AgentDetailPanel({
   const [isDeletingSkill, setIsDeletingSkill] = useState(false);
   const openPath = getOpenPath(selectedResource);
   const isLocalSkill = isLocalSkillResource(selectedResource);
+  const localSkill = getLocalSkillResource(selectedResource);
+  const canUpdateLocalMarketplaceSkill =
+    localSkill?.marketplaceHasUpdate === true &&
+    !isLocalMarketplaceDetailLoading &&
+    onUpdateLocalMarketplaceSkill != null;
   const skillDeleteTarget = getLocalSkillDeleteTarget(selectedResource);
   const skillToggleTarget = getLocalSkillToggleTarget(selectedResource);
   const title =
@@ -126,11 +187,13 @@ export function AgentDetailPanel({
     emptyTitle ??
     t("prototype.detail.title");
   const description =
-    selectedResource?.summary ??
-    (isAllAgentsView ? allAgentsDescription : undefined) ??
-    selectedAgent?.summary ??
-    emptyDescription ??
-    t("prototype.emptySelection");
+    selectedResource?.origin === "marketplace"
+      ? null
+      : (selectedResource?.summary ??
+        (isAllAgentsView ? allAgentsDescription : undefined) ??
+        selectedAgent?.summary ??
+        emptyDescription ??
+        t("prototype.emptySelection"));
   const skillAndCommandCount = getAgentSkillAndCommandCount(selectedAgent);
 
   const handleToggleSkill = async () => {
@@ -186,6 +249,35 @@ export function AgentDetailPanel({
             )}
           </div>
           <div className="flex shrink-0 flex-wrap items-center justify-end gap-2">
+            {selectedResource?.origin === "marketplace" ? (
+              <>
+                {selectedResource.url ? (
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    onClick={() => void openUrl(selectedResource.url!)}
+                  >
+                    {t("prototype.actions.visit")}
+                  </Button>
+                ) : null}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => void onInstallMarketplaceItem(selectedResource)}
+                >
+                  {t(installStateKey[selectedResource.installState])}
+                </Button>
+              </>
+            ) : null}
+            {canUpdateLocalMarketplaceSkill ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => localSkill && void onUpdateLocalMarketplaceSkill?.(localSkill)}
+              >
+                {t("prototype.actions.update")}
+              </Button>
+            ) : null}
             {isLocalSkill && openPath ? (
               <Button variant="outline" size="sm" onClick={() => onOpenSkillFolder(openPath)}>
                 {t("prototype.actions.open")}
@@ -222,22 +314,35 @@ export function AgentDetailPanel({
             ) : null}
           </div>
         </div>
-        <div className="text-muted-foreground mt-1 text-sm">{description}</div>
+        {description ? (
+          <div className="text-muted-foreground mt-1 text-sm">{description}</div>
+        ) : null}
         {selectedResource ? (
           <div className="text-muted-foreground mt-3 flex flex-wrap items-center gap-2 text-xs">
-            <span className="bg-muted rounded px-2 py-1">
-              {selectedResource.origin === "local"
-                ? t("prototype.badges.local")
-                : t("prototype.badges.marketplace")}
-            </span>
             {selectedResource.origin === "marketplace" ? (
+              <>
+                <InlineMetaItem
+                  label={t("prototype.detail.source")}
+                  value={selectedResource.sourceLabel}
+                  tone="blue"
+                />
+                <InlineMetaItem
+                  label={t("prototype.detail.version")}
+                  value={selectedResource.version}
+                  tone="green"
+                />
+                <InlineMetaItem
+                  label={t("prototype.detail.installs")}
+                  value={selectedResource.installs}
+                  tone="amber"
+                />
+              </>
+            ) : null}
+            {selectedResource.origin === "local" ? (
               <span className="bg-muted rounded px-2 py-1">
-                {t(installStateKey[selectedResource.installState])}
+                {t("prototype.detail.updatedAt")}: {selectedResource.updatedAt}
               </span>
             ) : null}
-            <span className="bg-muted rounded px-2 py-1">
-              {t("prototype.detail.updatedAt")}: {selectedResource.updatedAt}
-            </span>
             {isLocalSkill ? (
               <button
                 type="button"
@@ -309,8 +414,8 @@ export function AgentDetailPanel({
       <div className="flex-1 overflow-auto p-4">
         {selectedResource ? (
           <AgentResourceDetail
+            isMarketplaceDetailLoading={isMarketplaceDetailLoading}
             resource={selectedResource}
-            onUpdateMarketplaceInstallState={onUpdateMarketplaceInstallState}
             t={t}
           />
         ) : isAllAgentsView ? (

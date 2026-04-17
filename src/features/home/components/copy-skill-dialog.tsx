@@ -49,7 +49,7 @@ function getAgentMetaText(agent: ResolvedAgentView): string {
   }
 
   const segments = agent.rootPath.split(/[/\\]+/).filter(Boolean);
-  return segments.at(-1) ?? agent.rootPath;
+  return segments[segments.length - 1] ?? agent.rootPath;
 }
 
 function toTargetAgent(agent: ResolvedAgentView): LocalSkillCopyTargetAgent {
@@ -117,18 +117,20 @@ export function CopySkillDialog({
   const filteredTargetAgents = targetAgents.filter(
     (agent) => !sources.some((s) => s.ownerAgentId === agent.id)
   );
-  const selectedAgents = filteredTargetAgents.filter((agent) => selectedAgentIds.includes(agent.id));
+  const selectedAgents = filteredTargetAgents.filter((agent) =>
+    selectedAgentIds.includes(agent.id)
+  );
   const isPreviewing = previewingAgentIds.length > 0;
-  const allConflicts = selectedAgents.flatMap(
-    (agent) =>
-      (previewResults[agent.id]?.conflicts ?? []).map((conflict) => ({
-        agentId: agent.id,
-        conflict,
-      }))
+  const allConflicts = selectedAgents.flatMap((agent) =>
+    (previewResults[agent.id]?.conflicts ?? []).map((conflict) => ({
+      agentId: agent.id,
+      conflict,
+    }))
   );
   const hasConflicts = allConflicts.length > 0;
   const allPreviewsReady =
-    selectedAgentIds.length > 0 && selectedAgentIds.every((agentId) => previewResults[agentId] != null);
+    selectedAgentIds.length > 0 &&
+    selectedAgentIds.every((agentId) => previewResults[agentId] != null);
   const allResolved =
     !hasConflicts ||
     allConflicts.every(({ agentId, conflict }) =>
@@ -301,7 +303,7 @@ export function CopySkillDialog({
               </div>
             ) : selectedAgents.length > 0 ? (
               <div className="space-y-2">
-                <div className="text-sm text-muted-foreground">
+                <div className="text-muted-foreground text-sm">
                   {t("prototype.copySkill.selectedTargets", { count: selectedAgents.length })}
                 </div>
 

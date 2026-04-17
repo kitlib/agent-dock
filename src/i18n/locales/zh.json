@@ -51,6 +51,11 @@
       "showMainDesc": "使用快捷键快速显示主窗口",
       "setSuccess": "已将快捷键设为 {{shortcut}}！",
       "cleared": "已取消快捷键！"
+    },
+    "updates": {
+      "title": "更新",
+      "description": "检查当前版本并安装最新发布版本。",
+      "currentVersion": "当前版本"
     }
   },
   "prototype": {
@@ -64,13 +69,14 @@
       "marketplace": "市场"
     },
     "tabs": {
+      "all": "全部",
       "skill": "Skills",
       "mcp": "MCP",
       "subagent": "Subagents"
     },
     "actions": {
       "searchPlaceholder": "搜索本地资源和市场内容",
-      "searchSkillsPlaceholder": "搜索本地 Skills，输入后再显示市场结果",
+      "searchSkillsPlaceholder": "搜索本地 Skills，并浏览市场结果",
       "enable": "启用",
       "disable": "停用",
       "enabled": "已启用",
@@ -85,6 +91,7 @@
       "add": "管理",
       "clear": "清空",
       "open": "打开",
+      "visit": "访问",
       "edit": "编辑",
       "delete": "删除",
       "copy": "复制",
@@ -124,10 +131,15 @@
       "deleteSuccess": "Skill 已删除。",
       "deleteFailed": "删除 Skill 失败。",
       "copySuccess": "Skills 复制成功。",
-      "copyFailed": "复制 Skills 失败。"
+      "copyFailed": "复制 Skills 失败。",
+      "marketplaceInstallSuccess": "市场 Skill 安装成功。",
+      "marketplaceInstallFailed": "市场 Skill 安装失败。",
+      "marketplaceInstallSelectAgent": "请先选择一个目标 Agent，再安装市场 Skill。",
+      "marketplaceInstallUnsupported": "当前只支持安装市场 Skill。"
     },
     "detail": {
       "title": "详情",
+      "description": "描述",
       "preview": "预览",
       "document": "文档",
       "config": "配置",
@@ -138,7 +150,7 @@
       "version": "版本",
       "author": "作者",
       "agent": "Agent",
-      "downloads": "下载量",
+      "installs": "安装量",
       "updatedAt": "更新时间",
       "highlights": "亮点",
       "discoveryState": "发现状态",
@@ -157,6 +169,21 @@
       "addingTitle": "管理 Agent",
       "addingEmpty": "点击左侧任意 Agent 后，将返回三栏管理视图。",
       "allAgentsDescription": "查看从所有已管理 Agent 聚合的 Skills。"
+    },
+    "marketplace": {
+      "loadFailed": "市场请求失败",
+      "installToAgentTitle": "安装 Skill",
+      "installToAgentDescription": "安装市场 Skill 前，请先选择目标 Agent。",
+      "installConflict": {
+        "title": "覆盖已有 Skill？",
+        "description": "\"{{name}}\" 已存在于 \"{{agentName}}\" 中，是否覆盖本地文件？"
+      },
+      "boards": {
+        "hot": "热门"
+      },
+      "sources": {
+        "all": "全部来源"
+      }
     },
     "emptyList": "当前没有可显示的内容。",
     "noResults": "没有匹配结果。",

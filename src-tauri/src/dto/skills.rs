@@ -40,6 +40,9 @@ pub struct LocalSkillSummaryDto {
     pub agent_name: String,
     pub warnings: Vec<String>,
     pub errors: Vec<String>,
+    pub frontmatter: Option<Value>,
+    pub marketplace_source: Option<String>,
+    pub marketplace_skill_id: Option<String>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]
@@ -70,6 +73,8 @@ pub struct LocalSkillDetailDto {
     pub frontmatter_raw: Option<String>,
     pub supporting_files: Vec<SkillSupportingFileDto>,
     pub allowed_tools: Vec<String>,
+    pub marketplace_source: Option<String>,
+    pub marketplace_skill_id: Option<String>,
 }
 
 #[derive(Clone, Serialize, Deserialize)]

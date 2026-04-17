@@ -94,16 +94,8 @@ fn count_skill_directories(skills_root: &Path) -> u32 {
 pub fn build_commands_scan_root(agent: &str, root_path: &Path) -> Option<PathBuf> {
     let relative_commands_path = match agent {
         "antigravity" | "kilo" => "workflows/",
-        "augment"
-        | "claude"
-        | "claude-plugin"
-        | "command-code"
-        | "cursor"
-        | "factory"
-        | "iflow"
-        | "opencode"
-        | "qoder"
-        | "roo" => "commands/",
+        "augment" | "claude" | "claude-plugin" | "command-code" | "cursor" | "factory"
+        | "iflow" | "opencode" | "qoder" | "roo" => "commands/",
         "codex" | "continue" => "prompts/",
         "pi-mono" => "agent/prompts/",
         _ => return None,
@@ -129,8 +121,8 @@ fn count_command_markdown_files(commands_root: &Path) -> u32 {
             continue;
         }
 
-        let is_markdown_file =
-            path.is_file() && path.extension().and_then(|extension| extension.to_str()) == Some("md");
+        let is_markdown_file = path.is_file()
+            && path.extension().and_then(|extension| extension.to_str()) == Some("md");
         if is_markdown_file {
             count += 1;
         }

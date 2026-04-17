@@ -1,4 +1,5 @@
 import { invoke } from "@tauri-apps/api/core";
+import { checkLocalMarketplaceSkillUpdate } from "@/features/marketplace/api";
 import type {
   CreateAgentResult,
   DeleteAgentResult,
@@ -154,4 +155,8 @@ export async function copyLocalSkills(
     targetAgent,
     resolutions,
   });
+}
+
+export async function checkMarketplaceSkillUpdate(skillPath: string, entryFilePath: string) {
+  return checkLocalMarketplaceSkillUpdate(skillPath, entryFilePath);
 }

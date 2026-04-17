@@ -219,6 +219,9 @@ export type SkillResource = {
   frontmatterRaw?: string | null;
   supportingFiles?: SkillSupportingFile[];
   allowedTools?: string[];
+  marketplaceSource?: string;
+  marketplaceRemoteId?: string;
+  marketplaceHasUpdate?: boolean;
 };
 
 export type LocalSkillCopySource = {
@@ -296,11 +299,14 @@ export type MarketplaceDiscoveryFields = {
   origin: "marketplace";
   installState: MarketplaceInstallStateLabel;
   sourceLabel: string;
+  skillId?: string;
   version: string;
   author: string;
-  downloads: number;
+  installs: number;
   description: string;
   highlights: string[];
+  url?: string;
+  markdown?: string;
   usageLabel?: never;
 };
 
@@ -310,7 +316,7 @@ export type LocalDiscoveryFields = {
   sourceLabel: string;
   version?: undefined;
   author?: undefined;
-  downloads?: undefined;
+  installs?: undefined;
   description: string;
   highlights: string[];
   usageLabel: number;
@@ -320,7 +326,6 @@ export type MarketplaceDiscoveryItem = {
   id: string;
   kind: ResourceKind;
   name: string;
-  summary: string;
   updatedAt: string;
 } & MarketplaceDiscoveryFields;
 

@@ -1,26 +1,33 @@
 import { useCallback, useEffect, useState } from "react";
+import { getVersion } from "@tauri-apps/api/app";
 import { emit } from "@tauri-apps/api/event";
 import { Button } from "@/components/ui/button";
 import { cn } from "@/lib/utils";
 import { useTheme } from "@/components/theme-provider";
+import { UpdaterDialog } from "@/components/updater-dialog";
 import { TitleBar } from "@/components/title-bar";
 import { WindowFrame } from "@/components/window-frame";
 import { LanguageToggle } from "@/components/language-toggle";
 import { ShortcutInput } from "@/components/shortcut-input";
-import { Moon, Sun, Monitor, Palette, Keyboard } from "lucide-react";
+import { Moon, Sun, Monitor, Palette, Keyboard, RefreshCw } from "lucide-react";
 import { registerShortcut, unregisterShortcut } from "@/lib/shortcut";
 import { toggleWindow } from "@/lib/window";
 import { toast } from "sonner";
 import { Toaster } from "@/components/ui/sonner";
 import { useAppTranslation } from "@/hooks/use-app-translation";
+import type { UpdateCheckResult } from "@/lib/updater";
 
 const SHORTCUT_KEY = "global-shortcut-show-main";
 
-type SettingSection = "appearance" | "shortcut";
+type SettingSection = "appearance" | "shortcut" | "updates";
 
 export default function SettingsPage() {
   const [shortcut, setShortcut] = useState<string>("");
+  const [appVersion, setAppVersion] = useState("");
   const [activeSection, setActiveSection] = useState<SettingSection>("appearance");
+  const [manualCheckToken, setManualCheckToken] = useState(0);
+  const [showNoUpdate, setShowNoUpdate] = useState(false);
+  const [isCheckingUpdate, setIsCheckingUpdate] = useState(false);
   const { t } = useAppTranslation();
   const { theme, setTheme } = useTheme();
 
@@ -36,6 +43,10 @@ export default function SettingsPage() {
       registerShortcut(savedShortcut, handleShowMainWindow);
     }
   }, [handleShowMainWindow]);
+
+  useEffect(() => {
+    void getVersion().then(setAppVersion);
+  }, []);
 
   const handleShortcutChange = async (newShortcut: string) => {
     const oldShortcut = shortcut;
@@ -69,7 +80,30 @@ export default function SettingsPage() {
       label: t("settings.shortcut.title"),
       icon: Keyboard,
     },
+    {
+      id: "updates" as SettingSection,
+      label: t("settings.updates.title"),
+      icon: RefreshCw,
+    },
   ];
+
+  const handleCheckUpdate = () => {
+    setShowNoUpdate(false);
+    setIsCheckingUpdate(true);
+    setManualCheckToken((current) => current + 1);
+  };
+
+  const handleUpdateCheckResult = (result: UpdateCheckResult) => {
+    setIsCheckingUpdate(false);
+    if (result.status === "up-to-date") {
+      setShowNoUpdate(true);
+      return;
+    }
+
+    if (result.status === "error") {
+      toast.error(t("updater.checkFailed"));
+    }
+  };
 
   return (
     <WindowFrame
@@ -77,6 +111,7 @@ export default function SettingsPage() {
       contentClassName="flex flex-1 overflow-hidden"
     >
       <Toaster />
+      <UpdaterDialog manualCheckToken={manualCheckToken} onCheckResult={handleUpdateCheckResult} />
       <aside className="border-border flex w-40 flex-col border-r p-4">
         <nav className="flex-1 space-y-1">
           {menuItems.map((item) => {
@@ -174,6 +209,40 @@ export default function SettingsPage() {
                   </div>
                   <ShortcutInput value={shortcut} onChange={handleShortcutChange} />
                 </div>
+              </div>
+            </div>
+          )}
+
+          {activeSection === "updates" && (
+            <div className="space-y-4">
+              <div>
+                <h2 className="mb-1 text-lg font-semibold">{t("settings.updates.title")}</h2>
+                <p className="text-muted-foreground text-sm">{t("settings.updates.description")}</p>
+              </div>
+
+              <div className="space-y-0">
+                <div className="flex items-center justify-between py-2.5">
+                  <div>
+                    <label className="text-sm font-medium">
+                      {t("settings.updates.currentVersion")}
+                    </label>
+                    <p className="text-muted-foreground mt-0.5 text-xs">{appVersion || "-"}</p>
+                  </div>
+                  <Button variant="outline" onClick={handleCheckUpdate} disabled={isCheckingUpdate}>
+                    <RefreshCw
+                      className={`mr-2 h-4 w-4 ${isCheckingUpdate ? "animate-spin" : ""}`}
+                    />
+                    {isCheckingUpdate ? t("updater.checking") : t("updater.checkForUpdates")}
+                  </Button>
+                </div>
+                {showNoUpdate ? (
+                  <>
+                    <div className="border-t" />
+                    <div className="text-muted-foreground py-2.5 text-sm">
+                      {t("updater.upToDate")}
+                    </div>
+                  </>
+                ) : null}
               </div>
             </div>
           )}

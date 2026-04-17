@@ -5,16 +5,34 @@ import { toast } from "sonner";
 import { WindowFrame } from "@/components/window-frame";
 import { MainTitleBar } from "@/components/main-title-bar";
 import { UpdaterDialog } from "@/components/updater-dialog";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import { Toaster } from "@/components/ui/sonner";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { setLocalSkillEnabled } from "@/features/agents/api";
+import type { AgentDiscoveryItem, LocalDiscoveryItem } from "@/features/agents/types";
 import { getLocalSkillToggleTarget } from "@/features/home/local-skill-toggle";
+import {
+  installSkillsshMarketplaceItem,
+  previewSkillsshMarketplaceInstall,
+} from "@/features/marketplace/api";
 import { CopySkillDialog } from "@/features/home/components/copy-skill-dialog";
+import { MarketplaceInstallAgentDialog } from "@/features/home/components/marketplace-install-agent-dialog";
 import type {
+  MarketplaceDiscoveryItem,
+  ResolvedAgentView,
   LocalSkillCopySource,
   LocalSkillCopyTargetAgent,
   LocalSkillConflictResolution,
 } from "@/features/agents/types";
+import type { MarketplaceInstallPreview } from "@/features/marketplace/types";
 import type { PanelImperativeHandle } from "react-resizable-panels";
 import { registerShortcut } from "@/lib/shortcut";
 import { toggleWindow } from "@/lib/window";
@@ -26,6 +44,15 @@ import { AgentResourcePanel } from "@/features/home/components/resource-panel";
 import { AgentDetailPanel } from "@/features/home/components/detail-panel";
 
 const SHORTCUT_KEY = "global-shortcut-show-main";
+
+type PendingMarketplaceInstallRequest = {
+  resourceId: string;
+  source: string;
+  skillId: string;
+  name: string;
+  description: string;
+  targetAgent: LocalSkillCopyTargetAgent;
+};
 
 async function registerMainWindowShortcut(shortcut: string): Promise<void> {
   await registerShortcut(shortcut, async () => {
@@ -60,6 +87,10 @@ export default function HomePage() {
     onExecuteCopy,
     refreshSkills,
     managedAgentsForView,
+    isMarketplaceLoading,
+    isMarketplaceDetailLoading,
+    isLocalMarketplaceDetailLoading,
+    marketplaceError,
     selectAllAgents,
     selectedScope,
     workspaceMode,
@@ -74,6 +105,13 @@ export default function HomePage() {
   const [isRailCollapsed, setIsRailCollapsed] = useState(false);
   const [isCopyDialogOpen, setIsCopyDialogOpen] = useState(false);
   const [copySources, setCopySources] = useState<LocalSkillCopySource[]>([]);
+  const [pendingMarketplaceInstallSelection, setPendingMarketplaceInstallSelection] =
+    useState<MarketplaceDiscoveryItem | null>(null);
+  const [pendingInstallRequest, setPendingInstallRequest] =
+    useState<PendingMarketplaceInstallRequest | null>(null);
+  const [pendingInstallPreview, setPendingInstallPreview] =
+    useState<MarketplaceInstallPreview | null>(null);
+  const [isInstallingMarketplaceItem, setIsInstallingMarketplaceItem] = useState(false);
   const leftPanelRef = useRef<PanelImperativeHandle | null>(null);
   const leftPanelCollapsedSize = 56;
 
@@ -164,6 +202,177 @@ export default function HomePage() {
     }
   }
 
+  function toTargetAgent(agent: ResolvedAgentView): LocalSkillCopyTargetAgent {
+    return {
+      agentId: agent.id,
+      agentType: agent.agentType,
+      agentName: agent.name,
+      rootPath: agent.rootPath,
+    };
+  }
+
+  async function installMarketplaceItemToAgent(
+    resource: MarketplaceDiscoveryItem,
+    agent: ResolvedAgentView
+  ): Promise<void> {
+    const installRequest: PendingMarketplaceInstallRequest = {
+      resourceId: resource.id,
+      source: resource.sourceLabel,
+      skillId: resource.skillId ?? "",
+      name: resource.name,
+      description: resource.description,
+      targetAgent: toTargetAgent(agent),
+    };
+
+    try {
+      const preview = await previewSkillsshMarketplaceInstall(
+        installRequest.source,
+        installRequest.skillId,
+        installRequest.name,
+        installRequest.description,
+        installRequest.targetAgent
+      );
+      if (preview.hasConflict) {
+        setPendingInstallRequest(installRequest);
+        setPendingInstallPreview(preview);
+        return;
+      }
+
+      setIsInstallingMarketplaceItem(true);
+      await installSkillsshMarketplaceItem(
+        installRequest.source,
+        installRequest.skillId,
+        installRequest.name,
+        installRequest.description,
+        installRequest.targetAgent
+      );
+      updateMarketplaceInstallState(installRequest.resourceId);
+      refreshSkills();
+      toast.success(t("prototype.feedback.marketplaceInstallSuccess"));
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : t("prototype.feedback.marketplaceInstallFailed");
+      toast.error(message);
+      throw error;
+    } finally {
+      setIsInstallingMarketplaceItem(false);
+    }
+  }
+
+  async function handleInstallMarketplaceItem(resource: AgentDiscoveryItem): Promise<void> {
+    if (resource.origin !== "marketplace") {
+      return;
+    }
+
+    if (resource.kind !== "skill" || !resource.skillId) {
+      toast.error(t("prototype.feedback.marketplaceInstallUnsupported"));
+      return;
+    }
+
+    if (resource.installState === "installed") {
+      return;
+    }
+
+    if (!selectedAgent) {
+      setPendingMarketplaceInstallSelection(resource);
+      return;
+    }
+
+    await installMarketplaceItemToAgent(resource, selectedAgent);
+  }
+
+  async function handleUpdateLocalMarketplaceSkill(
+    resource: LocalDiscoveryItem & { kind: "skill"; origin: "local" }
+  ): Promise<void> {
+    const source = resource.marketplaceSource ?? "";
+    const remoteId = resource.marketplaceRemoteId ?? "";
+    if (!source || !remoteId) {
+      toast.error(t("prototype.feedback.marketplaceInstallUnsupported"));
+      return;
+    }
+
+    const targetOwner = managedAgentsForView.find((agent) => agent.id === resource.ownerAgentId);
+    if (!targetOwner) {
+      toast.error(t("prototype.feedback.marketplaceInstallSelectAgent"));
+      return;
+    }
+
+    try {
+      const installRequest: PendingMarketplaceInstallRequest = {
+        resourceId: resource.id,
+        source,
+        skillId: remoteId,
+        name: resource.name,
+        description: resource.description,
+        targetAgent: {
+          agentId: targetOwner.id,
+          agentType: targetOwner.agentType,
+          agentName: targetOwner.name,
+          rootPath: targetOwner.rootPath,
+        },
+      };
+      const preview = await previewSkillsshMarketplaceInstall(
+        installRequest.source,
+        installRequest.skillId,
+        installRequest.name,
+        installRequest.description,
+        installRequest.targetAgent
+      );
+      if (preview.hasConflict) {
+        setPendingInstallRequest(installRequest);
+        setPendingInstallPreview(preview);
+        return;
+      }
+
+      setIsInstallingMarketplaceItem(true);
+      await installSkillsshMarketplaceItem(
+        installRequest.source,
+        installRequest.skillId,
+        installRequest.name,
+        installRequest.description,
+        installRequest.targetAgent
+      );
+      refreshSkills(resource.id);
+      toast.success(t("prototype.feedback.marketplaceInstallSuccess"));
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : t("prototype.feedback.marketplaceInstallFailed");
+      toast.error(message);
+      throw error;
+    } finally {
+      setIsInstallingMarketplaceItem(false);
+    }
+  }
+
+  async function handleConfirmMarketplaceOverwrite(): Promise<void> {
+    if (!pendingInstallRequest) {
+      return;
+    }
+
+    try {
+      setIsInstallingMarketplaceItem(true);
+      await installSkillsshMarketplaceItem(
+        pendingInstallRequest.source,
+        pendingInstallRequest.skillId,
+        pendingInstallRequest.name,
+        pendingInstallRequest.description,
+        pendingInstallRequest.targetAgent,
+        true
+      );
+      updateMarketplaceInstallState(pendingInstallRequest.resourceId);
+      refreshSkills();
+      setPendingInstallPreview(null);
+      setPendingInstallRequest(null);
+      toast.success(t("prototype.feedback.marketplaceInstallSuccess"));
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : t("prototype.feedback.marketplaceInstallFailed");
+      toast.error(message);
+    } finally {
+      setIsInstallingMarketplaceItem(false);
+    }
+  }
+
   useEffect(() => {
     const unlistenShortcutChanged = listen<{ shortcut: string }>(
       "shortcut-changed",
@@ -206,6 +415,49 @@ export default function HomePage() {
     <WindowFrame titleBar={<MainTitleBar />} contentClassName="flex flex-1 overflow-hidden">
       <Toaster />
       <UpdaterDialog />
+      <Dialog
+        open={pendingInstallRequest != null && pendingInstallPreview?.hasConflict === true}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingInstallPreview(null);
+            setPendingInstallRequest(null);
+          }
+        }}
+      >
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("prototype.marketplace.installConflict.title")}</DialogTitle>
+            <DialogDescription>
+              {t("prototype.marketplace.installConflict.description", {
+                name: pendingInstallRequest?.name ?? "",
+                agentName: pendingInstallRequest?.targetAgent.agentName ?? "",
+              })}
+            </DialogDescription>
+          </DialogHeader>
+          {pendingInstallPreview?.existingPath ? (
+            <div className="bg-muted rounded-md border px-3 py-2 text-xs break-all">
+              {pendingInstallPreview.existingPath}
+            </div>
+          ) : null}
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => {
+                setPendingInstallPreview(null);
+                setPendingInstallRequest(null);
+              }}
+            >
+              {t("prototype.actions.cancel")}
+            </Button>
+            <Button
+              onClick={() => void handleConfirmMarketplaceOverwrite()}
+              disabled={isInstallingMarketplaceItem}
+            >
+              {t("prototype.actions.overwrite")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
       <CopySkillDialog
         open={isCopyDialogOpen}
         onOpenChange={setIsCopyDialogOpen}
@@ -213,6 +465,25 @@ export default function HomePage() {
         targetAgents={managedAgentsForView.filter((agent) => agent.managed)}
         onPreview={onPreviewCopy}
         onCopy={handleCopySkills}
+        t={t}
+      />
+      <MarketplaceInstallAgentDialog
+        open={pendingMarketplaceInstallSelection != null}
+        onOpenChange={(open) => {
+          if (!open) {
+            setPendingMarketplaceInstallSelection(null);
+          }
+        }}
+        targetAgents={managedAgentsForView.filter((agent) => agent.managed)}
+        onConfirm={async (agent) => {
+          if (!pendingMarketplaceInstallSelection) {
+            return;
+          }
+
+          const resource = pendingMarketplaceInstallSelection;
+          setPendingMarketplaceInstallSelection(null);
+          await installMarketplaceItemToAgent(resource, agent);
+        }}
         t={t}
       />
       <div className="h-full w-full overflow-hidden">
@@ -273,9 +544,10 @@ export default function HomePage() {
                   onSetLocalSkillEnabled={handleSetLocalSkillEnabled}
                   onToggleChecked={toggleChecked}
                   onToggleAllChecked={toggleAllChecked}
-                  onUpdateMarketplaceInstallState={updateMarketplaceInstallState}
+                  onInstallMarketplaceItem={handleInstallMarketplaceItem}
+                  isMarketplaceLoading={isMarketplaceLoading}
+                  marketplaceError={marketplaceError}
                   search={search}
-                  totalCount={filteredResources.length}
                   selectedResourceId={selectedResourceId}
                   t={t}
                 />
@@ -286,7 +558,9 @@ export default function HomePage() {
               <ResizablePanel defaultSize="52%" minSize={200}>
                 <AgentDetailPanel
                   allAgentsDescription={t("prototype.detail.allAgentsDescription")}
-                  allAgentsSkillCount={filteredResources.filter((resource) => resource.kind === "skill").length}
+                  allAgentsSkillCount={
+                    filteredResources.filter((resource) => resource.kind === "skill").length
+                  }
                   allAgentsTitle={t("prototype.agents.all")}
                   isAllAgentsView={selectedScope === "all"}
                   onDeleteLocalSkill={handleDeleteLocalSkill}
@@ -296,7 +570,10 @@ export default function HomePage() {
                   onSetLocalSkillEnabled={handleSetLocalSkillEnabled}
                   selectedAgent={selectedAgent}
                   selectedResource={selectedResource}
-                  onUpdateMarketplaceInstallState={updateMarketplaceInstallState}
+                  isMarketplaceDetailLoading={isMarketplaceDetailLoading}
+                  isLocalMarketplaceDetailLoading={isLocalMarketplaceDetailLoading}
+                  onInstallMarketplaceItem={handleInstallMarketplaceItem}
+                  onUpdateLocalMarketplaceSkill={handleUpdateLocalMarketplaceSkill}
                   t={t}
                 />
               </ResizablePanel>

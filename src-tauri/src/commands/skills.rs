@@ -11,6 +11,7 @@ use crate::dto::skills::{
     LocalSkillCopySourceDto, LocalSkillCopyTargetAgentDto, LocalSkillDetailDto,
     LocalSkillSummaryDto, PreviewLocalSkillCopyResultDto, SkillScanTargetDto,
 };
+use crate::persistence::marketplace_install_store;
 use crate::scanners::agent_type_scanner;
 use crate::services::skill_discovery_service;
 
@@ -73,7 +74,9 @@ fn is_disabled_entry(entry_path: &Path) -> bool {
 
 fn enabled_entry_path(entry_path: &Path, entry_file_path: &str) -> Result<PathBuf, String> {
     let entry_name = entry_file_name(entry_path, entry_file_path)?;
-    let enabled_name = entry_name.strip_suffix(DISABLED_SUFFIX).unwrap_or(&entry_name);
+    let enabled_name = entry_name
+        .strip_suffix(DISABLED_SUFFIX)
+        .unwrap_or(&entry_name);
     Ok(entry_path.with_file_name(enabled_name))
 }
 
@@ -116,7 +119,9 @@ fn validate_skill_path(skill_path: &str, canonical_entry_path: &Path) -> Result<
         return Ok(());
     }
 
-    Err(format!("Skill path is neither a file nor a directory: {skill_path}"))
+    Err(format!(
+        "Skill path is neither a file nor a directory: {skill_path}"
+    ))
 }
 
 fn resolve_skill_entry_paths(entry_file_path: &str) -> Result<(PathBuf, PathBuf), String> {
@@ -249,12 +254,20 @@ fn resolve_copy_source_path(source: &LocalSkillCopySourceDto) -> Result<PathBuf,
         SKILLS_SOURCE => {
             let source_path = PathBuf::from(&source.skill_path);
             if !source_path.exists() {
-                return Err(format!("Skill source path not found: {}", source.skill_path));
+                return Err(format!(
+                    "Skill source path not found: {}",
+                    source.skill_path
+                ));
             }
             Ok(source_path)
         }
-        COMMANDS_SOURCE => resolve_existing_skill_entry_path(&source.skill_path, &source.entry_file_path),
-        _ => Err(format!("Unsupported skill source kind: {}", source.source_kind)),
+        COMMANDS_SOURCE => {
+            resolve_existing_skill_entry_path(&source.skill_path, &source.entry_file_path)
+        }
+        _ => Err(format!(
+            "Unsupported skill source kind: {}",
+            source.source_kind
+        )),
     }
 }
 
@@ -277,7 +290,9 @@ fn resolve_existing_destination_path(
     destination_path: &Path,
 ) -> Result<Option<PathBuf>, String> {
     if source_kind == SKILLS_SOURCE {
-        return Ok(destination_path.exists().then(|| destination_path.to_path_buf()));
+        return Ok(destination_path
+            .exists()
+            .then(|| destination_path.to_path_buf()));
     }
 
     let destination_path_str = destination_path.to_string_lossy().to_string();
@@ -310,7 +325,10 @@ fn build_copy_plans(
 
     for source in sources {
         if !seen_source_ids.insert(source.id.clone()) {
-            return Err(format!("Duplicate skill source in copy request: {}", source.id));
+            return Err(format!(
+                "Duplicate skill source in copy request: {}",
+                source.id
+            ));
         }
         if source.owner_agent_id == target_agent.agent_id {
             return Err("Cannot copy skills into the same agent.".into());
@@ -398,7 +416,10 @@ pub fn list_local_skills(
         "[skills] list_local_skills command targets: {:?}",
         scan_targets
             .iter()
-            .map(|target| format!("{}|{}|{}", target.agent_id, target.agent_type, target.root_path))
+            .map(|target| format!(
+                "{}|{}|{}",
+                target.agent_id, target.agent_type, target.root_path
+            ))
             .collect::<Vec<_>>()
     );
 
@@ -428,7 +449,10 @@ pub fn get_local_skill_detail(
         skill_id,
         scan_targets
             .iter()
-            .map(|target| format!("{}|{}|{}", target.agent_id, target.agent_type, target.root_path))
+            .map(|target| format!(
+                "{}|{}|{}",
+                target.agent_id, target.agent_type, target.root_path
+            ))
             .collect::<Vec<_>>()
     );
 
@@ -487,7 +511,9 @@ pub fn open_skill_entry_file(
 
 #[tauri::command]
 pub fn delete_local_skill(skill_path: String, entry_file_path: String) -> Result<(), String> {
-    delete_local_skill_at_path(&skill_path, &entry_file_path)
+    delete_local_skill_at_path(&skill_path, &entry_file_path)?;
+    marketplace_install_store::remove_marketplace_install(&skill_path, &entry_file_path)?;
+    Ok(())
 }
 
 #[tauri::command]
@@ -617,7 +643,10 @@ mod tests {
             source_kind: "skills".into(),
             relative_path: name.into(),
             skill_path: skill_dir.to_string_lossy().to_string(),
-            entry_file_path: skill_dir.join(SKILL_ENTRY_FILE).to_string_lossy().to_string(),
+            entry_file_path: skill_dir
+                .join(SKILL_ENTRY_FILE)
+                .to_string_lossy()
+                .to_string(),
         }
     }
 

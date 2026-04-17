@@ -1,6 +1,7 @@
-import type { DragEvent } from "react";
-import { Copy, Search } from "lucide-react";
+import { type DragEvent, useState } from "react";
+import { Copy, Loader2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { ButtonGroup } from "@/components/ui/button-group";
 import { Input } from "@/components/ui/input";
 import type {
   AgentDiscoveryItem,
@@ -13,8 +14,10 @@ import { kindIcons } from "@/features/shared/constants";
 import { AgentResourceList } from "@/features/resources/core/components/resource-list";
 
 const resourceKinds: readonly ResourceKind[] = ["skill", "mcp", "subagent"];
+const sourceFilters = ["all", "local", "marketplace"] as const;
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
+type ResourceSourceFilter = (typeof sourceFilters)[number];
 
 function getSearchPlaceholder(activeKind: ResourceKind, t: Translate): string {
   if (activeKind === "skill") {
@@ -48,9 +51,10 @@ type AgentResourcePanelProps = {
   ) => Promise<void>;
   onToggleChecked: (id: string) => void;
   onToggleAllChecked: (ids: string[]) => void;
-  onUpdateMarketplaceInstallState: (id: string) => void;
+  onInstallMarketplaceItem: (resource: AgentDiscoveryItem) => Promise<void>;
+  isMarketplaceLoading: boolean;
+  marketplaceError: string | null;
   search: string;
-  totalCount: number;
   selectedResourceId: string;
   t: (key: string, options?: Record<string, unknown>) => string;
 };
@@ -74,76 +78,123 @@ export function AgentResourcePanel({
   onSetLocalSkillEnabled,
   onToggleChecked,
   onToggleAllChecked,
-  onUpdateMarketplaceInstallState,
+  onInstallMarketplaceItem,
+  isMarketplaceLoading,
+  marketplaceError,
   search,
-  totalCount,
   selectedResourceId,
   t,
 }: AgentResourcePanelProps) {
-  const hasToggleableSkill = filteredResources.some((resource) => {
-    if (!checkedIds.includes(resource.id)) {
+  const [sourceFilter, setSourceFilter] = useState<ResourceSourceFilter>("all");
+  const sourceCounts: Record<ResourceSourceFilter, number> = {
+    all: filteredResources.length,
+    local: filteredResources.filter((resource) => resource.origin === "local").length,
+    marketplace: filteredResources.filter((resource) => resource.origin === "marketplace").length,
+  };
+
+  const visibleResources = filteredResources.filter((resource) => {
+    if (sourceFilter === "all") {
+      return true;
+    }
+
+    return resource.origin === sourceFilter;
+  });
+
+  const visibleCheckedIds = checkedIds.filter((id) =>
+    visibleResources.some((resource) => resource.id === id)
+  );
+  const visibleLocalResources = visibleResources.filter((resource) => resource.origin === "local");
+  const hasToggleableSkill = visibleResources.some((resource) => {
+    if (!visibleCheckedIds.includes(resource.id)) {
       return false;
     }
+
     return getLocalSkillToggleTarget(resource) != null;
   });
-  const hasEnabledSkill = filteredResources.some((resource) => {
-    if (!checkedIds.includes(resource.id)) {
+  const hasEnabledSkill = visibleResources.some((resource) => {
+    if (!visibleCheckedIds.includes(resource.id)) {
       return false;
     }
 
     return getLocalSkillToggleTarget(resource)?.enabled ?? false;
   });
-  const hasCopyableSkills = checkedIds.some((id) => {
-    const resource = filteredResources.find((r) => r.id === id);
-    return resource?.origin === "local" && resource?.kind === "skill";
+  const hasCopyableSkills = visibleCheckedIds.some((id) => {
+    const resource = visibleResources.find((candidate) => candidate.id === id);
+    return resource?.origin === "local" && resource.kind === "skill";
   });
+
   return (
     <section className="flex h-full min-w-0 flex-col overflow-hidden">
       <div className="border-b p-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <div className="flex flex-wrap items-center gap-2">
-            {resourceKinds.map((kind) => {
-              const Icon = kindIcons[kind];
-              const active = activeKind === kind;
+        <div className="flex flex-wrap items-center gap-2">
+          {resourceKinds.map((kind) => {
+            const Icon = kindIcons[kind];
+            const active = activeKind === kind;
 
-              return (
-                <Button
-                  key={kind}
-                  variant={active ? "default" : "outline"}
-                  size="sm"
-                  onClick={() => onSelectKind(kind)}
-                >
-                  <Icon className="h-4 w-4" />
-                  {t(`prototype.tabs.${kind}`)}
-                </Button>
-              );
-            })}
-          </div>
-          <div className="bg-muted text-muted-foreground hidden rounded-md px-2 py-1 text-xs lg:flex">
-            {t("prototype.actions.totalCount", { count: totalCount })}
-          </div>
+            return (
+              <Button
+                key={kind}
+                variant={active ? "default" : "outline"}
+                size="sm"
+                onClick={() => onSelectKind(kind)}
+              >
+                <Icon className="h-4 w-4" />
+                {t(`prototype.tabs.${kind}`)}
+              </Button>
+            );
+          })}
         </div>
+
         <div className="mt-3 flex flex-wrap items-center gap-2">
           <div className="relative min-w-[240px] flex-1">
             <Search className="text-muted-foreground absolute top-1/2 left-3 h-4 w-4 -translate-y-1/2" />
+            {isMarketplaceLoading ? (
+              <Loader2 className="text-muted-foreground absolute top-1/2 right-3 h-4 w-4 -translate-y-1/2 animate-spin" />
+            ) : null}
             <Input
               value={search}
               onChange={(event) => onSearchChange(event.target.value)}
-              className="pl-9"
+              className="pr-9 pl-9"
               placeholder={getSearchPlaceholder(activeKind, t)}
             />
           </div>
         </div>
+
+        {activeKind === "skill" && marketplaceError ? (
+          <div className="mt-3 rounded-md border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs text-amber-800 dark:text-amber-200">
+            {t("prototype.marketplace.loadFailed")}: {marketplaceError}
+          </div>
+        ) : null}
       </div>
 
-      {checkedIds.length > 0 ? (
+      <div className="px-3 py-2">
+        <ButtonGroup className="w-fit [&>*]:border">
+          {sourceFilters.map((filter) => (
+            <Button
+              key={filter}
+              variant={sourceFilter === filter ? "default" : "outline"}
+              size="xs"
+              onClick={() => setSourceFilter(filter)}
+            >
+              {filter === "all" ? t("prototype.tabs.all") : t(`prototype.badges.${filter}`)}
+              <span className="ml-1 text-xs opacity-80">{sourceCounts[filter]}</span>
+            </Button>
+          ))}
+        </ButtonGroup>
+      </div>
+
+      <div className="border-b" />
+
+      {visibleCheckedIds.length > 0 ? (
         <div className="bg-muted/50 flex items-center justify-between border-b px-3 py-2 text-sm">
           <div className="flex items-center gap-2">
-            <span>{t("prototype.actions.batchSelected", { count: checkedIds.length })}</span>
+            <span>{t("prototype.actions.batchSelected", { count: visibleCheckedIds.length })}</span>
             <Button
               variant="outline"
               size="xs"
-              onClick={() => onToggleAllChecked(filteredResources.map((r) => r.id))}
+              onClick={() =>
+                onToggleAllChecked(visibleLocalResources.map((resource) => resource.id))
+              }
             >
               {t("prototype.actions.selectAll")}
             </Button>
@@ -157,14 +208,14 @@ export function AgentResourcePanel({
               size="xs"
               disabled={!hasCopyableSkills}
               onClick={() => {
-                const sources: LocalSkillCopySource[] = checkedIds
-                  .map((id) => filteredResources.find((r) => r.id === id))
+                const sources: LocalSkillCopySource[] = visibleCheckedIds
+                  .map((id) => visibleResources.find((resource) => resource.id === id))
                   .filter(
-                    (r): r is NonNullable<typeof r> =>
-                      r != null && r.origin === "local" && r.kind === "skill"
+                    (resource): resource is NonNullable<typeof resource> =>
+                      resource != null && resource.origin === "local" && resource.kind === "skill"
                   )
-                  .map((r) => {
-                    const skill = r as SkillResource & { origin: "local" };
+                  .map((resource) => {
+                    const skill = resource as SkillResource & { origin: "local" };
                     return {
                       id: skill.id,
                       name: skill.name,
@@ -193,28 +244,31 @@ export function AgentResourcePanel({
         </div>
       ) : null}
 
-      <div className="flex-1 overflow-auto p-2">
-        {filteredResources.length === 0 ? (
+      <div className="flex-1 overflow-auto px-3 py-2">
+        {visibleResources.length === 0 ? (
           <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
             {search ? t("prototype.noResults") : t("prototype.emptyList")}
           </div>
         ) : (
-          <AgentResourceList
-            checkedIds={checkedIds}
-            filteredResources={filteredResources}
-            isAllAgentsView={isAllAgentsView}
-            onCopySkill={onCopySkill}
-            onDeleteLocalSkill={onDeleteLocalSkill}
-            onDragStart={onDragStart}
-            onOpenSkillEntryFile={onOpenSkillEntryFile}
-            onOpenSkillFolder={onOpenSkillFolder}
-            onSelectResource={onSelectResource}
-            onSetLocalSkillEnabled={onSetLocalSkillEnabled}
-            onToggleChecked={onToggleChecked}
-            onUpdateMarketplaceInstallState={onUpdateMarketplaceInstallState}
-            selectedResourceId={selectedResourceId}
-            t={t}
-          />
+          <div className="bg-background rounded-lg pb-2">
+            <AgentResourceList
+              checkedIds={checkedIds}
+              filteredResources={visibleResources}
+              showOriginBadge={sourceFilter === "all"}
+              isAllAgentsView={isAllAgentsView}
+              onCopySkill={onCopySkill}
+              onDeleteLocalSkill={onDeleteLocalSkill}
+              onDragStart={onDragStart}
+              onOpenSkillEntryFile={onOpenSkillEntryFile}
+              onOpenSkillFolder={onOpenSkillFolder}
+              onSelectResource={onSelectResource}
+              onSetLocalSkillEnabled={onSetLocalSkillEnabled}
+              onToggleChecked={onToggleChecked}
+              onInstallMarketplaceItem={onInstallMarketplaceItem}
+              selectedResourceId={selectedResourceId}
+              t={t}
+            />
+          </div>
         )}
       </div>
     </section>

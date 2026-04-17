@@ -20,6 +20,7 @@ import { installStateKey } from "@/features/shared/constants";
 type AgentResourceListProps = {
   checkedIds: string[];
   filteredResources: AgentDiscoveryItem[];
+  showOriginBadge: boolean;
   isAllAgentsView: boolean;
   onCopySkill: (source: LocalSkillCopySource) => void;
   onDeleteLocalSkill: (skillPath: string, entryFilePath: string, skillId?: string) => Promise<void>;
@@ -34,19 +35,19 @@ type AgentResourceListProps = {
     skillId?: string
   ) => Promise<void>;
   onToggleChecked: (id: string) => void;
-  onUpdateMarketplaceInstallState: (id: string) => void;
+  onInstallMarketplaceItem: (resource: AgentDiscoveryItem) => Promise<void>;
   selectedResourceId: string;
   t: (key: string, options?: Record<string, unknown>) => string;
 };
 
 function renderDiscoveryMeta(
   resource: AgentDiscoveryItem,
+  showOriginBadge: boolean,
   isAllAgentsView: boolean,
   t: AgentResourceListProps["t"],
   active: boolean
 ) {
   const isLocalSkill = resource.origin === "local" && resource.kind === "skill";
-  const shouldShowInstallState = !isLocalSkill;
   const badgeClassName = active
     ? "border border-border/70 bg-background/85 px-1.5 py-0.5 text-[9px] leading-3 text-foreground"
     : "bg-muted px-1.5 py-0.5 text-[9px] leading-3 text-muted-foreground";
@@ -60,33 +61,23 @@ function renderDiscoveryMeta(
         active ? "text-foreground/75" : "text-muted-foreground"
       )}
     >
-      <span className={badgeClassName}>{originLabel}</span>
+      {showOriginBadge ? <span className={badgeClassName}>{originLabel}</span> : null}
       {isAllAgentsView && isLocalSkill && resource.agentName ? (
         <span className={cn("rounded", badgeClassName)}>{resource.agentName}</span>
       ) : null}
       {isLocalSkill ? (
-        <span
-          className={cn(
-            "rounded border px-1.5 py-0.5 text-[9px] leading-3",
-            resource.enabled
-              ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
-              : "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
-          )}
-        >
-          {resource.enabled ? t("prototype.actions.enabled") : t("prototype.actions.disabled")}
-        </span>
-      ) : null}
-      {shouldShowInstallState ? (
-        <span className={cn("rounded", badgeClassName)}>
-          {t(installStateKey[resource.installState])}
-        </span>
+        !resource.enabled ? (
+          <span className="rounded border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[9px] leading-3 text-amber-700 dark:text-amber-300">
+            {t("prototype.actions.disabled")}
+          </span>
+        ) : null
       ) : null}
       {resource.origin === "marketplace" ? (
         <>
           <span>{resource.author}</span>
-          <span>
-            <Download className="mr-1 inline h-3 w-3" />
-            {resource.downloads}
+          <span className="inline-flex items-center gap-1 leading-none">
+            <Download className="relative top-[-0.5px] h-3 w-3 shrink-0" />
+            {resource.installs}
           </span>
         </>
       ) : null}
@@ -100,12 +91,12 @@ function renderResourceAction(
   onOpenSkillEntryFile: AgentResourceListProps["onOpenSkillEntryFile"],
   onOpenSkillFolder: AgentResourceListProps["onOpenSkillFolder"],
   onSetLocalSkillEnabled: AgentResourceListProps["onSetLocalSkillEnabled"],
-  onUpdateMarketplaceInstallState: AgentResourceListProps["onUpdateMarketplaceInstallState"],
+  onInstallMarketplaceItem: AgentResourceListProps["onInstallMarketplaceItem"],
   t: AgentResourceListProps["t"]
 ) {
   if (resource.origin === "marketplace") {
     return (
-      <DropdownMenuItem onClick={() => onUpdateMarketplaceInstallState(resource.id)}>
+      <DropdownMenuItem onClick={() => void onInstallMarketplaceItem(resource)}>
         {t(installStateKey[resource.installState])}
       </DropdownMenuItem>
     );
@@ -221,9 +212,17 @@ function getActionButtonClassName(active: boolean): string {
   return cn(active && "text-foreground/80 hover:text-foreground");
 }
 
+function getMarketplaceActionButtonClassName(active: boolean): string {
+  return cn(
+    "shrink-0",
+    active ? "border-background/60 bg-background/90 hover:bg-background text-foreground" : ""
+  );
+}
+
 export function AgentResourceList({
   checkedIds,
   filteredResources,
+  showOriginBadge,
   isAllAgentsView,
   onCopySkill,
   onDeleteLocalSkill,
@@ -233,7 +232,7 @@ export function AgentResourceList({
   onSelectResource,
   onSetLocalSkillEnabled,
   onToggleChecked,
-  onUpdateMarketplaceInstallState,
+  onInstallMarketplaceItem,
   selectedResourceId,
   t,
 }: AgentResourceListProps) {
@@ -241,6 +240,7 @@ export function AgentResourceList({
     <div className="space-y-1">
       {filteredResources.map((resource) => {
         const active = isSelectedResource(resource.id, selectedResourceId);
+        const isMarketplaceResource = resource.origin === "marketplace";
 
         return (
           <div
@@ -264,33 +264,49 @@ export function AgentResourceList({
                 <div className={cn("truncate text-sm font-medium", active && "text-foreground")}>
                   {resource.name}
                 </div>
-                <div className={getSummaryClassName(active)}>{resource.summary}</div>
-                {renderDiscoveryMeta(resource, isAllAgentsView, t, active)}
+                {resource.origin === "local" ? (
+                  <div className={getSummaryClassName(active)}>{resource.summary}</div>
+                ) : null}
+                {renderDiscoveryMeta(resource, showOriginBadge, isAllAgentsView, t, active)}
               </div>
-              <DropdownMenu>
-                <DropdownMenuTrigger asChild>
-                  <Button
-                    variant="ghost"
-                    size="icon-xs"
-                    className={getActionButtonClassName(active)}
-                    onClick={(event) => event.stopPropagation()}
-                  >
-                    <MoreHorizontal className="h-4 w-4" />
-                  </Button>
-                </DropdownMenuTrigger>
-                <DropdownMenuContent align="end">
-                  {renderResourceAction(
-                    resource,
-                    onCopySkill,
-                    onDeleteLocalSkill,
-                    onOpenSkillEntryFile,
-                    onOpenSkillFolder,
-                    onSetLocalSkillEnabled,
-                    onUpdateMarketplaceInstallState,
-                    t
-                  )}
-                </DropdownMenuContent>
-              </DropdownMenu>
+              {isMarketplaceResource ? (
+                <Button
+                  variant={active ? "secondary" : "outline"}
+                  size="xs"
+                  className={cn("h-7 px-2 text-xs", getMarketplaceActionButtonClassName(active))}
+                  onClick={(event) => {
+                    event.stopPropagation();
+                    void onInstallMarketplaceItem(resource);
+                  }}
+                >
+                  {t(installStateKey[resource.installState])}
+                </Button>
+              ) : (
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button
+                      variant="ghost"
+                      size="icon-xs"
+                      className={getActionButtonClassName(active)}
+                      onClick={(event) => event.stopPropagation()}
+                    >
+                      <MoreHorizontal className="h-4 w-4" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end">
+                    {renderResourceAction(
+                      resource,
+                      onCopySkill,
+                      onDeleteLocalSkill,
+                      onOpenSkillEntryFile,
+                      onOpenSkillFolder,
+                      onSetLocalSkillEnabled,
+                      onInstallMarketplaceItem,
+                      t
+                    )}
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              )}
             </div>
           </div>
         );

@@ -51,6 +51,11 @@
       "showMainDesc": "Use shortcut to quickly show main window",
       "setSuccess": "Shortcut set to {{shortcut}}!",
       "cleared": "Shortcut cleared!"
+    },
+    "updates": {
+      "title": "Updates",
+      "description": "Check the current version and install the latest release.",
+      "currentVersion": "Current version"
     }
   },
   "prototype": {
@@ -64,13 +69,14 @@
       "marketplace": "Marketplace"
     },
     "tabs": {
+      "all": "All",
       "skill": "Skills",
       "mcp": "MCP",
       "subagent": "Subagents"
     },
     "actions": {
       "searchPlaceholder": "Search local and marketplace resources",
-      "searchSkillsPlaceholder": "Search local skills, then show marketplace results when typing",
+      "searchSkillsPlaceholder": "Search local skills and browse marketplace results",
       "enable": "Enable",
       "disable": "Disable",
       "enabled": "Enabled",
@@ -85,6 +91,7 @@
       "add": "Manage",
       "clear": "Clear",
       "open": "Open",
+      "visit": "Visit",
       "edit": "Edit",
       "delete": "Delete",
       "copy": "Copy",
@@ -124,10 +131,15 @@
       "deleteSuccess": "Skill deleted.",
       "deleteFailed": "Failed to delete skill.",
       "copySuccess": "Skills copied successfully.",
-      "copyFailed": "Failed to copy skills."
+      "copyFailed": "Failed to copy skills.",
+      "marketplaceInstallSuccess": "Marketplace skill installed successfully.",
+      "marketplaceInstallFailed": "Failed to install marketplace skill.",
+      "marketplaceInstallSelectAgent": "Select a target agent before installing a marketplace skill.",
+      "marketplaceInstallUnsupported": "Only marketplace skills are supported for installation right now."
     },
     "detail": {
       "title": "Details",
+      "description": "Description",
       "preview": "Preview",
       "document": "Document",
       "config": "Config",
@@ -138,7 +150,7 @@
       "version": "Version",
       "author": "Author",
       "agent": "Agent",
-      "downloads": "Downloads",
+      "installs": "Installs",
       "updatedAt": "Updated",
       "highlights": "Highlights",
       "discoveryState": "Discovery state",
@@ -157,6 +169,21 @@
       "addingTitle": "Manage agent",
       "addingEmpty": "Select an agent from the left list to return to the three-column workspace.",
       "allAgentsDescription": "Browse skills aggregated from all managed agents."
+    },
+    "marketplace": {
+      "loadFailed": "Marketplace request failed",
+      "installToAgentTitle": "Install Skill",
+      "installToAgentDescription": "Select the target Agent before installing this marketplace skill.",
+      "installConflict": {
+        "title": "Overwrite existing skill?",
+        "description": "\"{{name}}\" already exists in \"{{agentName}}\". Overwrite the local files?"
+      },
+      "boards": {
+        "hot": "Hot"
+      },
+      "sources": {
+        "all": "All sources"
+      }
     },
     "emptyList": "No items yet.",
     "noResults": "No matching results.",

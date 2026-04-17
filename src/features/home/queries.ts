@@ -1,18 +1,21 @@
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import { getLocalSkillDetail, listLocalSkills } from "@/features/agents/api";
+import {
+  checkMarketplaceSkillUpdate,
+  getLocalSkillDetail,
+  listLocalSkills,
+} from "@/features/agents/api";
 import type { SkillResource, SkillScanTarget } from "@/features/agents/types";
 
 const AGENT_SKILLS_QUERY_KEY = "agent-skills";
 const AGENT_SKILL_DETAIL_QUERY_KEY = "agent-skill-detail";
+const MARKETPLACE_SKILL_UPDATE_QUERY_KEY = "marketplace-skill-update";
 
 function normalizeSkills(skills: SkillResource[]): SkillResource[] {
   return skills.map((skill) => ({ ...skill, markdown: skill.markdown ?? "" }));
 }
 
 function buildSkillTargetKey(targets: SkillScanTarget[]): string {
-  return targets
-    .map((target) => `${target.agentId}:${target.source}:${target.rootPath}`)
-    .join("|");
+  return targets.map((target) => `${target.agentId}:${target.source}:${target.rootPath}`).join("|");
 }
 
 export function useAgentSkillsQuery(scopeKey: string, targets: SkillScanTarget[]) {
@@ -80,4 +83,20 @@ export function useRefreshAgentSkills() {
       });
     }
   };
+}
+
+export function useMarketplaceSkillUpdateQuery(
+  skillPath: string,
+  entryFilePath: string,
+  enabled: boolean
+) {
+  return useQuery({
+    queryKey: [MARKETPLACE_SKILL_UPDATE_QUERY_KEY, skillPath, entryFilePath],
+    enabled: enabled && skillPath.length > 0 && entryFilePath.length > 0,
+    queryFn: async () => checkMarketplaceSkillUpdate(skillPath, entryFilePath),
+    staleTime: 0,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    retry: 0,
+  });
 }

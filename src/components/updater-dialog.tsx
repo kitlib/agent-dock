@@ -11,36 +11,48 @@ import {
 } from "@/components/ui/dialog";
 import { Progress } from "@/components/ui/progress";
 import { useTranslation } from "react-i18next";
-import { toast } from "sonner";
+import type { UpdateCheckResult } from "@/lib/updater";
 
 interface UpdaterDialogProps {
-  manualCheck?: boolean;
-  onCheckComplete?: () => void;
+  manualCheckToken?: number;
+  onCheckResult?: (result: UpdateCheckResult) => void;
 }
 
-export function UpdaterDialog({ manualCheck = false, onCheckComplete }: UpdaterDialogProps) {
-  const { update, checking, downloading, progress, checkUpdate, installUpdate } = useUpdater();
+export function UpdaterDialog({ manualCheckToken, onCheckResult }: UpdaterDialogProps) {
+  const { update, downloading, progress, checkUpdate, installUpdate } = useUpdater();
   const [open, setOpen] = useState(false);
   const hasAutoCheckedRef = useRef(false);
+  const lastManualCheckTokenRef = useRef<number | null>(null);
   const { t } = useTranslation();
 
   useEffect(() => {
-    if (manualCheck || hasAutoCheckedRef.current) {
+    if (manualCheckToken != null || hasAutoCheckedRef.current) {
       return;
     }
 
     hasAutoCheckedRef.current = true;
     void checkUpdate();
-  }, [manualCheck, checkUpdate]);
+  }, [manualCheckToken, checkUpdate]);
+
+  useEffect(() => {
+    if (manualCheckToken == null || manualCheckToken === lastManualCheckTokenRef.current) {
+      return;
+    }
+
+    lastManualCheckTokenRef.current = manualCheckToken;
+    void checkUpdate().then((result) => {
+      if (result.status === "available") {
+        setOpen(true);
+      }
+      onCheckResult?.(result);
+    });
+  }, [manualCheckToken, checkUpdate, onCheckResult]);
 
   useEffect(() => {
     if (update) {
       setOpen(true);
-      onCheckComplete?.();
-    } else if (manualCheck && !checking) {
-      onCheckComplete?.();
     }
-  }, [update, checking, manualCheck, onCheckComplete]);
+  }, [update]);
 
   const handleInstall = () => {
     void installUpdate();
@@ -95,32 +107,4 @@ export function UpdaterDialog({ manualCheck = false, onCheckComplete }: UpdaterD
       </DialogContent>
     </Dialog>
   );
-}
-
-export function useManualUpdateCheck() {
-  const { checkUpdate, checking, update } = useUpdater();
-  const [showNoUpdate, setShowNoUpdate] = useState(false);
-  const { t } = useTranslation();
-
-  const handleCheckUpdate = async () => {
-    setShowNoUpdate(false);
-    const result = await checkUpdate();
-
-    if (result.status === "up-to-date") {
-      setShowNoUpdate(true);
-      return;
-    }
-
-    if (result.status === "error") {
-      toast.error(t("updater.checkFailed"));
-    }
-  };
-
-  return {
-    checkUpdate: handleCheckUpdate,
-    checking,
-    hasUpdate: !!update,
-    showNoUpdate,
-    dismissNoUpdate: () => setShowNoUpdate(false),
-  };
 }

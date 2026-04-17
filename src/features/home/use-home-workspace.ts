@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useState } from "react";
+import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useAgentDiscovery } from "@/features/agents/use-agent-discovery";
 import { useAgentManagement } from "@/features/agents/use-agent-management";
 import {
@@ -24,9 +24,11 @@ import { toSkillScanTargets, toSkillScanTargetsForAgents } from "@/features/home
 import {
   useAgentSkillDetailQuery,
   useAgentSkillsQuery,
+  useMarketplaceSkillUpdateQuery,
   useRefreshAgentSkills,
 } from "@/features/home/queries";
 import { useResourceBrowser } from "@/features/home/use-resource-browser";
+import { useSkillsshMarketplaceDetailQuery } from "@/features/marketplace/queries";
 
 type WorkspaceMode = "browse" | "adding";
 
@@ -69,6 +71,7 @@ function getSelectedAgent(
 export function useHomeWorkspace() {
   const [workspaceMode, setWorkspaceMode] = useState<WorkspaceMode>("browse");
   const [search, setSearch] = useState("");
+  const deferredSearch = useDeferredValue(search);
   const [selectedScope, setSelectedScope] = useState<AgentSelectionScope>("all");
   const [selectedAgentId, setSelectedAgentId] = useState("");
 
@@ -162,7 +165,9 @@ export function useHomeWorkspace() {
     [selectedAgent]
   );
   const effectiveSkillScanTargets =
-    selectedScope === "all" ? allVisibleManagedAgentSkillScanTargets : selectedAgentSkillScanTargets;
+    selectedScope === "all"
+      ? allVisibleManagedAgentSkillScanTargets
+      : selectedAgentSkillScanTargets;
 
   const { skills } = useAgentSkillsQuery(scopeKey, effectiveSkillScanTargets);
 
@@ -197,13 +202,18 @@ export function useHomeWorkspace() {
     });
   }, [currentSelectedAgentId, selectedScope, skills]);
 
-  const resourceBrowser = useResourceBrowser(search, selectedAgent, skills);
+  const resourceBrowser = useResourceBrowser(deferredSearch, selectedAgent, skills);
 
   const selectedSkillId =
     resourceBrowser.selectedResourceBase?.kind === "skill" &&
     resourceBrowser.selectedResourceBase.origin === "local"
       ? resourceBrowser.selectedResourceBase.id
       : "";
+  const selectedLocalSkill =
+    resourceBrowser.selectedResourceBase?.kind === "skill" &&
+    resourceBrowser.selectedResourceBase.origin === "local"
+      ? resourceBrowser.selectedResourceBase
+      : null;
 
   const selectedSkillDetailQuery = useAgentSkillDetailQuery(
     scopeKey,
@@ -211,6 +221,23 @@ export function useHomeWorkspace() {
     effectiveSkillScanTargets,
     resourceBrowser.activeKind === "skill"
   );
+  const selectedMarketplaceSkillDetailQuery = useSkillsshMarketplaceDetailQuery(
+    resourceBrowser.selectedResourceBase?.origin === "marketplace" &&
+      resourceBrowser.selectedResourceBase.kind === "skill"
+      ? resourceBrowser.selectedResourceBase.sourceLabel
+      : undefined,
+    resourceBrowser.selectedResourceBase?.origin === "marketplace" &&
+      resourceBrowser.selectedResourceBase.kind === "skill"
+      ? resourceBrowser.selectedResourceBase.skillId
+      : undefined,
+    resourceBrowser.activeKind === "skill"
+  );
+  const selectedLocalMarketplaceUpdateQuery = useMarketplaceSkillUpdateQuery(
+    selectedLocalSkill?.skillPath ?? "",
+    selectedLocalSkill?.entryFilePath ?? "",
+    resourceBrowser.activeKind === "skill"
+  );
+  const selectedLocalMarketplaceUpdate = selectedLocalMarketplaceUpdateQuery.data;
 
   const selectedResource =
     resourceBrowser.selectedResourceBase?.kind === "skill" &&
@@ -218,8 +245,17 @@ export function useHomeWorkspace() {
       ? {
           ...resourceBrowser.selectedResourceBase,
           ...selectedSkillDetailQuery.data,
+          marketplaceSource: selectedLocalMarketplaceUpdate?.source,
+          marketplaceRemoteId: selectedLocalMarketplaceUpdate?.skillId,
+          marketplaceHasUpdate: selectedLocalMarketplaceUpdate?.hasUpdate ?? false,
         }
-      : resourceBrowser.selectedResource;
+      : resourceBrowser.selectedResourceBase?.kind === "skill" &&
+          resourceBrowser.selectedResourceBase.origin === "marketplace"
+        ? {
+            ...resourceBrowser.selectedResourceBase,
+            ...selectedMarketplaceSkillDetailQuery.data,
+          }
+        : resourceBrowser.selectedResource;
 
   const refreshSkills = useRefreshAgentSkills();
 
@@ -292,9 +328,12 @@ export function useHomeWorkspace() {
     onPreviewCopy: previewCopy,
     onExecuteCopy: executeCopy,
     search,
+    isMarketplaceLoading: resourceBrowser.isMarketplaceLoading,
+    isMarketplaceDetailLoading: selectedMarketplaceSkillDetailQuery.isFetching,
+    isLocalMarketplaceDetailLoading: selectedLocalMarketplaceUpdateQuery.isFetching,
+    marketplaceError: resourceBrowser.marketplaceError,
     refreshAgents,
-    refreshSkills: (skillId?: string) =>
-      refreshSkills(scopeKey, skillId ?? selectedSkillId),
+    refreshSkills: (skillId?: string) => refreshSkills(scopeKey, skillId ?? selectedSkillId),
     selectAllAgents,
     selectKind: resourceBrowser.selectKind,
     selectResource: resourceBrowser.selectResource,

@@ -1,12 +1,10 @@
 import type { ReactNode } from "react";
 import { MarkdownContent } from "@/components/markdown-content";
-import { Button } from "@/components/ui/button";
 import type { AgentDiscoveryItem, MarketplaceDiscoveryFields } from "@/features/agents/types";
-import { installStateKey } from "@/features/shared/constants";
 
 type ResourceDetailContentProps = {
+  isMarketplaceDetailLoading?: boolean;
   resource: AgentDiscoveryItem;
-  onUpdateMarketplaceInstallState: (id: string) => void;
   t: (key: string, options?: Record<string, unknown>) => string;
 };
 
@@ -15,9 +13,9 @@ type LocalResource = Exclude<AgentDiscoveryItem, MarketplaceResource>;
 
 function StatCard({ label, value }: { label: string; value: string | number }) {
   return (
-    <div className="bg-background rounded-lg border p-3">
-      <div className="text-muted-foreground text-xs">{label}</div>
-      <div className="mt-1 font-medium">{value}</div>
+    <div className="bg-background rounded-lg border px-3 py-2">
+      <div className="text-muted-foreground text-[11px] leading-4">{label}</div>
+      <div className="mt-0.5 text-sm leading-5 font-medium">{value}</div>
     </div>
   );
 }
@@ -28,6 +26,34 @@ function TextSection({ title, children }: { title: string; children: ReactNode }
       <h3 className="text-sm font-semibold">{title}</h3>
       {children}
     </section>
+  );
+}
+
+function MarkdownSkeleton() {
+  return (
+    <div className="bg-muted/40 rounded-lg border p-3">
+      <div className="animate-pulse space-y-3">
+        <div className="bg-muted h-4 w-2/5 rounded" />
+        <div className="bg-muted h-4 w-full rounded" />
+        <div className="bg-muted h-4 w-11/12 rounded" />
+        <div className="bg-muted h-4 w-4/5 rounded" />
+        <div className="bg-muted h-24 w-full rounded" />
+        <div className="bg-muted h-4 w-3/5 rounded" />
+        <div className="bg-muted h-4 w-5/6 rounded" />
+      </div>
+    </div>
+  );
+}
+
+function DescriptionSkeleton() {
+  return (
+    <div className="bg-muted/40 rounded-lg border p-3">
+      <div className="animate-pulse space-y-2">
+        <div className="bg-muted h-4 w-full rounded" />
+        <div className="bg-muted h-4 w-10/12 rounded" />
+        <div className="bg-muted h-4 w-8/12 rounded" />
+      </div>
+    </div>
   );
 }
 
@@ -47,41 +73,37 @@ function ListSection({ title, items }: { title: string; items: string[] }) {
 }
 
 function MarketplaceResourceDetail({
+  isMarketplaceDetailLoading = false,
   resource,
-  onUpdateMarketplaceInstallState,
   t,
 }: {
+  isMarketplaceDetailLoading?: boolean;
   resource: MarketplaceResource;
-  onUpdateMarketplaceInstallState: (id: string) => void;
   t: ResourceDetailContentProps["t"];
 }) {
-  const installStateLabel = t(installStateKey[resource.installState]);
-
   return (
     <div className="space-y-4">
-      <section className="grid grid-cols-2 gap-3 text-sm">
-        <StatCard label={t("prototype.detail.source")} value={resource.sourceLabel} />
-        <StatCard label={t("prototype.detail.version")} value={resource.version} />
-      </section>
-
-      <section className="grid grid-cols-2 gap-3 text-sm">
-        <StatCard label={t("prototype.detail.author")} value={resource.author} />
-        <StatCard label={t("prototype.detail.downloads")} value={resource.downloads} />
-      </section>
-
-      <ListSection title={t("prototype.detail.highlights")} items={resource.highlights} />
-
-      <div className="bg-background space-y-3 rounded-lg border p-4">
-        <div className="flex items-center justify-between gap-3">
-          <div>
-            <div className="text-sm font-medium">{installStateLabel}</div>
-            <div className="text-muted-foreground mt-1 text-xs">{resource.sourceLabel}</div>
+      <TextSection title={t("prototype.detail.description")}>
+        {isMarketplaceDetailLoading ? (
+          <DescriptionSkeleton />
+        ) : (
+          <div className="bg-muted/40 rounded-lg border p-3 text-sm whitespace-pre-wrap">
+            {resource.description}
           </div>
-          <Button onClick={() => onUpdateMarketplaceInstallState(resource.id)}>
-            {installStateLabel}
-          </Button>
-        </div>
-      </div>
+        )}
+      </TextSection>
+
+      {resource.kind === "skill" ? (
+        <TextSection title="SKILL.md">
+          {resource.markdown?.trim() ? (
+            <div className="bg-muted/40 rounded-lg border p-3 text-sm">
+              <MarkdownContent content={resource.markdown} />
+            </div>
+          ) : isMarketplaceDetailLoading ? (
+            <MarkdownSkeleton />
+          ) : null}
+        </TextSection>
+      ) : null}
     </div>
   );
 }
@@ -98,7 +120,7 @@ function LocalResourceDetail({
 
     return (
       <div className="space-y-4">
-        <TextSection title="Description">
+        <TextSection title={t("prototype.detail.description")}>
           <div className="bg-muted/40 rounded-lg border p-3 text-sm whitespace-pre-wrap">
             {resource.description ?? resource.summary}
           </div>
@@ -113,7 +135,7 @@ function LocalResourceDetail({
             ) : null}
           </section>
         ) : null}
-        <TextSection title="Markdown">
+        <TextSection title="SKILL.md">
           {markdownContent.trim() ? (
             <div className="bg-muted/40 rounded-lg border p-3 text-sm">
               <MarkdownContent content={markdownContent} />
@@ -177,15 +199,15 @@ function LocalResourceDetail({
 }
 
 export function AgentResourceDetail({
+  isMarketplaceDetailLoading = false,
   resource,
-  onUpdateMarketplaceInstallState,
   t,
 }: ResourceDetailContentProps) {
   if (resource.origin === "marketplace") {
     return (
       <MarketplaceResourceDetail
+        isMarketplaceDetailLoading={isMarketplaceDetailLoading}
         resource={resource}
-        onUpdateMarketplaceInstallState={onUpdateMarketplaceInstallState}
         t={t}
       />
     );

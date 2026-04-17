@@ -11,18 +11,26 @@ pub fn list_managed_agents() -> Result<Vec<ManagedAgentDto>, String> {
 }
 
 #[tauri::command]
-pub fn list_resolved_agents(scan_targets: Vec<ScanTargetDto>) -> Result<Vec<ResolvedAgentDto>, String> {
+pub fn list_resolved_agents(
+    scan_targets: Vec<ScanTargetDto>,
+) -> Result<Vec<ResolvedAgentDto>, String> {
     Ok(agent_discovery_service::list_resolved_agents(scan_targets))
 }
 
 #[tauri::command]
-pub fn scan_agents(scan_targets: Vec<ScanTargetDto>) -> Result<Vec<ScannedAgentCandidateDto>, String> {
+pub fn scan_agents(
+    scan_targets: Vec<ScanTargetDto>,
+) -> Result<Vec<ScannedAgentCandidateDto>, String> {
     Ok(agent_discovery_service::scan_agents(scan_targets))
 }
 
 #[tauri::command]
-pub fn refresh_agent_discovery(scan_targets: Vec<ScanTargetDto>) -> Result<Vec<ResolvedAgentDto>, String> {
-    Ok(agent_discovery_service::refresh_agent_discovery(scan_targets))
+pub fn refresh_agent_discovery(
+    scan_targets: Vec<ScanTargetDto>,
+) -> Result<Vec<ResolvedAgentDto>, String> {
+    Ok(agent_discovery_service::refresh_agent_discovery(
+        scan_targets,
+    ))
 }
 
 #[tauri::command]

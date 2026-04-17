@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import { marketplaceItems } from "@/features/marketplace/mock";
+import { marketplaceItems as mockMarketplaceItems } from "@/features/marketplace/mock";
+import { useSkillsshMarketplaceQuery } from "@/features/marketplace/queries";
 import {
   buildDiscoveryItems,
   createMarketplaceInstallStateMap,
@@ -29,9 +30,27 @@ export function useResourceBrowser(
   const [checkedIds, setCheckedIds] = useState<string[]>([]);
   const [marketplaceInstallStates, setMarketplaceInstallStates] = useState<
     Record<string, MarketplaceInstallStateLabel>
-  >(() => createMarketplaceInstallStateMap(marketplaceItems));
+  >({});
 
   const normalizedSearch = search.trim().toLowerCase();
+  const skillMarketplaceQuery = useSkillsshMarketplaceQuery(
+    normalizedSearch,
+    activeKind === "skill"
+  );
+  const effectiveMarketplaceItems = useMemo(() => {
+    const nonSkillItems = mockMarketplaceItems.filter((item) => item.kind !== "skill");
+    const skillItems =
+      activeKind === "skill"
+        ? (skillMarketplaceQuery.data ?? [])
+        : mockMarketplaceItems.filter((item) => item.kind === "skill");
+
+    return [...skillItems, ...nonSkillItems];
+  }, [activeKind, skillMarketplaceQuery.data]);
+
+  useEffect(() => {
+    const defaultStates = createMarketplaceInstallStateMap(effectiveMarketplaceItems);
+    setMarketplaceInstallStates(defaultStates);
+  }, [effectiveMarketplaceItems, skills]);
 
   const localResources = useMemo(
     () => ({
@@ -45,7 +64,7 @@ export function useResourceBrowser(
     return buildDiscoveryItems(
       activeKind,
       localResources,
-      marketplaceItems,
+      effectiveMarketplaceItems,
       marketplaceInstallStates,
       selectedAgent?.id ?? null,
       selectedAgent?.managed ?? false
@@ -56,16 +75,17 @@ export function useResourceBrowser(
     marketplaceInstallStates,
     selectedAgent?.id,
     selectedAgent?.managed,
+    effectiveMarketplaceItems,
   ]);
 
   const filteredResources = useMemo(() => {
-    const includeMarketplaceWhenEmpty = activeKind !== "skill" || normalizedSearch.length > 0;
+    const includeMarketplaceWhenEmpty = true;
 
     return sortDiscoveryItems(
       filterDiscoveryItems(discoveryItems, normalizedSearch, { includeMarketplaceWhenEmpty }),
       normalizedSearch
     );
-  }, [activeKind, discoveryItems, normalizedSearch]);
+  }, [discoveryItems, normalizedSearch]);
 
   useEffect(() => {
     setCheckedIds((current) => clearUnavailableCheckedIds(current, filteredResources));
@@ -113,8 +133,9 @@ export function useResourceBrowser(
 
   const updateMarketplaceInstallState = (id: string) => {
     setMarketplaceInstallStates((current) => {
+      const currentState = current[id] ?? "available";
       const nextState =
-        current[id] === "update" || current[id] === "available" ? "installed" : current[id];
+        currentState === "update" || currentState === "available" ? "installed" : currentState;
       return { ...current, [id]: nextState };
     });
   };
@@ -132,5 +153,8 @@ export function useResourceBrowser(
     toggleChecked,
     toggleAllChecked,
     updateMarketplaceInstallState,
+    isMarketplaceLoading: skillMarketplaceQuery.isFetching,
+    marketplaceError:
+      skillMarketplaceQuery.error instanceof Error ? skillMarketplaceQuery.error.message : null,
   };
 }
