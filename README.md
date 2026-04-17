@@ -77,6 +77,7 @@ pnpm release:version --lang en
 ```
 
 It interactively handles the release preflight and version bump flow:
+
 - Ensures the working tree is clean
 - Requires the current branch to be `main`
 - Verifies `package.json`, `src-tauri/tauri.conf.json`, and `src-tauri/Cargo.toml` are in sync
@@ -104,6 +105,15 @@ pnpm dlx shadcn@latest add dialog
 ```bash
 pnpm format        # Format code
 pnpm format:check  # Check code formatting
+```
+
+## Quality Checks
+
+```bash
+pnpm lint
+pnpm build
+cargo fmt --check --manifest-path src-tauri/Cargo.toml
+cargo check --manifest-path src-tauri/Cargo.toml
 ```
 
 ## Project Structure
@@ -143,6 +153,7 @@ The workflow is triggered by pushing tags matching `v*` (for example `v0.1.0`).
 The recommended release path is to run `pnpm release:version`, which creates the matching `vX.Y.Z` tag for you.
 
 **Manual tag push example:**
+
 ```bash
 git tag v0.1.0
 git push origin v0.1.0
@@ -151,6 +162,7 @@ git push origin v0.1.0
 ### Build Outputs
 
 The workflow generates:
+
 - **NSIS Installer** - Windows installation package
 - **Updater Files** - `latest.json` for auto-update support
 
@@ -168,6 +180,7 @@ See [Auto Update Configuration](./docs/AUTO_UPDATE.md) for detailed instructions
 ### Code Signing (Optional)
 
 To enable code signing, add these secrets in your GitHub repository settings:
+
 - `TAURI_SIGNING_PRIVATE_KEY` - Private key content
 - `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` - Private key password
 

@@ -77,6 +77,7 @@ pnpm release:version --lang en
 ```
 
 它会交互式完成发布前检查和版本更新流程：
+
 - 确保工作区干净
 - 强制要求当前分支为 `main`
 - 校验 `package.json`、`src-tauri/tauri.conf.json` 和 `src-tauri/Cargo.toml` 的版本一致
@@ -104,6 +105,15 @@ pnpm dlx shadcn@latest add dialog
 ```bash
 pnpm format        # 格式化代码
 pnpm format:check  # 检查代码格式
+```
+
+## 质量检查
+
+```bash
+pnpm lint
+pnpm build
+cargo fmt --check --manifest-path src-tauri/Cargo.toml
+cargo check --manifest-path src-tauri/Cargo.toml
 ```
 
 ## 项目结构
@@ -143,6 +153,7 @@ pnpm format:check  # 检查代码格式
 推荐通过 `pnpm release:version` 发版，它会自动创建匹配的 `vX.Y.Z` tag。
 
 **手动创建并推送标签示例：**
+
 ```bash
 git tag v0.1.0
 git push origin v0.1.0
@@ -151,6 +162,7 @@ git push origin v0.1.0
 ### 构建产物
 
 工作流会生成：
+
 - **NSIS 安装包** - Windows 安装程序
 - **更新文件** - `latest.json` 用于自动更新支持
 
@@ -168,6 +180,7 @@ git push origin v0.1.0
 ### 代码签名（可选）
 
 如需启用代码签名，在 GitHub 仓库设置中添加以下 Secrets：
+
 - `TAURI_SIGNING_PRIVATE_KEY` - 私钥内容
 - `TAURI_SIGNING_PRIVATE_KEY_PASSWORD` - 私钥密码
 

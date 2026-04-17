@@ -11,8 +11,8 @@ AgentDock 的核心目标是成为一个面向多 Agent 的本地资源管理中
 - 通过 Marketplace 作为辅助导入入口
 
 说明：
-- `Home / Agents` 仍然是当前主工作台
-- `Resources` 页面仍是规划项，尚未正式落地
+- `Home / Agents` 是当前唯一主工作台
+- 不再规划独立 `Resources` 页面
 - `Marketplace` 目前仍以占位能力为主，真实接入尚未完成
 
 ## 当前实现现状（2026-04-16）
@@ -140,14 +140,6 @@ AgentDock 的核心目标是成为一个面向多 Agent 的本地资源管理中
 - 查看“全部”聚合 Skills
 - 执行启停、复制、删除等维护操作
 
-### Resources
-
-规划中的独立资源页，用于：
-- 查看所有本地 Skills、MCP、Subagents
-- 查看资源详情
-- 查看资源关系
-- 执行全局资源管理
-
 ### Marketplace
 
 辅助导入页，用于：
@@ -165,7 +157,6 @@ AgentDock 的核心目标是成为一个面向多 Agent 的本地资源管理中
 - Home 内“全部 Skills”聚合视图
 
 未完成：
-- 独立 Resources 页面
 - Marketplace 真接入
 - Skill 使用关系视图
 - 分组管理
@@ -180,3 +171,9 @@ AgentDock 的核心目标是成为一个面向多 Agent 的本地资源管理中
 - 删除绑定与删除资源本体必须明确区分
 - 高风险删除操作必须确认
 - 危险操作在视觉顺序上后置
+
+## 当前决策补充（2026-04-16）
+
+- 不再拆分 `Resources` 独立页
+- 原因是 Home 内“全部”视图已经承接当前全局 Skill 浏览需求
+- 下一步产品重点转向 `Marketplace` 真接入，以补齐资源获取与安装闭环

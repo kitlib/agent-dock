@@ -169,6 +169,13 @@ Skill 目录及其入口文件不应直接原样传给 UI 组件。
 4. 生成面向 UI 的列表模型、详情模型与能力摘要
 5. 保留必要的原始信息用于高级诊断展示
 
+当前实现还应明确保持以下行为，以确保扫描结果稳定且可降级：
+
+- 当 Skill 目录同时存在 `SKILL.md` 和 `SKILL.md.disabled` 时，优先使用启用态入口，并返回 warning
+- 当仅存在 `SKILL.md.disabled` 时，仍应将其识别为可展示 Skill，同时将 `enabled` 标记为 `false`
+- 当 frontmatter YAML 解析失败时，应优先尝试从原始 frontmatter 中恢复 `description`
+- 当 `description` 无法恢复时，应回退到 Markdown 摘要，保证列表和详情面板都有可展示文案
+
 ### 3.5 关键字段
 
 在当前开发阶段，应按以下字段作为重点支持对象：
