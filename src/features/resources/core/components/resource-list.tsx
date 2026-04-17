@@ -1,6 +1,6 @@
-import type { DragEvent } from "react";
+import { memo, useEffect, useMemo, type DragEvent, type RefObject } from "react";
+import { useVirtualizer } from "@tanstack/react-virtual";
 import { Download, MoreHorizontal } from "lucide-react";
-import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -9,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { cn, formatInstallCount } from "@/lib/utils";
+import { cn } from "@/lib/utils";
 import type {
   AgentDiscoveryItem,
   LocalSkillCopySource,
@@ -37,24 +37,57 @@ type AgentResourceListProps = {
   ) => Promise<void>;
   onToggleChecked: (id: string) => void;
   onInstallMarketplaceItem: (resource: AgentDiscoveryItem) => Promise<void>;
+  scrollContainerRef: RefObject<HTMLDivElement | null>;
   selectedResourceId: string;
   t: (key: string, options?: Record<string, unknown>) => string;
 };
 
+const VIRTUALIZATION_THRESHOLD = 100;
+const VIRTUAL_ROW_GAP = 4;
+const VIRTUAL_LOCAL_ROW_HEIGHT = 84;
+const VIRTUAL_MARKETPLACE_ROW_HEIGHT = 64;
+
+type DisplayResource = {
+  resource: AgentDiscoveryItem;
+  formattedMarketplaceInstalls?: string;
+  isLocalResource: boolean;
+  isMarketplaceResource: boolean;
+  isLocalSkill: boolean;
+  originLabel: string;
+  agentBadgeLabel?: string;
+  isDisabled: boolean;
+  skillPath?: string;
+  entryFilePath?: string;
+  copySource?: LocalSkillCopySource;
+  skillToggleTarget?: ReturnType<typeof getLocalSkillToggleTarget>;
+};
+
+type AgentResourceRowProps = {
+  active: boolean;
+  checked: boolean;
+  display: DisplayResource;
+  onCopySkill: AgentResourceListProps["onCopySkill"];
+  onDeleteLocalSkill: AgentResourceListProps["onDeleteLocalSkill"];
+  onDragStart: AgentResourceListProps["onDragStart"];
+  onOpenSkillEntryFile: AgentResourceListProps["onOpenSkillEntryFile"];
+  onOpenSkillFolder: AgentResourceListProps["onOpenSkillFolder"];
+  onSelectResource: AgentResourceListProps["onSelectResource"];
+  onSetLocalSkillEnabled: AgentResourceListProps["onSetLocalSkillEnabled"];
+  onToggleChecked: AgentResourceListProps["onToggleChecked"];
+  onInstallMarketplaceItem: AgentResourceListProps["onInstallMarketplaceItem"];
+  showOriginBadge: boolean;
+  t: AgentResourceListProps["t"];
+};
+
 function renderDiscoveryMeta(
-  resource: AgentDiscoveryItem,
+  display: DisplayResource,
   showOriginBadge: boolean,
-  isAllAgentsView: boolean,
-  t: AgentResourceListProps["t"],
   active: boolean,
   formattedMarketplaceInstalls?: string
 ) {
-  const isLocalSkill = resource.origin === "local" && resource.kind === "skill";
   const badgeClassName = active
     ? "border border-border/70 bg-background/85 px-1.5 py-0.5 text-[9px] leading-3 text-foreground"
     : "bg-muted px-1.5 py-0.5 text-[9px] leading-3 text-muted-foreground";
-  const originLabel =
-    resource.origin === "local" ? t("prototype.badges.local") : t("prototype.badges.marketplace");
 
   return (
     <div
@@ -63,31 +96,30 @@ function renderDiscoveryMeta(
         active ? "text-foreground/75" : "text-muted-foreground"
       )}
     >
-      {showOriginBadge ? <span className={badgeClassName}>{originLabel}</span> : null}
-      {isAllAgentsView && isLocalSkill && resource.agentName ? (
-        <span className={cn("rounded", badgeClassName)}>{resource.agentName}</span>
+      {showOriginBadge ? <span className={badgeClassName}>{display.originLabel}</span> : null}
+      {display.agentBadgeLabel ? (
+        <span className={cn("rounded", badgeClassName)}>{display.agentBadgeLabel}</span>
       ) : null}
-      {isLocalSkill ? (
-        !resource.enabled ? (
-          <span className="rounded border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[9px] leading-3 text-amber-700 dark:text-amber-300">
-            {t("prototype.actions.disabled")}
-          </span>
-        ) : null
+      {display.isDisabled ? (
+        <span className="rounded border border-amber-500/30 bg-amber-500/10 px-1.5 py-0.5 text-[9px] leading-3 text-amber-700 dark:text-amber-300">
+          Disabled
+        </span>
       ) : null}
-      {resource.origin === "marketplace" ? (
+      {display.isMarketplaceResource ? (
         <>
-          <span>{resource.sourceLabel}</span>
+          <span>{display.resource.sourceLabel}</span>
           <span className="inline-flex items-center gap-1 leading-none">
             <Download className="relative top-[-0.5px] h-3 w-3 shrink-0" />
-            {formattedMarketplaceInstalls ?? resource.installs}
+            {formattedMarketplaceInstalls ?? display.resource.installs}
           </span>
         </>
       ) : null}
     </div>
   );
 }
+
 function renderResourceAction(
-  resource: AgentDiscoveryItem,
+  display: DisplayResource,
   onCopySkill: AgentResourceListProps["onCopySkill"],
   onDeleteLocalSkill: AgentResourceListProps["onDeleteLocalSkill"],
   onOpenSkillEntryFile: AgentResourceListProps["onOpenSkillEntryFile"],
@@ -96,99 +128,80 @@ function renderResourceAction(
   onInstallMarketplaceItem: AgentResourceListProps["onInstallMarketplaceItem"],
   t: AgentResourceListProps["t"]
 ) {
-  if (resource.origin === "marketplace") {
+  if (display.isMarketplaceResource) {
     return (
-      <DropdownMenuItem onClick={() => void onInstallMarketplaceItem(resource)}>
-        {t(installStateKey[resource.installState])}
+      <DropdownMenuItem onClick={() => void onInstallMarketplaceItem(display.resource)}>
+        {t(installStateKey[display.resource.installState])}
       </DropdownMenuItem>
     );
   }
 
-  const isSkill = resource.kind === "skill";
-  // Type assertion for skill-specific properties
-  const skillResource = resource as SkillResource & { origin: "local" };
-  const skillPath = isSkill ? (skillResource.skillPath?.trim() ?? "") : "";
-  const entryFilePath = isSkill ? (skillResource.entryFilePath ?? "") : "";
-  const canOpenSkillFolder = skillPath.length > 0;
-  const canEditSkill = isSkill && skillPath.length > 0 && entryFilePath.length > 0;
-  const canDeleteSkill = isSkill && skillPath.length > 0;
-  const canCopySkill =
-    isSkill &&
-    skillPath.length > 0 &&
-    entryFilePath.length > 0 &&
-    (skillResource.ownerAgentId?.length ?? 0) > 0;
-  const skillToggleTarget = getLocalSkillToggleTarget(resource);
+  const canOpenSkillFolder = (display.skillPath?.length ?? 0) > 0;
+  const canEditSkill =
+    display.isLocalSkill &&
+    (display.skillPath?.length ?? 0) > 0 &&
+    (display.entryFilePath?.length ?? 0) > 0;
+  const canDeleteSkill = display.isLocalSkill && (display.skillPath?.length ?? 0) > 0;
+  const canCopySkill = display.copySource != null;
 
   return (
     <>
-      {isSkill ? (
+      {display.isLocalSkill ? (
         <DropdownMenuItem
           disabled={!canOpenSkillFolder}
           onClick={() => {
-            if (canOpenSkillFolder) {
-              onOpenSkillFolder(skillPath);
+            if (canOpenSkillFolder && display.skillPath) {
+              onOpenSkillFolder(display.skillPath);
             }
           }}
         >
           {t("prototype.actions.open")}
         </DropdownMenuItem>
       ) : null}
-      {isSkill && canEditSkill ? (
-        <DropdownMenuItem onClick={() => void onOpenSkillEntryFile(skillPath, entryFilePath)}>
+      {canEditSkill && display.skillPath && display.entryFilePath ? (
+        <DropdownMenuItem
+          onClick={() => void onOpenSkillEntryFile(display.skillPath!, display.entryFilePath!)}
+        >
           {t("prototype.actions.edit")}
         </DropdownMenuItem>
       ) : null}
-      {isSkill && canCopySkill ? (
-        <DropdownMenuItem
-          onClick={() =>
-            onCopySkill({
-              id: skillResource.id,
-              name: skillResource.name,
-              ownerAgentId: skillResource.ownerAgentId ?? "",
-              sourceKind: skillResource.sourceKind ?? "skills",
-              relativePath: skillResource.relativePath ?? "",
-              skillPath,
-              entryFilePath,
-            })
-          }
-        >
+      {canCopySkill ? (
+        <DropdownMenuItem onClick={() => onCopySkill(display.copySource!)}>
           {t("prototype.actions.copy")}
         </DropdownMenuItem>
       ) : null}
-      {skillToggleTarget ? (
+      {display.skillToggleTarget ? (
         <DropdownMenuItem
           onClick={() =>
             void onSetLocalSkillEnabled(
-              skillToggleTarget.skillPath,
-              skillToggleTarget.entryFilePath,
-              !skillToggleTarget.enabled,
-              skillToggleTarget.id
+              display.skillToggleTarget!.skillPath,
+              display.skillToggleTarget!.entryFilePath,
+              !display.skillToggleTarget!.enabled,
+              display.skillToggleTarget!.id
             )
           }
         >
-          {skillToggleTarget.enabled
+          {display.skillToggleTarget.enabled
             ? t("prototype.actions.disable")
             : t("prototype.actions.enable")}
         </DropdownMenuItem>
       ) : null}
-      {isSkill && canDeleteSkill ? (
+      {canDeleteSkill && display.skillPath ? (
         <DropdownMenuItem
           className="text-destructive focus:text-destructive"
-          onClick={() => void onDeleteLocalSkill(skillPath, entryFilePath, skillResource.id)}
+          onClick={() =>
+            void onDeleteLocalSkill(
+              display.skillPath!,
+              display.entryFilePath ?? "",
+              display.resource.id
+            )
+          }
         >
           {t("prototype.actions.delete")}
         </DropdownMenuItem>
       ) : null}
     </>
   );
-}
-
-function isLocalResource(resource: AgentDiscoveryItem): boolean {
-  return resource.origin === "local";
-}
-
-function isSelectedResource(resourceId: string, selectedResourceId: string): boolean {
-  return resourceId === selectedResourceId;
 }
 
 function getCheckboxClassName(active: boolean): string {
@@ -221,6 +234,169 @@ function getMarketplaceActionButtonClassName(active: boolean): string {
   );
 }
 
+const AgentResourceRow = memo(function AgentResourceRow({
+  active,
+  checked,
+  display,
+  onCopySkill,
+  onDeleteLocalSkill,
+  onDragStart,
+  onOpenSkillEntryFile,
+  onOpenSkillFolder,
+  onSelectResource,
+  onSetLocalSkillEnabled,
+  onToggleChecked,
+  onInstallMarketplaceItem,
+  showOriginBadge,
+  t,
+}: AgentResourceRowProps) {
+  const { resource, formattedMarketplaceInstalls, isLocalResource, isMarketplaceResource } =
+    display;
+
+  return (
+    <div
+      draggable={isLocalResource}
+      onDragStart={(event) => onDragStart(event, resource.id)}
+      onClick={() => onSelectResource(resource)}
+      className={getCardClassName(active)}
+    >
+      <div className="flex items-start gap-3">
+        {isLocalResource ? (
+          <Checkbox
+            checked={checked}
+            onCheckedChange={() => onToggleChecked(resource.id)}
+            onClick={(event) => event.stopPropagation()}
+            className={getCheckboxClassName(active)}
+            aria-label={resource.name}
+          />
+        ) : null}
+        <div className="min-w-0 flex-1">
+          <div className={cn("truncate text-sm font-medium", active && "text-foreground")}>
+            {resource.name}
+          </div>
+          {resource.origin === "local" ? (
+            <div className={getSummaryClassName(active)}>{resource.summary}</div>
+          ) : null}
+          {renderDiscoveryMeta(
+            display,
+            showOriginBadge,
+            active,
+            formattedMarketplaceInstalls
+          )}
+        </div>
+        {isMarketplaceResource ? (
+          <Button
+            variant={active ? "secondary" : "outline"}
+            size="xs"
+            className={cn("h-7 px-2 text-xs", getMarketplaceActionButtonClassName(active))}
+            onClick={(event) => {
+              event.stopPropagation();
+              void onInstallMarketplaceItem(resource);
+            }}
+          >
+            {t(installStateKey[resource.installState])}
+          </Button>
+        ) : (
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button
+                variant="ghost"
+                size="icon-xs"
+                className={getActionButtonClassName(active)}
+                onClick={(event) => event.stopPropagation()}
+              >
+                <MoreHorizontal className="h-4 w-4" />
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              {renderResourceAction(
+                display,
+                onCopySkill,
+                onDeleteLocalSkill,
+                onOpenSkillEntryFile,
+                onOpenSkillFolder,
+                onSetLocalSkillEnabled,
+                onInstallMarketplaceItem,
+                t
+              )}
+            </DropdownMenuContent>
+          </DropdownMenu>
+        )}
+      </div>
+    </div>
+  );
+});
+
+function buildDisplayResource(
+  resource: AgentDiscoveryItem,
+  showOriginBadge: boolean,
+  isAllAgentsView: boolean,
+  t: AgentResourceListProps["t"]
+): DisplayResource {
+  const isLocalResource = resource.origin === "local";
+  const isMarketplaceResource = resource.origin === "marketplace";
+  const isLocalSkill = isLocalResource && resource.kind === "skill";
+  const originLabel = isLocalResource
+    ? t("prototype.badges.local")
+    : t("prototype.badges.marketplace");
+  const formattedMarketplaceInstalls = resource.formattedInstalls;
+
+  if (!isLocalSkill) {
+    return {
+      resource,
+      formattedMarketplaceInstalls,
+      isLocalResource,
+      isMarketplaceResource,
+      isLocalSkill,
+      originLabel,
+      agentBadgeLabel: undefined,
+      isDisabled: false,
+    };
+  }
+
+  const skillResource = resource as SkillResource & { origin: "local" };
+  const skillPath = skillResource.skillPath?.trim() ?? "";
+  const entryFilePath = skillResource.entryFilePath ?? "";
+  const copySource =
+    skillPath.length > 0 &&
+    entryFilePath.length > 0 &&
+    (skillResource.ownerAgentId?.length ?? 0) > 0
+      ? {
+          id: skillResource.id,
+          name: skillResource.name,
+          ownerAgentId: skillResource.ownerAgentId ?? "",
+          sourceKind: skillResource.sourceKind ?? "skills",
+          relativePath: skillResource.relativePath ?? "",
+          skillPath,
+          entryFilePath,
+        }
+      : undefined;
+
+  return {
+    resource,
+    formattedMarketplaceInstalls,
+    isLocalResource,
+    isMarketplaceResource,
+    isLocalSkill,
+    originLabel,
+    agentBadgeLabel:
+      showOriginBadge && isAllAgentsView && resource.agentName ? resource.agentName : undefined,
+    isDisabled: !resource.enabled,
+    skillPath,
+    entryFilePath,
+    copySource,
+    skillToggleTarget: getLocalSkillToggleTarget(resource),
+  };
+}
+
+function estimateDisplayResourceHeight(display: DisplayResource | undefined): number {
+  if (!display) {
+    return VIRTUAL_LOCAL_ROW_HEIGHT;
+  }
+
+  return display.isMarketplaceResource ? VIRTUAL_MARKETPLACE_ROW_HEIGHT : VIRTUAL_LOCAL_ROW_HEIGHT;
+}
+
 export function AgentResourceList({
   checkedIds,
   filteredResources,
@@ -235,94 +411,124 @@ export function AgentResourceList({
   onSetLocalSkillEnabled,
   onToggleChecked,
   onInstallMarketplaceItem,
+  scrollContainerRef,
   selectedResourceId,
   t,
 }: AgentResourceListProps) {
-  const { i18n } = useTranslation();
+  const checkedIdSet = useMemo(() => new Set(checkedIds), [checkedIds]);
+  const displayResources = useMemo(
+    () =>
+      filteredResources.map((resource) =>
+        buildDisplayResource(resource, showOriginBadge, isAllAgentsView, t)
+      ),
+    [filteredResources, showOriginBadge, isAllAgentsView, t]
+  );
+  const shouldVirtualize = filteredResources.length >= VIRTUALIZATION_THRESHOLD;
+
+  // TanStack Virtual exposes imperative instance methods by design.
+  // This integration stays local to the list component and does not rely on React Compiler memoization.
+  // eslint-disable-next-line react-hooks/incompatible-library
+  const rowVirtualizer = useVirtualizer({
+    count: displayResources.length,
+    estimateSize: (index) => estimateDisplayResourceHeight(displayResources[index]),
+    gap: VIRTUAL_ROW_GAP,
+    getItemKey: (index) => displayResources[index]?.resource.id ?? index,
+    getScrollElement: () => scrollContainerRef.current,
+    overscan: 4,
+    useFlushSync: false,
+  });
+  const virtualRows = rowVirtualizer.getVirtualItems();
+
+  useEffect(() => {
+    if (!shouldVirtualize) {
+      return;
+    }
+
+    rowVirtualizer.measure();
+  }, [displayResources, rowVirtualizer, shouldVirtualize]);
+
+  useEffect(() => {
+    if (!shouldVirtualize) {
+      return;
+    }
+
+    const selectedIndex = filteredResources.findIndex(
+      (resource) => resource.id === selectedResourceId
+    );
+    if (selectedIndex < 0) {
+      return;
+    }
+
+    rowVirtualizer.scrollToIndex(selectedIndex, { align: "auto" });
+  }, [filteredResources, rowVirtualizer, selectedResourceId, shouldVirtualize]);
+
+  if (!shouldVirtualize) {
+    return (
+      <div className="space-y-1">
+        {displayResources.map((display) => (
+          <AgentResourceRow
+            key={display.resource.id}
+            active={display.resource.id === selectedResourceId}
+            checked={checkedIdSet.has(display.resource.id)}
+            display={display}
+            onCopySkill={onCopySkill}
+            onDeleteLocalSkill={onDeleteLocalSkill}
+            onDragStart={onDragStart}
+            onOpenSkillEntryFile={onOpenSkillEntryFile}
+            onOpenSkillFolder={onOpenSkillFolder}
+            onSelectResource={onSelectResource}
+            onSetLocalSkillEnabled={onSetLocalSkillEnabled}
+            onToggleChecked={onToggleChecked}
+            onInstallMarketplaceItem={onInstallMarketplaceItem}
+            showOriginBadge={showOriginBadge}
+            t={t}
+          />
+        ))}
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-1">
-      {filteredResources.map((resource) => {
-        const active = isSelectedResource(resource.id, selectedResourceId);
-        const isMarketplaceResource = resource.origin === "marketplace";
-        const formattedInstalls =
-          resource.origin === "marketplace"
-            ? formatInstallCount(resource.installs, i18n.language)
-            : null;
+    <div
+      className="relative w-full"
+      style={{
+        height: `${rowVirtualizer.getTotalSize()}px`,
+      }}
+    >
+      {virtualRows.map((virtualRow) => {
+        const item = displayResources[virtualRow.index];
+        if (!item) {
+          return null;
+        }
+        const display = item;
+        const { resource } = display;
 
         return (
           <div
-            key={resource.id}
-            draggable={isLocalResource(resource)}
-            onDragStart={(event) => onDragStart(event, resource.id)}
-            onClick={() => onSelectResource(resource)}
-            className={getCardClassName(active)}
+            key={virtualRow.key}
+            data-index={virtualRow.index}
+            ref={rowVirtualizer.measureElement}
+            className="absolute top-0 left-0 w-full"
+            style={{
+              transform: `translateY(${virtualRow.start}px)`,
+            }}
           >
-            <div className="flex items-start gap-3">
-              {isLocalResource(resource) ? (
-                <Checkbox
-                  checked={checkedIds.includes(resource.id)}
-                  onCheckedChange={() => onToggleChecked(resource.id)}
-                  onClick={(event) => event.stopPropagation()}
-                  className={getCheckboxClassName(active)}
-                  aria-label={resource.name}
-                />
-              ) : null}
-              <div className="min-w-0 flex-1">
-                <div className={cn("truncate text-sm font-medium", active && "text-foreground")}>
-                  {resource.name}
-                </div>
-                {resource.origin === "local" ? (
-                  <div className={getSummaryClassName(active)}>{resource.summary}</div>
-                ) : null}
-                {renderDiscoveryMeta(
-                  resource,
-                  showOriginBadge,
-                  isAllAgentsView,
-                  t,
-                  active,
-                  formattedInstalls ?? undefined
-                )}
-              </div>
-              {isMarketplaceResource ? (
-                <Button
-                  variant={active ? "secondary" : "outline"}
-                  size="xs"
-                  className={cn("h-7 px-2 text-xs", getMarketplaceActionButtonClassName(active))}
-                  onClick={(event) => {
-                    event.stopPropagation();
-                    void onInstallMarketplaceItem(resource);
-                  }}
-                >
-                  {t(installStateKey[resource.installState])}
-                </Button>
-              ) : (
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <Button
-                      variant="ghost"
-                      size="icon-xs"
-                      className={getActionButtonClassName(active)}
-                      onClick={(event) => event.stopPropagation()}
-                    >
-                      <MoreHorizontal className="h-4 w-4" />
-                    </Button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent align="end">
-                    {renderResourceAction(
-                      resource,
-                      onCopySkill,
-                      onDeleteLocalSkill,
-                      onOpenSkillEntryFile,
-                      onOpenSkillFolder,
-                      onSetLocalSkillEnabled,
-                      onInstallMarketplaceItem,
-                      t
-                    )}
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              )}
-            </div>
+            <AgentResourceRow
+              active={resource.id === selectedResourceId}
+              checked={checkedIdSet.has(resource.id)}
+              display={display}
+              onCopySkill={onCopySkill}
+              onDeleteLocalSkill={onDeleteLocalSkill}
+              onDragStart={onDragStart}
+              onOpenSkillEntryFile={onOpenSkillEntryFile}
+              onOpenSkillFolder={onOpenSkillFolder}
+              onSelectResource={onSelectResource}
+              onSetLocalSkillEnabled={onSetLocalSkillEnabled}
+              onToggleChecked={onToggleChecked}
+              onInstallMarketplaceItem={onInstallMarketplaceItem}
+              showOriginBadge={showOriginBadge}
+              t={t}
+            />
           </div>
         );
       })}

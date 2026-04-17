@@ -303,6 +303,7 @@ export type MarketplaceDiscoveryFields = {
   version: string;
   author: string;
   installs: number;
+  formattedInstalls?: string;
   description: string;
   highlights: string[];
   url?: string;
@@ -317,6 +318,7 @@ export type LocalDiscoveryFields = {
   version?: undefined;
   author?: undefined;
   installs?: undefined;
+  formattedInstalls?: undefined;
   description: string;
   highlights: string[];
   usageLabel: number;

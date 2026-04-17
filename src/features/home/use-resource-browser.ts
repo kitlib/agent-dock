@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { useTranslation } from "react-i18next";
 import { marketplaceItems as mockMarketplaceItems } from "@/features/marketplace/mock";
 import { useSkillsshMarketplaceQuery } from "@/features/marketplace/queries";
 import {
@@ -8,6 +9,7 @@ import {
   sortDiscoveryItems,
 } from "@/features/resources/core/discovery";
 import { resourcesByKind } from "@/features/resources/core/resource-catalog";
+import { formatInstallCount } from "@/lib/utils";
 import type {
   AgentDiscoveryItem,
   MarketplaceInstallStateLabel,
@@ -17,7 +19,8 @@ import type {
 } from "@/features/agents/types";
 
 function clearUnavailableCheckedIds(ids: string[], resources: AgentDiscoveryItem[]) {
-  return ids.filter((id) => resources.some((resource) => resource.id === id));
+  const availableIds = new Set(resources.map((resource) => resource.id));
+  return ids.filter((id) => availableIds.has(id));
 }
 
 export function useResourceBrowser(
@@ -25,6 +28,7 @@ export function useResourceBrowser(
   selectedAgent: ResolvedAgentView | null,
   skills: SkillResource[]
 ) {
+  const { i18n } = useTranslation();
   const [activeKind, setActiveKind] = useState<ResourceKind>("skill");
   const [selectedResourceId, setSelectedResourceId] = useState("");
   const [checkedIds, setCheckedIds] = useState<string[]>([]);
@@ -84,8 +88,15 @@ export function useResourceBrowser(
     return sortDiscoveryItems(
       filterDiscoveryItems(discoveryItems, normalizedSearch, { includeMarketplaceWhenEmpty }),
       normalizedSearch
+    ).map((resource) =>
+      resource.origin === "marketplace"
+        ? {
+            ...resource,
+            formattedInstalls: formatInstallCount(resource.installs, i18n.language),
+          }
+        : resource
     );
-  }, [discoveryItems, normalizedSearch]);
+  }, [discoveryItems, i18n.language, normalizedSearch]);
 
   useEffect(() => {
     setCheckedIds((current) => clearUnavailableCheckedIds(current, filteredResources));
@@ -97,15 +108,18 @@ export function useResourceBrowser(
     setSelectedResourceId("");
   }, [filteredResources, selectedResourceId]);
 
+  const filteredResourceMap = useMemo(
+    () => new Map(filteredResources.map((resource) => [resource.id, resource])),
+    [filteredResources]
+  );
+
   const selectedResourceBase =
-    filteredResources.find((resource) => resource.id === selectedResourceId) ??
-    filteredResources[0] ??
-    null;
+    filteredResourceMap.get(selectedResourceId) ?? filteredResources[0] ?? null;
 
   const selectedResource = selectedResourceBase;
 
   const toggleChecked = (id: string) => {
-    const item = filteredResources.find((resource) => resource.id === id);
+    const item = filteredResourceMap.get(id);
     if (!item || item.origin !== "local") {
       return;
     }

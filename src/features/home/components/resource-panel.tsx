@@ -1,4 +1,4 @@
-import { type DragEvent, useState } from "react";
+import { useMemo, useRef, useState, type DragEvent } from "react";
 import { Copy, Loader2, Search } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { ButtonGroup } from "@/components/ui/button-group";
@@ -86,42 +86,54 @@ export function AgentResourcePanel({
   t,
 }: AgentResourcePanelProps) {
   const [sourceFilter, setSourceFilter] = useState<ResourceSourceFilter>("all");
-  const sourceCounts: Record<ResourceSourceFilter, number> = {
-    all: filteredResources.length,
-    local: filteredResources.filter((resource) => resource.origin === "local").length,
-    marketplace: filteredResources.filter((resource) => resource.origin === "marketplace").length,
-  };
+  const scrollContainerRef = useRef<HTMLDivElement | null>(null);
+  const sourceCounts = useMemo(() => {
+    return filteredResources.reduce<Record<ResourceSourceFilter, number>>(
+      (counts, resource) => {
+        counts.all += 1;
+        counts[resource.origin] += 1;
+        return counts;
+      },
+      { all: 0, local: 0, marketplace: 0 }
+    );
+  }, [filteredResources]);
 
-  const visibleResources = filteredResources.filter((resource) => {
-    if (sourceFilter === "all") {
-      return true;
-    }
-
-    return resource.origin === sourceFilter;
-  });
-
-  const visibleCheckedIds = checkedIds.filter((id) =>
-    visibleResources.some((resource) => resource.id === id)
+  const visibleResources = useMemo(
+    () =>
+      filteredResources.filter((resource) =>
+        sourceFilter === "all" ? true : resource.origin === sourceFilter
+      ),
+    [filteredResources, sourceFilter]
   );
-  const visibleLocalResources = visibleResources.filter((resource) => resource.origin === "local");
-  const hasToggleableSkill = visibleResources.some((resource) => {
-    if (!visibleCheckedIds.includes(resource.id)) {
-      return false;
-    }
 
-    return getLocalSkillToggleTarget(resource) != null;
-  });
-  const hasEnabledSkill = visibleResources.some((resource) => {
-    if (!visibleCheckedIds.includes(resource.id)) {
-      return false;
-    }
+  const visibleResourceMap = useMemo(
+    () => new Map(visibleResources.map((resource) => [resource.id, resource])),
+    [visibleResources]
+  );
 
-    return getLocalSkillToggleTarget(resource)?.enabled ?? false;
-  });
-  const hasCopyableSkills = visibleCheckedIds.some((id) => {
-    const resource = visibleResources.find((candidate) => candidate.id === id);
-    return resource?.origin === "local" && resource.kind === "skill";
-  });
+  const visibleCheckedIds = useMemo(
+    () => checkedIds.filter((id) => visibleResourceMap.has(id)),
+    [checkedIds, visibleResourceMap]
+  );
+  const visibleCheckedIdSet = useMemo(() => new Set(visibleCheckedIds), [visibleCheckedIds]);
+  const visibleLocalResources = useMemo(
+    () => visibleResources.filter((resource) => resource.origin === "local"),
+    [visibleResources]
+  );
+  const selectedCheckedResources = useMemo(
+    () =>
+      visibleResources.filter(
+        (resource) => visibleCheckedIdSet.has(resource.id) && resource.origin === "local"
+      ),
+    [visibleCheckedIdSet, visibleResources]
+  );
+  const hasToggleableSkill = selectedCheckedResources.some(
+    (resource) => getLocalSkillToggleTarget(resource) != null
+  );
+  const hasEnabledSkill = selectedCheckedResources.some(
+    (resource) => getLocalSkillToggleTarget(resource)?.enabled ?? false
+  );
+  const hasCopyableSkills = selectedCheckedResources.some((resource) => resource.kind === "skill");
 
   return (
     <section className="flex h-full min-w-0 flex-col overflow-hidden">
@@ -209,7 +221,7 @@ export function AgentResourcePanel({
               disabled={!hasCopyableSkills}
               onClick={() => {
                 const sources: LocalSkillCopySource[] = visibleCheckedIds
-                  .map((id) => visibleResources.find((resource) => resource.id === id))
+                  .map((id) => visibleResourceMap.get(id))
                   .filter(
                     (resource): resource is NonNullable<typeof resource> =>
                       resource != null && resource.origin === "local" && resource.kind === "skill"
@@ -244,7 +256,7 @@ export function AgentResourcePanel({
         </div>
       ) : null}
 
-      <div className="flex-1 overflow-auto px-3 py-2">
+      <div ref={scrollContainerRef} className="flex-1 overflow-auto px-3 py-2">
         {visibleResources.length === 0 ? (
           <div className="text-muted-foreground flex h-full items-center justify-center text-sm">
             {search ? t("prototype.noResults") : t("prototype.emptyList")}
@@ -265,6 +277,7 @@ export function AgentResourcePanel({
               onSetLocalSkillEnabled={onSetLocalSkillEnabled}
               onToggleChecked={onToggleChecked}
               onInstallMarketplaceItem={onInstallMarketplaceItem}
+              scrollContainerRef={scrollContainerRef}
               selectedResourceId={selectedResourceId}
               t={t}
             />
