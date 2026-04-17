@@ -492,6 +492,7 @@ export default function HomePage() {
             panelRef={leftPanelRef}
             defaultSize="18%"
             minSize={180}
+            maxSize={320}
             collapsedSize={leftPanelCollapsedSize}
             collapsible
             onResize={() => setIsRailCollapsed(leftPanelRef.current?.isCollapsed() ?? false)}
@@ -524,7 +525,7 @@ export default function HomePage() {
             </ResizablePanel>
           ) : (
             <>
-              <ResizablePanel defaultSize="30%" minSize={420}>
+              <ResizablePanel defaultSize="30%" minSize={420} maxSize={640}>
                 <AgentResourcePanel
                   activeKind={activeKind}
                   checkedIds={checkedIds}
@@ -555,7 +556,7 @@ export default function HomePage() {
 
               <ResizableHandle />
 
-              <ResizablePanel defaultSize="52%" minSize={200}>
+              <ResizablePanel defaultSize="52%" minSize={320}>
                 <AgentDetailPanel
                   allAgentsDescription={t("prototype.detail.allAgentsDescription")}
                   allAgentsSkillCount={

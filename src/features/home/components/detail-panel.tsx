@@ -1,5 +1,6 @@
 import { useState } from "react";
 import { openUrl } from "@tauri-apps/plugin-opener";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import {
   Dialog,
@@ -22,6 +23,7 @@ import {
 } from "@/features/home/local-skill-toggle";
 import { AgentResourceDetail } from "@/features/resources/core/components/resource-detail";
 import { installStateKey } from "@/features/shared/constants";
+import { formatInstallCount } from "@/lib/utils";
 
 function compactHomePath(path: string | undefined): string | undefined {
   if (!path) {
@@ -167,6 +169,7 @@ export function AgentDetailPanel({
   selectedResource,
   t,
 }: AgentDetailPanelProps) {
+  const { i18n } = useTranslation();
   const [isUpdatingSkillEnabled, setIsUpdatingSkillEnabled] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeletingSkill, setIsDeletingSkill] = useState(false);
@@ -195,6 +198,10 @@ export function AgentDetailPanel({
         emptyDescription ??
         t("prototype.emptySelection"));
   const skillAndCommandCount = getAgentSkillAndCommandCount(selectedAgent);
+  const formattedMarketplaceInstalls =
+    selectedResource?.origin === "marketplace"
+      ? formatInstallCount(selectedResource.installs, i18n.language)
+      : null;
 
   const handleToggleSkill = async () => {
     if (!skillToggleTarget || !onSetLocalSkillEnabled) {
@@ -333,7 +340,7 @@ export function AgentDetailPanel({
                 />
                 <InlineMetaItem
                   label={t("prototype.detail.installs")}
-                  value={selectedResource.installs}
+                  value={formattedMarketplaceInstalls ?? selectedResource.installs}
                   tone="amber"
                 />
               </>

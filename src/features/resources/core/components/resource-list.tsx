@@ -1,5 +1,6 @@
 import type { DragEvent } from "react";
 import { Download, MoreHorizontal } from "lucide-react";
+import { useTranslation } from "react-i18next";
 import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import {
@@ -8,7 +9,7 @@ import {
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
-import { cn } from "@/lib/utils";
+import { cn, formatInstallCount } from "@/lib/utils";
 import type {
   AgentDiscoveryItem,
   LocalSkillCopySource,
@@ -45,7 +46,8 @@ function renderDiscoveryMeta(
   showOriginBadge: boolean,
   isAllAgentsView: boolean,
   t: AgentResourceListProps["t"],
-  active: boolean
+  active: boolean,
+  formattedMarketplaceInstalls?: string
 ) {
   const isLocalSkill = resource.origin === "local" && resource.kind === "skill";
   const badgeClassName = active
@@ -74,10 +76,10 @@ function renderDiscoveryMeta(
       ) : null}
       {resource.origin === "marketplace" ? (
         <>
-          <span>{resource.author}</span>
+          <span>{resource.sourceLabel}</span>
           <span className="inline-flex items-center gap-1 leading-none">
             <Download className="relative top-[-0.5px] h-3 w-3 shrink-0" />
-            {resource.installs}
+            {formattedMarketplaceInstalls ?? resource.installs}
           </span>
         </>
       ) : null}
@@ -236,11 +238,17 @@ export function AgentResourceList({
   selectedResourceId,
   t,
 }: AgentResourceListProps) {
+  const { i18n } = useTranslation();
+
   return (
     <div className="space-y-1">
       {filteredResources.map((resource) => {
         const active = isSelectedResource(resource.id, selectedResourceId);
         const isMarketplaceResource = resource.origin === "marketplace";
+        const formattedInstalls =
+          resource.origin === "marketplace"
+            ? formatInstallCount(resource.installs, i18n.language)
+            : null;
 
         return (
           <div
@@ -267,7 +275,14 @@ export function AgentResourceList({
                 {resource.origin === "local" ? (
                   <div className={getSummaryClassName(active)}>{resource.summary}</div>
                 ) : null}
-                {renderDiscoveryMeta(resource, showOriginBadge, isAllAgentsView, t, active)}
+                {renderDiscoveryMeta(
+                  resource,
+                  showOriginBadge,
+                  isAllAgentsView,
+                  t,
+                  active,
+                  formattedInstalls ?? undefined
+                )}
               </div>
               {isMarketplaceResource ? (
                 <Button

@@ -15,7 +15,7 @@ use crate::services::marketplace_service;
 pub async fn fetch_skillssh_leaderboard(
     board: Option<String>,
 ) -> Result<Vec<MarketplaceItemDto>, String> {
-    let board_value = board.unwrap_or_else(|| "hot".to_string());
+    let board_value = board.unwrap_or_else(|| "all-time".to_string());
 
     tauri::async_runtime::spawn_blocking(move || {
         skillssh_scanner::fetch_leaderboard(LeaderboardType::from_str(&board_value)).map(|skills| {

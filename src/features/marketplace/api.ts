@@ -8,7 +8,7 @@ import type {
   MarketplaceSkillUpdateCheck,
 } from "./types";
 
-export async function fetchSkillsshLeaderboard(board = "hot") {
+export async function fetchSkillsshLeaderboard(board = "all-time") {
   return invoke<MarketplaceItem[]>("fetch_skillssh_leaderboard", { board });
 }
 
