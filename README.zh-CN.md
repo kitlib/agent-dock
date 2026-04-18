@@ -9,7 +9,7 @@
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?logo=typescript)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/License-MIT-green)](./LICENSE)
 
-基于 Tauri v2 + React 19 + TypeScript + shadcn/ui 的现代桌面应用。
+一个用于浏览、管理和编排本地 AI 工具资源的桌面应用，面向多种 Agent 生态。
 
 </div>
 
@@ -19,17 +19,14 @@
 
 ## 特点
 
-- ✨ **现代化技术栈** - Tauri v2 + React 19 + TypeScript + Vite
-- 🎨 **精美 UI 组件** - 集成 shadcn/ui 组件库和 Tailwind CSS v4
-- 🌓 **暗色模式支持** - 内置亮色/暗色主题切换
-- 🌍 **国际化支持** - 集成 i18next，支持中英文切换
-- 🖼️ **自定义标题栏** - 无边框透明窗口，支持拖拽、最小化、最大化、关闭
-- 🗂️ **多窗口管理** - 支持创建子窗口、窗口生命周期管理、延迟销毁机制
-- 🔔 **系统托盘集成** - 支持托盘图标、菜单和窗口隐藏/显示
-- ⌨️ **全局快捷键** - 支持注册全局快捷键，应用未聚焦时也能响应
-- 🔄 **自动发布与更新** - 支持基于 `vX.Y.Z` 标签的 GitHub Actions 自动构建、Release 发布与自动更新
-- 📦 **开箱即用** - 预配置 Prettier、ESLint 和 TypeScript 严格模式
-- 🚀 **快速开发** - Vite HMR + Tauri 热重载
+- 🤖 **本地 Agent 管理** - 发现、导入、创建、移除并查看不同 AI 工具体系下的本地 Agent
+- 🧩 **Skill 发现与维护** - 扫描 `skills/` 与 `commands/`，查看详情，启停 Skill，打开文件，删除并跨 Agent 复制
+- 🛒 **Skill Marketplace 集成** - 通过 `skills.sh` 浏览、搜索、查看详情、安装和更新 Marketplace Skill
+- 🔌 **本地 MCP 管理** - 支持 `Claude Code`、`Codex CLI`、`Gemini CLI`、`OpenCode` 的本地 MCP 发现与管理
+- 📥 **MCP JSON 导入** - 粘贴 MCP JSON，预览冲突后导入到当前支持的本地 Agent 配置
+- 🏠 **统一工作区体验** - 以单一 `Home / Agents` 工作区承载 Agent、Skill、MCP 等资源操作
+- 🔔 **桌面壳能力** - 系统托盘、全局快捷键、单实例行为以及更新相关桌面流程
+- 🌍 **国际化支持** - 基于 i18next 提供中英文界面
 
 ## 技术栈
 
@@ -120,26 +117,25 @@ cargo check --manifest-path src-tauri/Cargo.toml
 
 ```
 .
-├── src/                    # 前端源码
-│   ├── components/         # React 组件
-│   │   └── ui/            # shadcn/ui 组件
-│   ├── i18n/              # 国际化
-│   │   ├── index.ts       # i18n 配置
-│   │   └── locales/       # 翻译文件
-│   ├── lib/               # 工具函数
-│   ├── pages/             # 页面组件
-│   │   ├── home.tsx       # 主窗口页面
-│   │   ├── about.tsx      # 关于窗口页面
-│   │   └── settings.tsx   # 设置窗口页面
-│   └── main.tsx           # 前端入口和基于 pathname 的页面选择器
-├── src-tauri/             # Tauri/Rust 后端
-│   ├── src/               # Rust 源码
-│   └── tauri.conf.json    # Tauri 配置
-├── docs/                  # 文档
-│   ├── AUTO_UPDATE.zh-CN.md # 自动更新指南
-│   ├── I18N.zh-CN.md      # 国际化指南
-│   └── GLOBAL_SHORTCUT.zh-CN.md # 全局快捷键指南
-├── components.json        # shadcn/ui 配置
+├── src/                           # 前端源码
+│   ├── components/                # 共享 React 组件
+│   │   └── ui/                    # shadcn/ui 封装
+│   ├── features/                  # 领域功能模块
+│   │   ├── agents/                # Agent 发现与管理
+│   │   ├── home/                  # 工作区与资源浏览
+│   │   ├── marketplace/           # skills.sh 集成
+│   │   └── resources/             # 共享资源渲染
+│   ├── i18n/                      # 国际化
+│   ├── pages/                     # 窗口页面
+│   └── main.tsx                   # 前端入口与基于 pathname 的页面选择器
+├── src-tauri/                     # Tauri/Rust 后端
+│   ├── src/commands/              # Tauri 命令层
+│   ├── src/scanners/              # 本地发现扫描器
+│   ├── src/services/              # 领域编排逻辑
+│   ├── src/persistence/           # 本地持久化状态
+│   └── tauri.conf.json            # Tauri 配置
+├── docs/                          # 产品与实现文档
+├── components.json                # shadcn/ui 配置
 └── package.json
 ```
 

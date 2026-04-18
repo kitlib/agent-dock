@@ -1,4 +1,4 @@
-<div align="center">
+﻿<div align="center">
 
 # AgentDock
 
@@ -9,7 +9,7 @@ English | [简体中文](./README.zh-CN.md)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.6-3178C6?logo=typescript)](https://www.typescriptlang.org/)
 [![License](https://img.shields.io/badge/License-MIT-green)](./LICENSE)
 
-A modern desktop application built with Tauri v2 + React 19 + TypeScript + shadcn/ui.
+A desktop application for browsing, managing, and composing local AI tooling resources across multiple agent ecosystems.
 
 </div>
 
@@ -19,17 +19,14 @@ A modern desktop application built with Tauri v2 + React 19 + TypeScript + shadc
 
 ## Features
 
-- ✨ **Modern Tech Stack** - Tauri v2 + React 19 + TypeScript + Vite
-- 🎨 **Beautiful UI Components** - Integrated shadcn/ui component library and Tailwind CSS v4
-- 🌓 **Dark Mode Support** - Built-in light/dark theme toggle
+- 🤖 **Local Agent Management** - Discover, import, create, remove, and inspect local AI agents from different tooling ecosystems
+- 🧩 **Skill Discovery And Maintenance** - Scan `skills/` and `commands/`, inspect details, enable or disable skills, open files, delete, and copy across agents
+- 🛒 **Skill Marketplace Integration** - Browse, search, inspect, install, and update marketplace-backed skills through `skills.sh`
+- 🔌 **Local MCP Management** - Discover and manage local MCP servers for `Claude Code`, `Codex CLI`, `Gemini CLI`, and `OpenCode`
+- 📥 **MCP JSON Import** - Paste MCP JSON, preview conflicts, and import config into supported local agent runtimes
+- 🏠 **Unified Home Workspace** - Work from a single `Home / Agents` experience instead of separate resource pages
+- 🔔 **Desktop Shell Behavior** - System tray, global shortcuts, single-instance behavior, and updater-ready desktop flows
 - 🌍 **Internationalization** - i18next integration with English and Chinese support
-- 🖼️ **Custom Titlebar** - Frameless transparent window with drag, minimize, maximize, and close support
-- 🗂️ **Multi-Window Management** - Support for child windows, window lifecycle management, and delayed destruction
-- 🔔 **System Tray Integration** - Tray icon, menu, and window show/hide support
-- ⌨️ **Global Shortcuts** - Register global shortcuts that work even when app is not focused
-- 🔄 **Automated Release & Updates** - GitHub Actions build, GitHub Release publishing, and auto-update delivery based on `vX.Y.Z` tags
-- 📦 **Ready to Use** - Pre-configured with Prettier, ESLint, and TypeScript strict mode
-- 🚀 **Fast Development** - Vite HMR + Tauri hot reload
 
 ## Tech Stack
 
@@ -120,26 +117,25 @@ cargo check --manifest-path src-tauri/Cargo.toml
 
 ```
 .
-├── src/                    # Frontend source code
-│   ├── components/         # React components
-│   │   └── ui/            # shadcn/ui components
-│   ├── i18n/              # Internationalization
-│   │   ├── index.ts       # i18n configuration
-│   │   └── locales/       # Translation files
-│   ├── lib/               # Utility functions
-│   ├── pages/             # Page components
-│   │   ├── home.tsx       # Main window page
-│   │   ├── about.tsx      # About window page
-│   │   └── settings.tsx   # Settings window page
-│   └── main.tsx           # Frontend entry and pathname-based page selector
-├── src-tauri/             # Tauri/Rust backend
-│   ├── src/               # Rust source code
-│   └── tauri.conf.json    # Tauri configuration
-├── docs/                  # Documentation
-│   ├── AUTO_UPDATE.md     # Auto update guide
-│   ├── I18N.md            # Internationalization guide
-│   └── GLOBAL_SHORTCUT.md # Global shortcut guide
-├── components.json        # shadcn/ui configuration
+├── src/                           # Frontend source code
+│   ├── components/                # Shared React components
+│   │   └── ui/                    # shadcn/ui wrappers
+│   ├── features/                  # Domain features
+│   │   ├── agents/                # Agent discovery and management
+│   │   ├── home/                  # Workspace flows and resource browser
+│   │   ├── marketplace/           # skills.sh integration
+│   │   └── resources/             # Shared resource rendering
+│   ├── i18n/                      # Internationalization
+│   ├── pages/                     # Window pages
+│   └── main.tsx                   # Frontend entry and pathname-based page selector
+├── src-tauri/                     # Tauri/Rust backend
+│   ├── src/commands/              # Tauri command surface
+│   ├── src/scanners/              # Local discovery scanners
+│   ├── src/services/              # Domain orchestration
+│   ├── src/persistence/           # Local managed state
+│   └── tauri.conf.json            # Tauri configuration
+├── docs/                          # Product and implementation docs
+├── components.json                # shadcn/ui configuration
 └── package.json
 ```
 
