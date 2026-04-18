@@ -17,6 +17,7 @@ export type AgentTypeId =
   | "crush"
   | "cursor"
   | "factory"
+  | "gemini"
   | "github-copilot"
   | "goose"
   | "iflow"
@@ -53,7 +54,7 @@ export type AgentTypeMeta = {
   commands: string | null;
   agents: string | null;
   skills: string | null;
-  mcp: string | null;
+  mcp: string;
 };
 
 export type AgentTypeMetaMap = Record<AgentTypeId, AgentTypeMeta>;
@@ -189,6 +190,23 @@ export type SkillScanTarget = {
   source: "skills" | "commands";
 };
 
+export type McpScanTarget = {
+  agentId: string;
+  agentType: AgentTypeId;
+  rootPath: string;
+  displayName: string;
+};
+
+export type LocalMcpImportConflictStrategy = "overwrite" | "skip";
+
+export type ImportLocalMcpResult = {
+  configPath: string;
+  importedCount: number;
+  skippedCount: number;
+  importedNames: string[];
+  skippedNames: string[];
+};
+
 export type SkillResource = {
   id: string;
   kind: "skill";
@@ -270,6 +288,15 @@ export type McpResource = {
   updatedAt: string;
   document: string;
   config: string;
+  ownerAgentId?: string | null;
+  sourceLabel?: string;
+  agentType?: string;
+  agentName?: string;
+  configPath?: string;
+  scope?: string;
+  projectPath?: string | null;
+  warnings?: string[];
+  errors?: string[];
 };
 
 export type SubagentResource = {

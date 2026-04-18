@@ -2,13 +2,15 @@ import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   checkMarketplaceSkillUpdate,
   getLocalSkillDetail,
+  listLocalMcps,
   listLocalSkills,
 } from "@/features/agents/api";
-import type { SkillResource, SkillScanTarget } from "@/features/agents/types";
+import type { McpResource, McpScanTarget, SkillResource, SkillScanTarget } from "@/features/agents/types";
 
 const AGENT_SKILLS_QUERY_KEY = "agent-skills";
 const AGENT_SKILL_DETAIL_QUERY_KEY = "agent-skill-detail";
 const MARKETPLACE_SKILL_UPDATE_QUERY_KEY = "marketplace-skill-update";
+const AGENT_MCPS_QUERY_KEY = "agent-mcps";
 
 function normalizeSkills(skills: SkillResource[]): SkillResource[] {
   return skills.map((skill) => ({ ...skill, markdown: skill.markdown ?? "" }));
@@ -82,6 +84,45 @@ export function useRefreshAgentSkills() {
         queryKey: [AGENT_SKILL_DETAIL_QUERY_KEY, scopeKey, skillId],
       });
     }
+  };
+}
+
+export function useAgentMcpsQuery(scopeKey: string, targets: McpScanTarget[]) {
+  const targetKey = targets.map((target) => `${target.agentId}:${target.rootPath}`).join("|");
+
+  const query = useQuery({
+    queryKey: [AGENT_MCPS_QUERY_KEY, scopeKey, targetKey],
+    enabled: scopeKey.length > 0,
+    queryFn: async () => {
+      if (targets.length === 0) {
+        return [] as McpResource[];
+      }
+
+      return listLocalMcps(targets);
+    },
+    staleTime: 0,
+    gcTime: 30 * 60 * 1000,
+    refetchOnWindowFocus: false,
+    retry: 0,
+  });
+
+  return {
+    mcps: query.data ?? [],
+    isFetchingMcps: query.isFetching,
+  };
+}
+
+export function useRefreshAgentMcps() {
+  const queryClient = useQueryClient();
+
+  return (scopeKey: string) => {
+    if (!scopeKey) {
+      return;
+    }
+
+    void queryClient.invalidateQueries({
+      queryKey: [AGENT_MCPS_QUERY_KEY, scopeKey],
+    });
   };
 }
 

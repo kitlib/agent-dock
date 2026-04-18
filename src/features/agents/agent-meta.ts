@@ -1,6 +1,12 @@
 import type { AgentTypeMetaMap } from "./types";
 
-export const agentTypeMeta: AgentTypeMetaMap = {
+type RawAgentTypeMeta = Omit<AgentTypeMetaMap[keyof AgentTypeMetaMap], "mcp"> & {
+  mcp: string | null;
+};
+
+export const unsupportedMcpLabel = "暂未支持";
+
+const rawAgentTypeMeta: Record<keyof AgentTypeMetaMap, RawAgentTypeMeta> = {
   adal: {
     agentType: "adal",
     name: "AdaL",
@@ -54,7 +60,7 @@ export const agentTypeMeta: AgentTypeMetaMap = {
     commands: "commands/",
     agents: "agents/",
     skills: "skills/",
-    mcp: ".mcp.json (root)",
+    mcp: "~/.claude.json",
   },
   cline: {
     agentType: "cline",
@@ -143,6 +149,17 @@ export const agentTypeMeta: AgentTypeMetaMap = {
     agents: "droids/",
     skills: "skills/",
     mcp: "settings/mcp.json",
+  },
+  gemini: {
+    agentType: "gemini",
+    name: "Gemini CLI",
+    directory: ".gemini/",
+    rootFile: "GEMINI.md",
+    rules: null,
+    commands: null,
+    agents: null,
+    skills: null,
+    mcp: "settings.json",
   },
   "github-copilot": {
     agentType: "github-copilot",
@@ -296,7 +313,7 @@ export const agentTypeMeta: AgentTypeMetaMap = {
     commands: "commands/",
     agents: "agents/",
     skills: "skills/",
-    mcp: "opencode.json",
+    mcp: "~/.config/opencode/opencode.json",
   },
   openhands: {
     agentType: "openhands",
@@ -431,3 +448,17 @@ export const agentTypeMeta: AgentTypeMetaMap = {
     mcp: null,
   },
 };
+
+export const agentTypeMeta: AgentTypeMetaMap = Object.fromEntries(
+  Object.entries(rawAgentTypeMeta).map(([agentType, meta]) => [
+    agentType,
+    {
+      ...meta,
+      mcp: meta.mcp ?? unsupportedMcpLabel,
+    },
+  ])
+) as AgentTypeMetaMap;
+
+export function supportsAgentMcp(agentType: keyof AgentTypeMetaMap) {
+  return rawAgentTypeMeta[agentType].mcp !== null;
+}

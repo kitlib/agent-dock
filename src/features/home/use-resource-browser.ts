@@ -13,6 +13,7 @@ import { formatInstallCount } from "@/lib/utils";
 import type {
   AgentDiscoveryItem,
   MarketplaceInstallStateLabel,
+  McpResource,
   ResourceKind,
   ResolvedAgentView,
   SkillResource,
@@ -26,7 +27,8 @@ function clearUnavailableCheckedIds(ids: string[], resources: AgentDiscoveryItem
 export function useResourceBrowser(
   search: string,
   selectedAgent: ResolvedAgentView | null,
-  skills: SkillResource[]
+  skills: SkillResource[],
+  mcps: McpResource[]
 ) {
   const { i18n } = useTranslation();
   const [activeKind, setActiveKind] = useState<ResourceKind>("skill");
@@ -61,8 +63,9 @@ export function useResourceBrowser(
     () => ({
       ...resourcesByKind,
       skill: skills,
+      mcp: mcps,
     }),
-    [skills]
+    [mcps, skills]
   );
 
   const discoveryItems = useMemo(() => {

@@ -137,7 +137,11 @@
       "marketplaceInstallSuccess": "市场 Skill 安装成功。",
       "marketplaceInstallFailed": "市场 Skill 安装失败。",
       "marketplaceInstallSelectAgent": "请先选择一个目标 Agent，再安装市场 Skill。",
-      "marketplaceInstallUnsupported": "当前只支持安装市场 Skill。"
+      "marketplaceInstallUnsupported": "当前只支持安装市场 Skill。",
+      "importMcpSuccess": "已导入 {{count}} 个 MCP server。",
+      "importMcpSkipped": "已跳过 {{count}} 个冲突 MCP server。",
+      "importMcpFailed": "导入 MCP JSON 失败。",
+      "importMcpSelectAgent": "请先选择目标 Agent，再导入 MCP JSON。"
     },
     "detail": {
       "title": "详情",
@@ -197,7 +201,24 @@
     },
     "emptyList": "当前没有可显示的内容。",
     "noResults": "没有匹配结果。",
-    "emptySelection": "请选择一项以查看详情。"
+    "emptySelection": "请选择一项以查看详情。",
+    "importMcp": {
+      "title": "导入 MCP JSON",
+      "description": "粘贴 MCP JSON，并导入到 {{agentName}}。",
+      "inputLabel": "JSON 内容",
+      "placeholder": "{\n  \"mcpServers\": {\n    \"filesystem\": {\n      \"command\": \"npx\",\n      \"args\": [\"-y\", \"@modelcontextprotocol/server-filesystem\"]\n    }\n  }\n}",
+      "hint": "支持粘贴完整的 mcpServers 对象，或直接粘贴以 server 名称为 key 的对象。",
+      "previewTitle": "准备导入 {{count}} 个 server",
+      "conflictCount": "{{count}} 个冲突",
+      "conflictBadge": "冲突",
+      "newBadge": "新增",
+      "conflictStrategy": "冲突处理策略",
+      "overwriteTitle": "覆盖已存在的 server",
+      "overwriteDescription": "当名称已存在时，用新配置覆盖本地 MCP 条目。",
+      "skipTitle": "跳过冲突的 server",
+      "skipDescription": "保留现有 MCP 条目，只导入新名称。",
+      "submit": "导入 MCP"
+    }
   },
   "releaseVersion": {
     "options": {

@@ -18,12 +18,14 @@ import { Toaster } from "@/components/ui/sonner";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { setLocalSkillEnabled } from "@/features/agents/api";
 import type { AgentDiscoveryItem, LocalDiscoveryItem } from "@/features/agents/types";
+import { supportsAgentMcp } from "@/features/agents/agent-meta";
 import { getLocalSkillToggleTarget } from "@/features/home/local-skill-toggle";
 import {
   installSkillsshMarketplaceItem,
   previewSkillsshMarketplaceInstall,
 } from "@/features/marketplace/api";
 import { CopySkillDialog } from "@/features/home/components/copy-skill-dialog";
+import { ImportMcpDialog } from "@/features/home/components/import-mcp-dialog";
 import { MarketplaceInstallAgentDialog } from "@/features/home/components/marketplace-install-agent-dialog";
 import type {
   MarketplaceDiscoveryItem,
@@ -85,8 +87,12 @@ export default function HomePage() {
     clearChecked,
     updateMarketplaceInstallState,
     onDeleteLocalSkill,
+    onDeleteLocalMcp,
+    onImportLocalMcpJson,
     onOpenSkillEntryFile,
     onOpenSkillFolder,
+    onOpenMcpConfigFile,
+    onOpenMcpConfigFolder,
     onPreviewCopy,
     onExecuteCopy,
     refreshSkills,
@@ -99,6 +105,7 @@ export default function HomePage() {
     isMarketplaceDetailLoading,
     isLocalMarketplaceDetailLoading,
     marketplaceError,
+    refreshMcps,
     selectAllAgents,
     selectedScope,
     workspaceMode,
@@ -115,6 +122,7 @@ export default function HomePage() {
   const [copySources, setCopySources] = useState<LocalSkillCopySource[]>([]);
   const [pendingMarketplaceInstallSelection, setPendingMarketplaceInstallSelection] =
     useState<MarketplaceDiscoveryItem | null>(null);
+  const [isImportMcpDialogOpen, setIsImportMcpDialogOpen] = useState(false);
   const [pendingInstallRequest, setPendingInstallRequest] =
     useState<PendingMarketplaceInstallRequest | null>(null);
   const [pendingInstallPreview, setPendingInstallPreview] =
@@ -181,6 +189,60 @@ export default function HomePage() {
       toast.success(t("prototype.feedback.deleteSuccess"));
     } catch (error) {
       const message = error instanceof Error ? error.message : t("prototype.feedback.deleteFailed");
+      toast.error(message);
+      throw error;
+    }
+  }
+
+  async function handleDeleteLocalMcp(
+    agentType: string,
+    configPath: string,
+    serverName: string
+  ): Promise<void> {
+    try {
+      await onDeleteLocalMcp(agentType, configPath, serverName);
+      refreshMcps();
+      toast.success(t("prototype.feedback.deleteMcpSuccess"));
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : t("prototype.feedback.deleteMcpFailed");
+      toast.error(message);
+      throw error;
+    }
+  }
+
+  async function handleImportLocalMcp(
+    jsonPayload: string,
+    conflictStrategy: "overwrite" | "skip"
+  ) {
+    if (!selectedAgent) {
+      throw new Error(t("prototype.feedback.importMcpSelectAgent"));
+    }
+
+    try {
+      const result = await onImportLocalMcpJson(
+        selectedAgent.agentType,
+        selectedAgent.rootPath,
+        jsonPayload,
+        conflictStrategy
+      );
+      refreshMcps();
+      toast.success(
+        t("prototype.feedback.importMcpSuccess", {
+          count: result.importedCount,
+        })
+      );
+      if (result.skippedCount > 0) {
+        toast.message(
+          t("prototype.feedback.importMcpSkipped", {
+            count: result.skippedCount,
+          })
+        );
+      }
+      return result;
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : t("prototype.feedback.importMcpFailed");
       toast.error(message);
       throw error;
     }
@@ -422,10 +484,27 @@ export default function HomePage() {
     };
   }, [t]);
 
+  const canImportMcp =
+    activeKind === "mcp" &&
+    selectedScope === "agent" &&
+    selectedAgent != null &&
+    supportsAgentMcp(selectedAgent.agentType);
+  const selectedAgentMcpNames = filteredResources
+    .filter((resource) => resource.origin === "local" && resource.kind === "mcp")
+    .map((resource) => resource.name);
+
   return (
     <WindowFrame titleBar={<MainTitleBar />} contentClassName="flex flex-1 overflow-hidden">
       <Toaster />
       <UpdaterDialog />
+      <ImportMcpDialog
+        open={isImportMcpDialogOpen}
+        onOpenChange={setIsImportMcpDialogOpen}
+        targetAgent={canImportMcp ? selectedAgent : null}
+        existingServerNames={selectedAgentMcpNames}
+        onImport={handleImportLocalMcp}
+        t={t}
+      />
       <Dialog
         open={pendingInstallRequest != null && pendingInstallPreview?.hasConflict === true}
         onOpenChange={(open) => {
@@ -540,6 +619,7 @@ export default function HomePage() {
               <ResizablePanel defaultSize="30%" minSize={420} maxSize={640}>
                 <AgentResourcePanel
                   activeKind={activeKind}
+                  canImportMcp={canImportMcp}
                   checkedIds={checkedIds}
                   filteredResources={filteredResources}
                   isAllAgentsView={selectedScope === "all"}
@@ -547,10 +627,14 @@ export default function HomePage() {
                   onCopySkill={openSingleCopyDialog}
                   onCopySkills={openCopyDialog}
                   onDeleteLocalSkill={handleDeleteLocalSkill}
+                  onDeleteLocalMcp={handleDeleteLocalMcp}
+                  onImportMcp={() => setIsImportMcpDialogOpen(true)}
                   onToggleCheckedSkills={handleToggleCheckedSkills}
                   onDragStart={handleDragStart}
                   onOpenSkillEntryFile={onOpenSkillEntryFile}
                   onOpenSkillFolder={onOpenSkillFolder}
+                  onOpenMcpConfigFile={onOpenMcpConfigFile}
+                  onOpenMcpConfigFolder={onOpenMcpConfigFolder}
                   onSearchChange={setSearch}
                   onSelectKind={selectKind}
                   onSelectResource={selectResource}
@@ -581,8 +665,11 @@ export default function HomePage() {
                   allAgentsTitle={t("prototype.agents.all")}
                   isAllAgentsView={selectedScope === "all"}
                   onDeleteLocalSkill={handleDeleteLocalSkill}
+                  onDeleteLocalMcp={handleDeleteLocalMcp}
                   onOpenSkillEntryFile={onOpenSkillEntryFile}
                   onOpenSkillFolder={onOpenSkillFolder}
+                  onOpenMcpConfigFile={onOpenMcpConfigFile}
+                  onOpenMcpConfigFolder={onOpenMcpConfigFolder}
                   onRefreshAgents={refreshAgents}
                   onSetLocalSkillEnabled={handleSetLocalSkillEnabled}
                   selectedAgent={selectedAgent}

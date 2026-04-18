@@ -63,6 +63,30 @@ function ListSection({ title, items }: { title: string; items: string[] }) {
   );
 }
 
+function InfoSection({
+  title,
+  items,
+}: {
+  title: string;
+  items: Array<{ label: string; value: string }>;
+}) {
+  return (
+    <section className="space-y-2">
+      <h3 className="text-sm font-semibold">{title}</h3>
+      <div className="space-y-2">
+        {items.map((item) => (
+          <div key={item.label} className="bg-muted/40 rounded-lg border px-3 py-2">
+            <div className="text-muted-foreground text-[11px] uppercase tracking-wide">
+              {item.label}
+            </div>
+            <div className="mt-1 text-sm break-all">{item.value}</div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+}
+
 function MarketplaceResourceDetail({
   isMarketplaceDetailLoading = false,
   resource,
@@ -151,18 +175,53 @@ function LocalResourceDetail({
   }
 
   if (resource.kind === "mcp") {
+    const readResultItems = [
+      { label: "Transport", value: resource.transport },
+      { label: "Source Agent", value: resource.agentName ?? resource.sourceLabel ?? "Unknown" },
+      { label: "Scope", value: resource.scope ?? "Unknown" },
+      { label: "Updated", value: resource.updatedAt },
+      ...(resource.endpoint ? [{ label: "Endpoint", value: resource.endpoint }] : []),
+      ...(resource.projectPath ? [{ label: "Project Path", value: resource.projectPath }] : []),
+      ...(resource.configPath ? [{ label: "Config Path", value: resource.configPath }] : []),
+    ];
+
     return (
       <div className="space-y-4">
-        <TextSection title={t("prototype.detail.document")}>
+        <TextSection title="Summary">
           <div className="bg-muted/40 rounded-lg border p-3 text-sm whitespace-pre-wrap">
-            {resource.document}
+            {resource.summary}
           </div>
         </TextSection>
-        <TextSection title={t("prototype.detail.config")}>
+        <InfoSection title="Read Result" items={readResultItems} />
+        <TextSection title="Notes">
+          <div className="bg-muted/40 rounded-lg border p-3 text-sm whitespace-pre-wrap">
+            <MarkdownContent content={resource.document} />
+          </div>
+        </TextSection>
+        <TextSection title="Masked Config">
           <pre className="bg-muted/40 overflow-x-auto rounded-lg border p-3 text-xs">
             {resource.config}
           </pre>
         </TextSection>
+        {resource.warnings?.length || resource.errors?.length ? (
+          <TextSection title="Diagnostics">
+            <div className="space-y-2 text-sm">
+              {resource.warnings?.map((warning) => (
+                <div
+                  key={warning}
+                  className="rounded-lg border border-yellow-500/30 bg-yellow-500/10 p-3"
+                >
+                  {warning}
+                </div>
+              ))}
+              {resource.errors?.map((error) => (
+                <div key={error} className="rounded-lg border border-red-500/30 bg-red-500/10 p-3">
+                  {error}
+                </div>
+              ))}
+            </div>
+          </TextSection>
+        ) : null}
       </div>
     );
   }

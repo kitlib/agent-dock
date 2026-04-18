@@ -55,6 +55,7 @@ function getSearchPlaceholder(activeKind: ResourceKind, t: Translate): string {
 
 type AgentResourcePanelProps = {
   activeKind: ResourceKind;
+  canImportMcp: boolean;
   checkedIds: string[];
   filteredResources: AgentDiscoveryItem[];
   isAllAgentsView: boolean;
@@ -62,10 +63,14 @@ type AgentResourcePanelProps = {
   onCopySkill: (source: LocalSkillCopySource) => void;
   onCopySkills: (sources: LocalSkillCopySource[]) => void;
   onDeleteLocalSkill: (skillPath: string, entryFilePath: string, skillId?: string) => Promise<void>;
+  onDeleteLocalMcp: (agentType: string, configPath: string, serverName: string) => Promise<void>;
+  onImportMcp: () => void;
   onToggleCheckedSkills: () => Promise<void>;
   onDragStart: (event: DragEvent<HTMLDivElement>, resourceId: string) => void;
   onOpenSkillEntryFile: (skillPath: string, entryFilePath: string) => Promise<void>;
   onOpenSkillFolder: (skillPath: string) => void;
+  onOpenMcpConfigFile: (configPath: string) => Promise<void>;
+  onOpenMcpConfigFolder: (configPath: string) => void;
   onSearchChange: (value: string) => void;
   onSelectKind: (kind: ResourceKind) => void;
   onSelectResource: (resource: AgentDiscoveryItem) => void;
@@ -91,6 +96,7 @@ type AgentResourcePanelProps = {
 
 export function AgentResourcePanel({
   activeKind,
+  canImportMcp,
   checkedIds,
   filteredResources,
   isAllAgentsView,
@@ -98,10 +104,14 @@ export function AgentResourcePanel({
   onCopySkill,
   onCopySkills,
   onDeleteLocalSkill,
+  onDeleteLocalMcp,
+  onImportMcp,
   onToggleCheckedSkills,
   onDragStart,
   onOpenSkillEntryFile,
   onOpenSkillFolder,
+  onOpenMcpConfigFile,
+  onOpenMcpConfigFolder,
   onSearchChange,
   onSelectKind,
   onSelectResource,
@@ -267,6 +277,11 @@ export function AgentResourcePanel({
               placeholder={getSearchPlaceholder(activeKind, t)}
             />
           </div>
+          {activeKind === "mcp" && canImportMcp ? (
+            <Button variant="outline" size="sm" onClick={onImportMcp}>
+              {t("prototype.actions.import")}
+            </Button>
+          ) : null}
         </div>
 
         {activeKind === "skill" && marketplaceError ? (
@@ -373,9 +388,12 @@ export function AgentResourcePanel({
               isAllAgentsView={isAllAgentsView}
               onCopySkill={onCopySkill}
               onDeleteLocalSkill={onDeleteLocalSkill}
+              onDeleteLocalMcp={onDeleteLocalMcp}
               onDragStart={onDragStart}
               onOpenSkillEntryFile={onOpenSkillEntryFile}
               onOpenSkillFolder={onOpenSkillFolder}
+              onOpenMcpConfigFile={onOpenMcpConfigFile}
+              onOpenMcpConfigFolder={onOpenMcpConfigFolder}
               onSelectResource={onSelectResource}
               onSetLocalSkillEnabled={onSetLocalSkillEnabled}
               onToggleChecked={onToggleChecked}

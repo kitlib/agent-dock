@@ -2,7 +2,11 @@ import { useDeferredValue, useEffect, useMemo, useState } from "react";
 import { useAgentDiscovery } from "@/features/agents/use-agent-discovery";
 import { useAgentManagement } from "@/features/agents/use-agent-management";
 import {
+  deleteLocalMcp,
   deleteLocalSkill,
+  importLocalMcpJson,
+  openMcpConfigFile,
+  openMcpConfigFolder,
   openSkillEntryFile,
   openSkillFolder,
   previewLocalSkillCopy,
@@ -19,14 +23,18 @@ import type {
   PreviewLocalSkillCopyResult,
   RemoveAgentResult,
   ResolvedAgentView,
+  LocalMcpImportConflictStrategy,
 } from "@/features/agents/types";
 import { toSkillScanTargets, toSkillScanTargetsForAgents } from "@/features/home/skill-targets";
 import {
+  useAgentMcpsQuery,
   useAgentSkillDetailQuery,
   useAgentSkillsQuery,
   useMarketplaceSkillUpdateQuery,
+  useRefreshAgentMcps,
   useRefreshAgentSkills,
 } from "@/features/home/queries";
+import { toMcpScanTarget, toMcpScanTargetsForAgents } from "@/features/home/skill-targets";
 import { useResourceBrowser } from "@/features/home/use-resource-browser";
 import { useSkillsshMarketplaceDetailQuery } from "@/features/marketplace/queries";
 
@@ -168,8 +176,19 @@ export function useHomeWorkspace() {
     selectedScope === "all"
       ? allVisibleManagedAgentSkillScanTargets
       : selectedAgentSkillScanTargets;
+  const allVisibleManagedAgentMcpScanTargets = useMemo(
+    () => toMcpScanTargetsForAgents(managedVisibleAgents),
+    [managedVisibleAgents]
+  );
+  const selectedAgentMcpScanTargets = useMemo(
+    () => (selectedAgent ? toMcpScanTarget(selectedAgent) : []),
+    [selectedAgent]
+  );
+  const effectiveMcpScanTargets =
+    selectedScope === "all" ? allVisibleManagedAgentMcpScanTargets : selectedAgentMcpScanTargets;
 
   const { skills } = useAgentSkillsQuery(scopeKey, effectiveSkillScanTargets);
+  const { mcps } = useAgentMcpsQuery(scopeKey, effectiveMcpScanTargets);
 
   useEffect(() => {
     console.log("[skills] workspace selection snapshot", {
@@ -202,7 +221,7 @@ export function useHomeWorkspace() {
     });
   }, [currentSelectedAgentId, selectedScope, skills]);
 
-  const resourceBrowser = useResourceBrowser(deferredSearch, selectedAgent, skills);
+  const resourceBrowser = useResourceBrowser(deferredSearch, selectedAgent, skills, mcps);
 
   const selectedSkillId =
     resourceBrowser.selectedResourceBase?.kind === "skill" &&
@@ -258,6 +277,7 @@ export function useHomeWorkspace() {
         : resourceBrowser.selectedResource;
 
   const refreshSkills = useRefreshAgentSkills();
+  const refreshMcps = useRefreshAgentMcps();
 
   const openSelectedSkillFolder = (skillPath: string) => {
     void openSkillFolder(skillPath).catch(() => undefined);
@@ -269,6 +289,31 @@ export function useHomeWorkspace() {
 
   const deleteSelectedLocalSkill = async (skillPath: string, entryFilePath: string) => {
     await deleteLocalSkill(skillPath, entryFilePath);
+  };
+
+  const deleteSelectedLocalMcp = async (
+    agentType: string,
+    configPath: string,
+    serverName: string
+  ) => {
+    await deleteLocalMcp(agentType, configPath, serverName);
+  };
+
+  const importSelectedAgentMcpJson = async (
+    agentType: string,
+    rootPath: string,
+    jsonPayload: string,
+    conflictStrategy: LocalMcpImportConflictStrategy
+  ) => {
+    return importLocalMcpJson(agentType, rootPath, jsonPayload, conflictStrategy);
+  };
+
+  const openSelectedMcpConfigFolder = (configPath: string) => {
+    void openMcpConfigFolder(configPath).catch(() => undefined);
+  };
+
+  const openSelectedMcpConfigFile = async (configPath: string) => {
+    await openMcpConfigFile(configPath).catch(() => undefined);
   };
 
   const selectAllAgents = () => {
@@ -321,9 +366,13 @@ export function useHomeWorkspace() {
     onCreateAgentSuccess: syncCreatedAgent,
     onDeleteAgentSuccess: syncDeletedAgent,
     onDeleteLocalSkill: deleteSelectedLocalSkill,
+    onDeleteLocalMcp: deleteSelectedLocalMcp,
+    onImportLocalMcpJson: importSelectedAgentMcpJson,
     onImportAgentsSuccess: syncImportedAgents,
     onOpenSkillEntryFile: openSelectedSkillEntryFile,
     onOpenSkillFolder: openSelectedSkillFolder,
+    onOpenMcpConfigFile: openSelectedMcpConfigFile,
+    onOpenMcpConfigFolder: openSelectedMcpConfigFolder,
     onRemoveAgentSuccess: syncRemovedAgent,
     onPreviewCopy: previewCopy,
     onExecuteCopy: executeCopy,
@@ -337,6 +386,7 @@ export function useHomeWorkspace() {
     isLocalMarketplaceDetailLoading: selectedLocalMarketplaceUpdateQuery.isFetching,
     marketplaceError: resourceBrowser.marketplaceError,
     refreshAgents,
+    refreshMcps: () => refreshMcps(scopeKey),
     refreshSkills: (skillId?: string) => refreshSkills(scopeKey, skillId ?? selectedSkillId),
     selectAllAgents,
     selectKind: resourceBrowser.selectKind,

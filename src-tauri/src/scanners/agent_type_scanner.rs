@@ -4,6 +4,7 @@ use std::{
 };
 
 use crate::dto::agents::{AgentResourceCountsDto, DiscoveredAgentDto, ScanTargetDto};
+use crate::scanners::mcp_scanner;
 
 #[derive(Clone)]
 pub struct AgentScanTarget {
@@ -138,13 +139,10 @@ fn agent_resource_counts(agent: &str, absolute_root: &Path) -> AgentResourceCoun
     let command = build_commands_scan_root(agent, absolute_root)
         .map(|commands_root| count_command_markdown_files(&commands_root))
         .unwrap_or(0);
-
-    let (mcp, subagent) = match agent {
-        "cursor" => (1, 1),
-        "claude" => (1, 1),
-        "codex" => (1, 0),
-        "antigravity" => (0, 1),
-        _ => (0, 0),
+    let mcp = mcp_scanner::count_local_mcps(agent, absolute_root);
+    let subagent = match agent {
+        "cursor" | "claude" | "antigravity" => 1,
+        _ => 0,
     };
 
     AgentResourceCountsDto {
@@ -280,7 +278,7 @@ mod tests {
         let counts = agent_resource_counts("claude", &root);
         assert_eq!(counts.skill, 1);
         assert_eq!(counts.command, 0);
-        assert_eq!(counts.mcp, 1);
+        assert_eq!(counts.mcp, 0);
         assert_eq!(counts.subagent, 1);
 
         fs::remove_dir_all(&root).expect("cleanup temp dir");

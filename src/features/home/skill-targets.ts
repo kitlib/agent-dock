@@ -1,6 +1,7 @@
-import { agentTypeMeta } from "@/features/agents/agent-meta";
+import { agentTypeMeta, supportsAgentMcp } from "@/features/agents/agent-meta";
 import type {
   AgentTypeId,
+  McpScanTarget,
   ResolvedAgentView,
   SkillResource,
   SkillScanTarget,
@@ -59,6 +60,45 @@ export function toSkillScanTargetsForAgents(agents: ResolvedAgentView[]): SkillS
   agents.forEach((agent) => {
     toSkillScanTargets(agent).forEach((target) => {
       const key = `${target.agentId}:${target.source}:${target.rootPath}`;
+      if (seenKeys.has(key)) {
+        return;
+      }
+
+      seenKeys.add(key);
+      targets.push(target);
+    });
+  });
+
+  return targets;
+}
+
+export function toMcpScanTarget(agent: ResolvedAgentView): McpScanTarget[] {
+  if (!agent.managed || agent.hidden || !agent.rootPath) {
+    return [];
+  }
+
+  const meta = agentTypeMeta[agent.agentType as AgentTypeId];
+  if (!meta || !supportsAgentMcp(agent.agentType as AgentTypeId)) {
+    return [];
+  }
+
+  return [
+    {
+      agentId: agent.id,
+      agentType: agent.agentType,
+      rootPath: trimTrailingSlash(agent.rootPath),
+      displayName: agent.alias ?? agent.name,
+    },
+  ];
+}
+
+export function toMcpScanTargetsForAgents(agents: ResolvedAgentView[]): McpScanTarget[] {
+  const seenKeys = new Set<string>();
+  const targets: McpScanTarget[] = [];
+
+  agents.forEach((agent) => {
+    toMcpScanTarget(agent).forEach((target) => {
+      const key = `${target.agentId}:${target.rootPath}`;
       if (seenKeys.has(key)) {
         return;
       }

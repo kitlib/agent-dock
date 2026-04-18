@@ -2,50 +2,7 @@ import type { AgentResource, ResourceKind } from "@/features/agents/types";
 
 const localResources = {
   skill: [],
-  mcp: [
-    {
-      id: "mcp-filesystem-local",
-      kind: "mcp",
-      name: "Filesystem Local",
-      summary: "Accesses workspace files and metadata with local permissions.",
-      enabled: true,
-      endpoint: "stdio://filesystem-local",
-      transport: "stdio",
-      usageCount: 14,
-      updatedAt: "2026-03-20",
-      document:
-        "# Filesystem Local\n\nProvides controlled file reads, writes, and glob access inside the workspace.",
-      config: '{\n  "command": "pnpm",\n  "args": ["mcp:filesystem"],\n  "cwd": "~/workspace"\n}',
-    },
-    {
-      id: "mcp-browser-inspect",
-      kind: "mcp",
-      name: "Browser Inspect",
-      summary: "Captures DOM snapshots and interaction traces for debugging.",
-      enabled: true,
-      endpoint: "http://127.0.0.1:3030/mcp",
-      transport: "http",
-      usageCount: 7,
-      updatedAt: "2026-03-19",
-      document:
-        "# Browser Inspect\n\nExposes page snapshots, console logs, and input automation for local test sessions.",
-      config:
-        '{\n  "url": "http://127.0.0.1:3030/mcp",\n  "headers": {\n    "x-project": "agentdock"\n  }\n}',
-    },
-    {
-      id: "mcp-notes-index",
-      kind: "mcp",
-      name: "Notes Index",
-      summary: "Searches indexed markdown notes and internal summaries.",
-      enabled: false,
-      endpoint: "stdio://notes-index",
-      transport: "stdio",
-      usageCount: 3,
-      updatedAt: "2026-03-17",
-      document: "# Notes Index\n\nReturns note matches ranked by recency and semantic relevance.",
-      config: '{\n  "command": "node",\n  "args": ["./tools/notes-index.js"]\n}',
-    },
-  ],
+  mcp: [],
   subagent: [
     {
       id: "subagent-ui-critic",

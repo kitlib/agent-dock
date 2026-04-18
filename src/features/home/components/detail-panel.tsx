@@ -68,6 +68,16 @@ function getOpenPath(selectedResource: AgentDiscoveryItem | null): string {
   return skill.skillPath ?? skill.entryFilePath ?? "";
 }
 
+function getLocalMcpResource(
+  selectedResource: AgentDiscoveryItem | null
+): (LocalDiscoveryItem & { kind: "mcp"; origin: "local" }) | null {
+  if (!selectedResource || selectedResource.origin !== "local" || selectedResource.kind !== "mcp") {
+    return null;
+  }
+
+  return selectedResource as LocalDiscoveryItem & { kind: "mcp"; origin: "local" };
+}
+
 function getSelectedResourceSourceValue(
   selectedResource: AgentDiscoveryItem | null,
   t: AgentDetailPanelProps["t"]
@@ -133,8 +143,15 @@ type AgentDetailPanelProps = {
     entryFilePath: string,
     skillId?: string
   ) => Promise<void>;
+  onDeleteLocalMcp?: (
+    agentType: string,
+    configPath: string,
+    serverName: string
+  ) => Promise<void>;
   onOpenSkillEntryFile?: (skillPath: string, entryFilePath: string) => Promise<void>;
   onOpenSkillFolder: (skillPath: string) => void;
+  onOpenMcpConfigFile?: (configPath: string) => Promise<void>;
+  onOpenMcpConfigFolder?: (configPath: string) => void;
   onRefreshAgents?: () => void;
   onSetLocalSkillEnabled?: (
     skillPath: string,
@@ -169,8 +186,11 @@ export function AgentDetailPanel({
   isMarketplaceDetailLoading = false,
   isLocalMarketplaceDetailLoading = false,
   onDeleteLocalSkill,
+  onDeleteLocalMcp,
   onOpenSkillEntryFile,
   onOpenSkillFolder,
+  onOpenMcpConfigFile,
+  onOpenMcpConfigFolder,
   onRefreshAgents,
   onSetLocalSkillEnabled,
   onInstallMarketplaceItem,
@@ -183,9 +203,12 @@ export function AgentDetailPanel({
   const [isUpdatingSkillEnabled, setIsUpdatingSkillEnabled] = useState(false);
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false);
   const [isDeletingSkill, setIsDeletingSkill] = useState(false);
+  const [isDeleteMcpDialogOpen, setIsDeleteMcpDialogOpen] = useState(false);
+  const [isDeletingMcp, setIsDeletingMcp] = useState(false);
   const openPath = getOpenPath(selectedResource);
   const isLocalSkill = isLocalSkillResource(selectedResource);
   const localSkill = getLocalSkillResource(selectedResource);
+  const localMcp = getLocalMcpResource(selectedResource);
   const canUpdateLocalMarketplaceSkill =
     localSkill?.marketplaceHasUpdate === true &&
     !isLocalMarketplaceDetailLoading &&
@@ -256,6 +279,22 @@ export function AgentDetailPanel({
     }
   };
 
+  const handleDeleteMcp = async () => {
+    if (!localMcp?.agentType || !localMcp?.configPath || !onDeleteLocalMcp) {
+      return;
+    }
+
+    setIsDeletingMcp(true);
+    try {
+      await onDeleteLocalMcp(localMcp.agentType, localMcp.configPath, localMcp.name);
+      setIsDeleteMcpDialogOpen(false);
+    } catch (error) {
+      console.error("Failed to delete local MCP:", error);
+    } finally {
+      setIsDeletingMcp(false);
+    }
+  };
+
   return (
     <div className="bg-muted/20 flex h-full min-w-0 flex-col overflow-hidden">
       <div className="border-b p-4">
@@ -303,6 +342,15 @@ export function AgentDetailPanel({
                 {t("prototype.actions.open")}
               </Button>
             ) : null}
+            {localMcp?.configPath && onOpenMcpConfigFolder ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => onOpenMcpConfigFolder(localMcp.configPath!)}
+              >
+                {t("prototype.actions.open")}
+              </Button>
+            ) : null}
             {isLocalSkill && onOpenSkillEntryFile ? (
               <Button
                 variant="outline"
@@ -313,6 +361,24 @@ export function AgentDetailPanel({
                 }}
               >
                 {t("prototype.actions.edit")}
+              </Button>
+            ) : null}
+            {localMcp?.configPath && onOpenMcpConfigFile ? (
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => void onOpenMcpConfigFile(localMcp.configPath!)}
+              >
+                {t("prototype.actions.edit")}
+              </Button>
+            ) : null}
+            {localMcp?.configPath && localMcp?.agentType && onDeleteLocalMcp ? (
+              <Button
+                variant="destructive"
+                size="sm"
+                onClick={() => setIsDeleteMcpDialogOpen(true)}
+              >
+                {t("prototype.actions.delete")}
               </Button>
             ) : null}
             {skillToggleTarget ? (
@@ -412,6 +478,21 @@ export function AgentDetailPanel({
                 />
               </button>
             ) : null}
+            {localMcp?.configPath && onOpenMcpConfigFolder ? (
+              <button
+                type="button"
+                className="cursor-pointer break-all transition-opacity hover:opacity-85"
+                onClick={() => onOpenMcpConfigFolder(localMcp.configPath!)}
+                title={localMcp.configPath}
+              >
+                <InlineMetaBadge
+                  label={t("prototype.detail.rootPath")}
+                  value={compactHomePath(localMcp.configPath) ?? localMcp.configPath}
+                  tone="amber"
+                  className="max-w-full"
+                />
+              </button>
+            ) : null}
           </div>
         ) : null}
         {isAllAgentsView && !selectedResource ? (
@@ -465,6 +546,28 @@ export function AgentDetailPanel({
               variant="destructive"
               onClick={() => void handleDeleteSkill()}
               disabled={isDeletingSkill}
+            >
+              {t("prototype.actions.delete")}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      <Dialog open={isDeleteMcpDialogOpen} onOpenChange={setIsDeleteMcpDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>{t("prototype.deleteMcp.title")}</DialogTitle>
+            <DialogDescription>
+              {t("prototype.deleteMcp.description", { name: title })}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setIsDeleteMcpDialogOpen(false)}>
+              {t("prototype.actions.cancel")}
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => void handleDeleteMcp()}
+              disabled={isDeletingMcp}
             >
               {t("prototype.actions.delete")}
             </Button>

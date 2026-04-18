@@ -116,6 +116,10 @@
       "title": "Delete skill",
       "description": "Delete \"{{name}}\" from disk? This action cannot be undone."
     },
+    "deleteMcp": {
+      "title": "Delete MCP",
+      "description": "Delete \"{{name}}\" from the local MCP config? This action cannot be undone."
+    },
     "copySkill": {
       "title": "Copy Skill",
       "selectTarget": "Select target Agent",
@@ -129,9 +133,32 @@
       "copied": "Copied {{count}} skills",
       "skipped": "Skipped {{count}} skills"
     },
+    "importMcp": {
+      "title": "Import MCP JSON",
+      "description": "Paste MCP JSON and import it into {{agentName}}.",
+      "inputLabel": "JSON payload",
+      "placeholder": "{\n  \"mcpServers\": {\n    \"filesystem\": {\n      \"command\": \"npx\",\n      \"args\": [\"-y\", \"@modelcontextprotocol/server-filesystem\"]\n    }\n  }\n}",
+      "hint": "Supports either a full 'mcpServers' object or a plain map keyed by server name.",
+      "previewTitle": "{{count}} server(s) ready to import",
+      "conflictCount": "{{count}} conflict(s)",
+      "conflictBadge": "Conflict",
+      "newBadge": "New",
+      "conflictStrategy": "Conflict strategy",
+      "overwriteTitle": "Overwrite existing servers",
+      "overwriteDescription": "Replace existing MCP entries when names already exist.",
+      "skipTitle": "Skip conflicting servers",
+      "skipDescription": "Keep existing MCP entries and import only new names.",
+      "submit": "Import MCP"
+    },
     "feedback": {
       "deleteSuccess": "Skill deleted.",
       "deleteFailed": "Failed to delete skill.",
+      "deleteMcpSuccess": "MCP deleted.",
+      "deleteMcpFailed": "Failed to delete MCP.",
+      "importMcpSuccess": "Imported {{count}} MCP server(s).",
+      "importMcpSkipped": "Skipped {{count}} conflicting MCP server(s).",
+      "importMcpFailed": "Failed to import MCP JSON.",
+      "importMcpSelectAgent": "Select a target agent before importing MCP JSON.",
       "copySuccess": "Skills copied successfully.",
       "copyFailed": "Failed to copy skills.",
       "marketplaceInstallSuccess": "Marketplace skill installed successfully.",

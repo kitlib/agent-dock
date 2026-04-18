@@ -12,6 +12,10 @@ import type {
   ScannedAgentCandidate,
   SkillResource,
   SkillScanTarget,
+  McpResource,
+  McpScanTarget,
+  ImportLocalMcpResult,
+  LocalMcpImportConflictStrategy,
   LocalSkillCopySource,
   LocalSkillCopyTargetAgent,
   PreviewLocalSkillCopyResult,
@@ -106,6 +110,36 @@ export async function getLocalSkillDetail(scanTargets: SkillScanTarget[], skillI
   });
 
   return detail;
+}
+
+export async function listLocalMcps(scanTargets: McpScanTarget[]) {
+  return invoke<McpResource[]>("list_local_mcps", { scanTargets });
+}
+
+export async function openMcpConfigFolder(configPath: string) {
+  return invoke<void>("open_mcp_config_folder", { configPath });
+}
+
+export async function openMcpConfigFile(configPath: string) {
+  return invoke<void>("open_mcp_config_file", { configPath });
+}
+
+export async function deleteLocalMcp(agentType: string, configPath: string, serverName: string) {
+  return invoke<void>("delete_local_mcp", { agentType, configPath, serverName });
+}
+
+export async function importLocalMcpJson(
+  agentType: string,
+  rootPath: string,
+  jsonPayload: string,
+  conflictStrategy: LocalMcpImportConflictStrategy
+) {
+  return invoke<ImportLocalMcpResult>("import_local_mcp_json", {
+    agentType,
+    rootPath,
+    jsonPayload,
+    conflictStrategy,
+  });
 }
 
 export async function setLocalSkillEnabled(
