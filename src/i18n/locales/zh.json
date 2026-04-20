@@ -74,6 +74,9 @@
       "mcp": "MCP",
       "subagent": "Subagents"
     },
+    "resources": {
+      "mcp": "MCP"
+    },
     "actions": {
       "searchPlaceholder": "搜索本地资源和市场内容",
       "searchSkillsPlaceholder": "搜索本地 Skills，并浏览市场结果",
@@ -95,6 +98,7 @@
       "edit": "编辑",
       "delete": "删除",
       "copy": "复制",
+      "copied": "已复制",
       "copyToAgent": "复制到 Agent",
       "overwrite": "覆盖",
       "skip": "跳过",
@@ -110,7 +114,12 @@
       "selectAllReady": "全选可导入项",
       "notAdded": "未管理",
       "loadingMore": "正在加载更多...",
-      "scrollToLoadMore": "滚动以加载更多"
+      "scrollToLoadMore": "滚动以加载更多",
+      "openFile": "打开文件",
+      "visit": "访问",
+      "inspect": "检查",
+      "retry": "重试",
+      "close": "关闭"
     },
     "deleteSkill": {
       "title": "删除 Skill",
@@ -141,7 +150,34 @@
       "importMcpSuccess": "已导入 {{count}} 个 MCP server。",
       "importMcpSkipped": "已跳过 {{count}} 个冲突 MCP server。",
       "importMcpFailed": "导入 MCP JSON 失败。",
-      "importMcpSelectAgent": "请先选择目标 Agent，再导入 MCP JSON。"
+      "importMcpSelectAgent": "请先选择目标 Agent，再导入 MCP JSON。",
+      "loadMcpEditFailed": "加载 MCP 编辑数据失败。",
+      "loadMcpInspectFailed": "加载 MCP 检查数据失败。",
+      "updateMcpSuccess": "MCP 已更新。",
+      "updateMcpFailed": "更新 MCP 失败。",
+      "inspectorLaunched": "MCP Inspector 已在浏览器中打开",
+      "inspectorStopped": "MCP Inspector 已停止"
+    },
+    "inspector": {
+      "title": "MCP Inspector",
+      "description": "MCP服务器调试工具，查看可用工具和测试调用。",
+      "status": {
+        "title": "状态",
+        "installed": "✅ MCP Inspector 已安装",
+        "notInstalled": "❌ MCP Inspector 未安装",
+        "starting": "🔄 正在启动调试服务...",
+        "running": "✅ 调试服务已运行",
+        "stopped": "⏹️ 调试服务已停止"
+      },
+      "accessUrl": "访问地址",
+      "openButton": "打开调试页面",
+      "stopAndClose": "关闭",
+      "errors": {
+        "launchFailed": "启动MCP Inspector失败，请检查配置是否正确",
+        "missingCommand": "MCP配置缺失启动命令，请检查配置",
+        "missingUrl": "MCP配置缺失服务地址，请检查配置",
+        "nodeRequired": "请先安装 Node.js 以使用 MCP Inspector"
+      }
     },
     "detail": {
       "title": "详情",
@@ -149,6 +185,9 @@
       "preview": "预览",
       "document": "文档",
       "config": "配置",
+      "serverConfig": "服务器配置",
+      "summary": "摘要",
+      "notes": "说明",
       "prompt": "提示词",
       "capabilities": "能力",
       "tags": "标签",
@@ -218,6 +257,31 @@
       "skipTitle": "跳过冲突的 server",
       "skipDescription": "保留现有 MCP 条目，只导入新名称。",
       "submit": "导入 MCP"
+    },
+    "editMcp": {
+      "title": "编辑 MCP",
+      "description": "更新 {{agentName}} 中 {{name}} 的本地 MCP 配置。",
+      "submit": "保存 MCP",
+      "fields": {
+        "serverName": "Server 名称",
+        "transport": "传输方式",
+        "command": "命令",
+        "args": "参数",
+        "env": "环境变量",
+        "url": "URL",
+        "headers": "Headers"
+      },
+      "placeholders": {
+        "args": "--flag\nvalue"
+      },
+      "hints": {
+        "args": "每行输入一个参数。"
+      },
+      "validation": {
+        "serverNameRequired": "请输入 server 名称。",
+        "commandRequired": "stdio 类型的 MCP 必须提供 command。",
+        "urlRequired": "远程 MCP 必须提供 URL。"
+      }
     }
   },
   "releaseVersion": {

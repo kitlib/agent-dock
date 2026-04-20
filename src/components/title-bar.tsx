@@ -1,6 +1,6 @@
-import { useEffect, useState, ReactNode } from "react";
+import { type ReactNode, useEffect, useState } from "react";
 import { getCurrentWebviewWindow } from "@tauri-apps/api/webviewWindow";
-import { Minus, Maximize2, Minimize2, X } from "lucide-react";
+import { Maximize2, Minimize2, Minus, X } from "lucide-react";
 import { cn } from "@/lib/utils";
 
 interface TitleBarProps {
@@ -10,6 +10,10 @@ interface TitleBarProps {
   showClose?: boolean;
   leftActions?: ReactNode;
   rightActions?: ReactNode;
+}
+
+function getAppWindow() {
+  return getCurrentWebviewWindow();
 }
 
 export function TitleBar({
@@ -25,7 +29,7 @@ export function TitleBar({
   useEffect(() => {
     if (!showMaximize) return;
 
-    const appWindow = getCurrentWebviewWindow();
+    const appWindow = getAppWindow();
 
     // Initialize maximized state
     appWindow.isMaximized().then(setIsMaximized);
@@ -42,17 +46,17 @@ export function TitleBar({
   }, [showMaximize]);
 
   const handleMinimize = async () => {
-    const appWindow = getCurrentWebviewWindow();
+    const appWindow = getAppWindow();
     await appWindow.minimize();
   };
 
   const handleToggleMaximize = async () => {
-    const appWindow = getCurrentWebviewWindow();
+    const appWindow = getAppWindow();
     await appWindow.toggleMaximize();
   };
 
   const handleClose = async () => {
-    const appWindow = getCurrentWebviewWindow();
+    const appWindow = getAppWindow();
     await appWindow.close();
   };
 
@@ -61,7 +65,7 @@ export function TitleBar({
       return;
     }
 
-    const appWindow = getCurrentWebviewWindow();
+    const appWindow = getAppWindow();
     if (appWindow.label === "main") {
       return;
     }
@@ -88,10 +92,7 @@ export function TitleBar({
       )}
     >
       {/* Left: Title + Drag region */}
-      <div
-        data-tauri-drag-region
-        className="flex grow items-center gap-2 pl-2"
-      >
+      <div data-tauri-drag-region className="flex grow items-center gap-2 pl-2">
         {title && (
           <span data-tauri-drag-region className="text-sm font-medium text-slate-400">
             {title}

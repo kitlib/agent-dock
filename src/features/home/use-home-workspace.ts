@@ -4,6 +4,7 @@ import { useAgentManagement } from "@/features/agents/use-agent-management";
 import {
   deleteLocalMcp,
   deleteLocalSkill,
+  getLocalMcpEditData,
   importLocalMcpJson,
   openMcpConfigFile,
   openMcpConfigFolder,
@@ -11,6 +12,7 @@ import {
   openSkillFolder,
   previewLocalSkillCopy,
   copyLocalSkills,
+  updateLocalMcp,
 } from "@/features/agents/api";
 import type {
   AgentSelectionScope,
@@ -23,7 +25,6 @@ import type {
   PreviewLocalSkillCopyResult,
   RemoveAgentResult,
   ResolvedAgentView,
-  LocalMcpImportConflictStrategy,
 } from "@/features/agents/types";
 import { toSkillScanTargets, toSkillScanTargetsForAgents } from "@/features/home/skill-targets";
 import {
@@ -279,40 +280,20 @@ export function useHomeWorkspace() {
   const refreshSkills = useRefreshAgentSkills();
   const refreshMcps = useRefreshAgentMcps();
 
-  const openSelectedSkillFolder = (skillPath: string) => {
+  // Wrappers for API calls with error swallowing
+  const openSkillFolderSafe = (skillPath: string) => {
     void openSkillFolder(skillPath).catch(() => undefined);
   };
 
-  const openSelectedSkillEntryFile = async (skillPath: string, entryFilePath: string) => {
+  const openSkillEntryFileSafe = async (skillPath: string, entryFilePath: string) => {
     await openSkillEntryFile(skillPath, entryFilePath).catch(() => undefined);
   };
 
-  const deleteSelectedLocalSkill = async (skillPath: string, entryFilePath: string) => {
-    await deleteLocalSkill(skillPath, entryFilePath);
-  };
-
-  const deleteSelectedLocalMcp = async (
-    agentType: string,
-    configPath: string,
-    serverName: string
-  ) => {
-    await deleteLocalMcp(agentType, configPath, serverName);
-  };
-
-  const importSelectedAgentMcpJson = async (
-    agentType: string,
-    rootPath: string,
-    jsonPayload: string,
-    conflictStrategy: LocalMcpImportConflictStrategy
-  ) => {
-    return importLocalMcpJson(agentType, rootPath, jsonPayload, conflictStrategy);
-  };
-
-  const openSelectedMcpConfigFolder = (configPath: string) => {
+  const openMcpConfigFolderSafe = (configPath: string) => {
     void openMcpConfigFolder(configPath).catch(() => undefined);
   };
 
-  const openSelectedMcpConfigFile = async (configPath: string) => {
+  const openMcpConfigFileSafe = async (configPath: string) => {
     await openMcpConfigFile(configPath).catch(() => undefined);
   };
 
@@ -365,16 +346,18 @@ export function useHomeWorkspace() {
     managedAgentsForView: resolvedAgents,
     onCreateAgentSuccess: syncCreatedAgent,
     onDeleteAgentSuccess: syncDeletedAgent,
-    onDeleteLocalSkill: deleteSelectedLocalSkill,
-    onDeleteLocalMcp: deleteSelectedLocalMcp,
-    onImportLocalMcpJson: importSelectedAgentMcpJson,
+    onDeleteLocalSkill: deleteLocalSkill,
+    onDeleteLocalMcp: deleteLocalMcp,
+    onGetLocalMcpEditData: getLocalMcpEditData,
+    onImportLocalMcpJson: importLocalMcpJson,
     onImportAgentsSuccess: syncImportedAgents,
-    onOpenSkillEntryFile: openSelectedSkillEntryFile,
-    onOpenSkillFolder: openSelectedSkillFolder,
-    onOpenMcpConfigFile: openSelectedMcpConfigFile,
-    onOpenMcpConfigFolder: openSelectedMcpConfigFolder,
+    onOpenSkillEntryFile: openSkillEntryFileSafe,
+    onOpenSkillFolder: openSkillFolderSafe,
+    onOpenMcpConfigFile: openMcpConfigFileSafe,
+    onOpenMcpConfigFolder: openMcpConfigFolderSafe,
     onRemoveAgentSuccess: syncRemovedAgent,
     onPreviewCopy: previewCopy,
+    onUpdateLocalMcp: updateLocalMcp,
     onExecuteCopy: executeCopy,
     search,
     isMarketplaceLoading: resourceBrowser.isMarketplaceLoading,

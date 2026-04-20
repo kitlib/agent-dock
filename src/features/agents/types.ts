@@ -207,6 +207,64 @@ export type ImportLocalMcpResult = {
   skippedNames: string[];
 };
 
+export type EditableLocalMcp = {
+  serverName: string;
+  transport: "stdio" | "http" | "sse";
+  command: string | null;
+  args: string[];
+  env: Record<string, string>;
+  url: string | null;
+  headers: Record<string, string>;
+};
+
+export type UpdateLocalMcpInput = EditableLocalMcp;
+
+export type UpdateLocalMcpResult = {
+  configPath: string;
+  serverName: string;
+};
+
+export type McpToolParameter = {
+  name: string;
+  description?: string;
+  type: string;
+  required: boolean;
+  schema: unknown;
+};
+
+export type McpTool = {
+  name: string;
+  description?: string;
+  parameters: McpToolParameter[];
+};
+
+export type McpServerResource = {
+  uri: string;
+  name: string;
+  description?: string;
+  mimeType?: string;
+};
+
+export type McpPromptArgument = {
+  name: string;
+  description?: string;
+  required: boolean;
+};
+
+export type McpPrompt = {
+  name: string;
+  description?: string;
+  arguments: McpPromptArgument[];
+};
+
+export type McpServerCapabilities = {
+  serverInfo: unknown;
+  protocolVersion: string;
+  tools: McpTool[];
+  resources: McpServerResource[];
+  prompts: McpPrompt[];
+};
+
 export type SkillResource = {
   id: string;
   kind: "skill";

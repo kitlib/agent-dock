@@ -38,7 +38,15 @@ type ImportMcpDialogProps = {
   t: (key: string, options?: Record<string, unknown>) => string;
 };
 
-const RESERVED_SERVER_FIELDS = new Set(["type", "command", "args", "env", "url", "httpUrl", "headers"]);
+const RESERVED_SERVER_FIELDS = new Set([
+  "type",
+  "command",
+  "args",
+  "env",
+  "url",
+  "httpUrl",
+  "headers",
+]);
 
 function previewImportPayload(
   jsonPayload: string,
@@ -172,17 +180,15 @@ export function ImportMcpDialog({
             <textarea
               value={jsonPayload}
               onChange={(event) => setJsonPayload(event.target.value)}
-              className="border-input bg-background min-h-56 w-full rounded-md border px-3 py-2 font-mono text-xs outline-none focus-visible:ring-2 focus-visible:ring-ring"
+              className="border-input bg-background focus-visible:ring-ring min-h-56 w-full rounded-md border px-3 py-2 font-mono text-xs outline-none focus-visible:ring-2"
               placeholder={t("prototype.importMcp.placeholder")}
               spellCheck={false}
             />
-            <div className="text-muted-foreground text-xs">
-              {t("prototype.importMcp.hint")}
-            </div>
+            <div className="text-muted-foreground text-xs">{t("prototype.importMcp.hint")}</div>
           </div>
 
           {preview.error ? (
-            <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+            <div className="border-destructive/30 bg-destructive/10 text-destructive rounded-md border px-3 py-2 text-xs">
               {preview.error}
             </div>
           ) : null}
@@ -261,7 +267,9 @@ export function ImportMcpDialog({
           </Button>
           <Button
             onClick={() => void handleImport()}
-            disabled={!targetAgent || isImporting || preview.error != null || preview.items.length === 0}
+            disabled={
+              !targetAgent || isImporting || preview.error != null || preview.items.length === 0
+            }
           >
             {t("prototype.importMcp.submit")}
           </Button>

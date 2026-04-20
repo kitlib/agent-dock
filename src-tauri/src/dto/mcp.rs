@@ -1,4 +1,5 @@
 use serde::{Deserialize, Serialize};
+use std::collections::BTreeMap;
 
 #[derive(Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
@@ -32,4 +33,16 @@ pub struct LocalMcpServerDto {
     pub project_path: Option<String>,
     pub warnings: Vec<String>,
     pub errors: Vec<String>,
+}
+
+#[derive(Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct EditableLocalMcpDto {
+    pub server_name: String,
+    pub transport: String,
+    pub command: Option<String>,
+    pub args: Vec<String>,
+    pub env: BTreeMap<String, String>,
+    pub url: Option<String>,
+    pub headers: BTreeMap<String, String>,
 }

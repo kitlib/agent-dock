@@ -274,7 +274,12 @@ fn scan_claude_servers(target: &McpScanTargetDto) -> Vec<LocalMcpServerDto> {
                 .get("url")
                 .and_then(Value::as_str)
                 .map(str::to_string)
-                .or_else(|| server.get("command").and_then(Value::as_str).map(str::to_string))
+                .or_else(|| {
+                    server
+                        .get("command")
+                        .and_then(Value::as_str)
+                        .map(str::to_string)
+                })
                 .unwrap_or_default();
             items.push(build_local_mcp(
                 target,
@@ -312,7 +317,12 @@ fn scan_claude_servers(target: &McpScanTargetDto) -> Vec<LocalMcpServerDto> {
                     .get("url")
                     .and_then(Value::as_str)
                     .map(str::to_string)
-                    .or_else(|| server.get("command").and_then(Value::as_str).map(str::to_string))
+                    .or_else(|| {
+                        server
+                            .get("command")
+                            .and_then(Value::as_str)
+                            .map(str::to_string)
+                    })
                     .unwrap_or_default();
                 items.push(build_local_mcp(
                     target,
@@ -352,7 +362,12 @@ fn scan_codex_server_tables(
             .get("url")
             .and_then(toml::Value::as_str)
             .map(str::to_string)
-            .or_else(|| server.get("command").and_then(toml::Value::as_str).map(str::to_string))
+            .or_else(|| {
+                server
+                    .get("command")
+                    .and_then(toml::Value::as_str)
+                    .map(str::to_string)
+            })
             .unwrap_or_default();
         items.push(build_local_mcp(
             target,
@@ -500,7 +515,10 @@ fn scan_opencode_servers(target: &McpScanTargetDto) -> Vec<LocalMcpServerDto> {
         let Some(server) = server_value.as_object() else {
             continue;
         };
-        let open_code_type = server.get("type").and_then(Value::as_str).unwrap_or("local");
+        let open_code_type = server
+            .get("type")
+            .and_then(Value::as_str)
+            .unwrap_or("local");
         let mut normalized_server = serde_json::Map::new();
         let (transport, endpoint) = match open_code_type {
             "local" => {

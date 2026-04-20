@@ -5,7 +5,12 @@ import {
   listLocalMcps,
   listLocalSkills,
 } from "@/features/agents/api";
-import type { McpResource, McpScanTarget, SkillResource, SkillScanTarget } from "@/features/agents/types";
+import type {
+  McpResource,
+  McpScanTarget,
+  SkillResource,
+  SkillScanTarget,
+} from "@/features/agents/types";
 
 const AGENT_SKILLS_QUERY_KEY = "agent-skills";
 const AGENT_SKILL_DETAIL_QUERY_KEY = "agent-skill-detail";

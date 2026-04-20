@@ -25,19 +25,19 @@ function MarketplaceListSkeleton() {
       {Array.from({ length: 8 }, (_, index) => (
         <div
           key={index}
-          className="rounded-lg border border-border/70 bg-background px-3 py-2 animate-pulse"
+          className="border-border/70 bg-background animate-pulse rounded-lg border px-3 py-2"
         >
           <div className="flex items-start gap-3">
-            <div className="mt-1 h-4 w-4 rounded-sm bg-muted" />
+            <div className="bg-muted mt-1 h-4 w-4 rounded-sm" />
             <div className="min-w-0 flex-1">
-              <div className="h-4 w-2/5 rounded bg-muted" />
+              <div className="bg-muted h-4 w-2/5 rounded" />
               <div className="mt-2 flex items-center gap-2">
-                <div className="h-3 w-20 rounded bg-muted" />
-                <div className="h-3 w-24 rounded bg-muted" />
-                <div className="h-3 w-16 rounded bg-muted" />
+                <div className="bg-muted h-3 w-20 rounded" />
+                <div className="bg-muted h-3 w-24 rounded" />
+                <div className="bg-muted h-3 w-16 rounded" />
               </div>
             </div>
-            <div className="h-7 w-16 rounded-md bg-muted" />
+            <div className="bg-muted h-7 w-16 rounded-md" />
           </div>
         </div>
       ))}
@@ -64,6 +64,7 @@ type AgentResourcePanelProps = {
   onCopySkills: (sources: LocalSkillCopySource[]) => void;
   onDeleteLocalSkill: (skillPath: string, entryFilePath: string, skillId?: string) => Promise<void>;
   onDeleteLocalMcp: (agentType: string, configPath: string, serverName: string) => Promise<void>;
+  onEditLocalMcp: (resource: AgentDiscoveryItem) => void;
   onImportMcp: () => void;
   onToggleCheckedSkills: () => Promise<void>;
   onDragStart: (event: DragEvent<HTMLDivElement>, resourceId: string) => void;
@@ -105,6 +106,7 @@ export function AgentResourcePanel({
   onCopySkills,
   onDeleteLocalSkill,
   onDeleteLocalMcp,
+  onEditLocalMcp,
   onImportMcp,
   onToggleCheckedSkills,
   onDragStart,
@@ -389,6 +391,7 @@ export function AgentResourcePanel({
               onCopySkill={onCopySkill}
               onDeleteLocalSkill={onDeleteLocalSkill}
               onDeleteLocalMcp={onDeleteLocalMcp}
+              onEditLocalMcp={onEditLocalMcp}
               onDragStart={onDragStart}
               onOpenSkillEntryFile={onOpenSkillEntryFile}
               onOpenSkillFolder={onOpenSkillFolder}

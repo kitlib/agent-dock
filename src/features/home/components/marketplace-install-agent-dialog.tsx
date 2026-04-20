@@ -9,10 +9,7 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import {
-  RadioGroup,
-  RadioGroupItem,
-} from "@/components/ui/radio-group";
+import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { AgentIcon } from "@/features/agents/components/agent-icon";
 import type { ResolvedAgentView } from "@/features/agents/types";
 import type { MarketplaceInstallMethod } from "@/features/marketplace/types";
@@ -27,6 +24,22 @@ type MarketplaceInstallAgentDialogProps = {
   t: (key: string, options?: Record<string, unknown>) => string;
 };
 
+type InstallMethodOption = {
+  descriptionKey: string;
+  value: MarketplaceInstallMethod;
+};
+
+const installMethodOptions: InstallMethodOption[] = [
+  {
+    value: "skillsh",
+    descriptionKey: "prototype.marketplace.installMethods.skillshDescription",
+  },
+  {
+    value: "github",
+    descriptionKey: "prototype.marketplace.installMethods.githubDescription",
+  },
+];
+
 function getAgentMetaText(agent: ResolvedAgentView): string {
   if (agent.alias && agent.alias !== agent.name) {
     return agent.alias;
@@ -34,6 +47,14 @@ function getAgentMetaText(agent: ResolvedAgentView): string {
 
   const segments = agent.rootPath.split(/[/\\]+/).filter(Boolean);
   return segments[segments.length - 1] ?? agent.rootPath;
+}
+
+function resetDialogState(initialSelectedAgentId?: string | null) {
+  return {
+    installMethod: "skillsh" as MarketplaceInstallMethod,
+    isSubmitting: false,
+    selectedAgentId: initialSelectedAgentId ?? null,
+  };
 }
 
 export function MarketplaceInstallAgentDialog({
@@ -50,14 +71,17 @@ export function MarketplaceInstallAgentDialog({
 
   useEffect(() => {
     if (open) {
-      setSelectedAgentId(initialSelectedAgentId ?? null);
-      setInstallMethod("skillsh");
+      const nextState = resetDialogState(initialSelectedAgentId);
+      setSelectedAgentId(nextState.selectedAgentId);
+      setInstallMethod(nextState.installMethod);
+      setIsSubmitting(nextState.isSubmitting);
       return;
     }
 
-    setSelectedAgentId(null);
-    setInstallMethod("skillsh");
-    setIsSubmitting(false);
+    const nextState = resetDialogState();
+    setSelectedAgentId(nextState.selectedAgentId);
+    setInstallMethod(nextState.installMethod);
+    setIsSubmitting(nextState.isSubmitting);
   }, [initialSelectedAgentId, open]);
 
   const selectedAgent = targetAgents.find((agent) => agent.id === selectedAgentId) ?? null;
@@ -126,50 +150,36 @@ export function MarketplaceInstallAgentDialog({
         ) : null}
 
         <div className="space-y-2">
-          <div className="text-sm font-medium">
-            {t("prototype.marketplace.installMethodLabel")}
-          </div>
+          <div className="text-sm font-medium">{t("prototype.marketplace.installMethodLabel")}</div>
           <RadioGroup
             value={installMethod}
             onValueChange={(value) => setInstallMethod(value as MarketplaceInstallMethod)}
             className="grid grid-cols-1 gap-2 sm:grid-cols-2"
           >
-            <label
-              className={cn(
-                "flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-3 transition-colors",
-                installMethod === "skillsh"
-                  ? "border-primary bg-accent text-accent-foreground"
-                  : "bg-background border-border/70 hover:bg-accent hover:text-accent-foreground"
-              )}
-            >
-              <RadioGroupItem value="skillsh" />
-              <div className="min-w-0 flex-1">
-                <div className="text-sm font-medium">
-                  {t("prototype.marketplace.installMethods.skillsh")}
-                </div>
-                <div className="text-muted-foreground mt-1 text-xs">
-                  {t("prototype.marketplace.installMethods.skillshDescription")}
-                </div>
-              </div>
-            </label>
-            <label
-              className={cn(
-                "flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-3 transition-colors",
-                installMethod === "github"
-                  ? "border-primary bg-accent text-accent-foreground"
-                  : "bg-background border-border/70 hover:bg-accent hover:text-accent-foreground"
-              )}
-            >
-              <RadioGroupItem value="github" />
-              <div className="min-w-0 flex-1">
-                <div className="text-sm font-medium">
-                  {t("prototype.marketplace.installMethods.github")}
-                </div>
-                <div className="text-muted-foreground mt-1 text-xs">
-                  {t("prototype.marketplace.installMethods.githubDescription")}
-                </div>
-              </div>
-            </label>
+            {installMethodOptions.map((option) => {
+              const isSelected = installMethod === option.value;
+              const labelKey = `prototype.marketplace.installMethods.${option.value}`;
+
+              return (
+                <label
+                  key={option.value}
+                  className={cn(
+                    "flex cursor-pointer items-start gap-3 rounded-lg border px-3 py-3 transition-colors",
+                    isSelected
+                      ? "border-primary bg-accent text-accent-foreground"
+                      : "bg-background border-border/70 hover:bg-accent hover:text-accent-foreground"
+                  )}
+                >
+                  <RadioGroupItem value={option.value} />
+                  <div className="min-w-0 flex-1">
+                    <div className="text-sm font-medium">{t(labelKey)}</div>
+                    <div className="text-muted-foreground mt-1 text-xs">
+                      {t(option.descriptionKey)}
+                    </div>
+                  </div>
+                </label>
+              );
+            })}
           </RadioGroup>
         </div>
 

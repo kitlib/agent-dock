@@ -29,6 +29,7 @@ pub fn run() {
         }))
         .plugin(tauri_plugin_opener::init())
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
+        .plugin(tauri_plugin_shell::init())
         .plugin(plugins::system_tray::init())
         .invoke_handler(tauri::generate_handler![
             update_tray_menu,
@@ -43,8 +44,12 @@ pub fn run() {
             commands::mcp::list_local_mcps,
             commands::mcp::open_mcp_config_folder,
             commands::mcp::open_mcp_config_file,
+            commands::mcp::get_local_mcp_edit_data,
+            commands::mcp::update_local_mcp,
             commands::mcp::delete_local_mcp,
             commands::mcp::import_local_mcp_json,
+            commands::mcp::launch_mcp_inspector,
+            commands::mcp::stop_mcp_inspector,
             commands::marketplace::fetch_skillssh_leaderboard,
             commands::marketplace::get_skillssh_marketplace_detail,
             commands::marketplace::preview_skillssh_marketplace_install,

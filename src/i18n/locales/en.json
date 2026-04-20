@@ -91,10 +91,15 @@
       "add": "Manage",
       "clear": "Clear",
       "open": "Open",
+      "openFile": "Open file",
       "visit": "Visit",
+      "inspect": "Inspect",
       "edit": "Edit",
       "delete": "Delete",
+      "retry": "Retry",
+      "close": "Close",
       "copy": "Copy",
+      "copied": "Copied",
       "copyToAgent": "Copy to Agent",
       "overwrite": "Overwrite",
       "skip": "Skip",
@@ -150,15 +155,46 @@
       "skipDescription": "Keep existing MCP entries and import only new names.",
       "submit": "Import MCP"
     },
+    "editMcp": {
+      "title": "Edit MCP",
+      "description": "Update the local MCP config for {{name}} in {{agentName}}.",
+      "submit": "Save MCP",
+      "fields": {
+        "serverName": "Server name",
+        "transport": "Transport",
+        "command": "Command",
+        "args": "Arguments",
+        "env": "Environment variables",
+        "url": "URL",
+        "headers": "Headers"
+      },
+      "placeholders": {
+        "args": "--flag\nvalue"
+      },
+      "hints": {
+        "args": "Enter one argument per line."
+      },
+      "validation": {
+        "serverNameRequired": "Server name is required.",
+        "commandRequired": "Command is required for stdio MCP servers.",
+        "urlRequired": "URL is required for remote MCP servers."
+      }
+    },
     "feedback": {
       "deleteSuccess": "Skill deleted.",
       "deleteFailed": "Failed to delete skill.",
       "deleteMcpSuccess": "MCP deleted.",
       "deleteMcpFailed": "Failed to delete MCP.",
+      "loadMcpEditFailed": "Failed to load MCP edit data.",
+      "loadMcpInspectFailed": "Failed to load MCP inspection data.",
       "importMcpSuccess": "Imported {{count}} MCP server(s).",
       "importMcpSkipped": "Skipped {{count}} conflicting MCP server(s).",
       "importMcpFailed": "Failed to import MCP JSON.",
       "importMcpSelectAgent": "Select a target agent before importing MCP JSON.",
+      "updateMcpSuccess": "MCP updated.",
+      "updateMcpFailed": "Failed to update MCP.",
+      "inspectorLaunched": "MCP Inspector opened in browser.",
+      "inspectorStopped": "MCP Inspector stopped.",
       "copySuccess": "Skills copied successfully.",
       "copyFailed": "Failed to copy skills.",
       "marketplaceInstallSuccess": "Marketplace skill installed successfully.",
@@ -166,12 +202,36 @@
       "marketplaceInstallSelectAgent": "Select a target agent before installing a marketplace skill.",
       "marketplaceInstallUnsupported": "Only marketplace skills are supported for installation right now."
     },
+    "inspector": {
+      "title": "MCP Inspector",
+      "description": "MCP server debugging tool to view available tools and test calls.",
+      "status": {
+        "title": "Status",
+        "installed": "✅ MCP Inspector is installed",
+        "notInstalled": "❌ MCP Inspector is not installed",
+        "starting": "🔄 Starting debug service...",
+        "running": "✅ Debug service is running",
+        "stopped": "⏹️ Debug service is stopped"
+      },
+      "accessUrl": "Access URL",
+      "openButton": "Open Debug Page",
+      "stopAndClose": "Stop and Close",
+      "errors": {
+        "launchFailed": "Failed to launch MCP Inspector, please check your configuration",
+        "missingCommand": "MCP configuration is missing the start command, please check your settings",
+        "missingUrl": "MCP configuration is missing the service URL, please check your settings",
+        "nodeRequired": "Please install Node.js to use MCP Inspector"
+      }
+    },
     "detail": {
       "title": "Details",
       "description": "Description",
       "preview": "Preview",
       "document": "Document",
       "config": "Config",
+      "serverConfig": "Server Configuration",
+      "summary": "Summary",
+      "notes": "Notes",
       "prompt": "Prompt",
       "capabilities": "Capabilities",
       "tags": "Tags",

@@ -27,6 +27,7 @@ type AgentResourceListProps = {
   onCopySkill: (source: LocalSkillCopySource) => void;
   onDeleteLocalSkill: (skillPath: string, entryFilePath: string, skillId?: string) => Promise<void>;
   onDeleteLocalMcp: (agentType: string, configPath: string, serverName: string) => Promise<void>;
+  onEditLocalMcp: (resource: AgentDiscoveryItem) => void;
   onDragStart: (event: DragEvent<HTMLDivElement>, resourceId: string) => void;
   onOpenSkillEntryFile: (skillPath: string, entryFilePath: string) => Promise<void>;
   onOpenSkillFolder: (skillPath: string) => void;
@@ -74,11 +75,11 @@ type AgentResourceRowProps = {
   onCopySkill: AgentResourceListProps["onCopySkill"];
   onDeleteLocalSkill: AgentResourceListProps["onDeleteLocalSkill"];
   onDeleteLocalMcp: AgentResourceListProps["onDeleteLocalMcp"];
+  onEditLocalMcp: AgentResourceListProps["onEditLocalMcp"];
   onDragStart: AgentResourceListProps["onDragStart"];
   onOpenSkillEntryFile: AgentResourceListProps["onOpenSkillEntryFile"];
   onOpenSkillFolder: AgentResourceListProps["onOpenSkillFolder"];
   onOpenMcpConfigFile: AgentResourceListProps["onOpenMcpConfigFile"];
-  onOpenMcpConfigFolder: AgentResourceListProps["onOpenMcpConfigFolder"];
   onSelectResource: AgentResourceListProps["onSelectResource"];
   onSetLocalSkillEnabled: AgentResourceListProps["onSetLocalSkillEnabled"];
   onToggleChecked: AgentResourceListProps["onToggleChecked"];
@@ -131,10 +132,10 @@ function renderResourceAction(
   onCopySkill: AgentResourceListProps["onCopySkill"],
   onDeleteLocalSkill: AgentResourceListProps["onDeleteLocalSkill"],
   onDeleteLocalMcp: AgentResourceListProps["onDeleteLocalMcp"],
+  onEditLocalMcp: AgentResourceListProps["onEditLocalMcp"],
   onOpenSkillEntryFile: AgentResourceListProps["onOpenSkillEntryFile"],
   onOpenSkillFolder: AgentResourceListProps["onOpenSkillFolder"],
   onOpenMcpConfigFile: AgentResourceListProps["onOpenMcpConfigFile"],
-  onOpenMcpConfigFolder: AgentResourceListProps["onOpenMcpConfigFolder"],
   onSetLocalSkillEnabled: AgentResourceListProps["onSetLocalSkillEnabled"],
   onInstallMarketplaceItem: AgentResourceListProps["onInstallMarketplaceItem"],
   t: AgentResourceListProps["t"]
@@ -187,10 +188,10 @@ function renderResourceAction(
       ) : null}
       {canOpenMcpFolder ? (
         <>
-          <DropdownMenuItem onClick={() => onOpenMcpConfigFolder(display.configPath!)}>
-            {t("prototype.actions.open")}
-          </DropdownMenuItem>
           <DropdownMenuItem onClick={() => void onOpenMcpConfigFile(display.configPath!)}>
+            {t("prototype.actions.openFile")}
+          </DropdownMenuItem>
+          <DropdownMenuItem onClick={() => onEditLocalMcp(display.resource)}>
             {t("prototype.actions.edit")}
           </DropdownMenuItem>
           {canDeleteMcp ? (
@@ -285,11 +286,11 @@ const AgentResourceRow = memo(function AgentResourceRow({
   onCopySkill,
   onDeleteLocalSkill,
   onDeleteLocalMcp,
+  onEditLocalMcp,
   onDragStart,
   onOpenSkillEntryFile,
   onOpenSkillFolder,
   onOpenMcpConfigFile,
-  onOpenMcpConfigFolder,
   onSelectResource,
   onSetLocalSkillEnabled,
   onToggleChecked,
@@ -324,12 +325,7 @@ const AgentResourceRow = memo(function AgentResourceRow({
           {resource.origin === "local" ? (
             <div className={getSummaryClassName(active)}>{resource.summary}</div>
           ) : null}
-          {renderDiscoveryMeta(
-            display,
-            showOriginBadge,
-            active,
-            formattedMarketplaceInstalls
-          )}
+          {renderDiscoveryMeta(display, showOriginBadge, active, formattedMarketplaceInstalls)}
         </div>
         {isMarketplaceResource ? (
           <Button
@@ -361,10 +357,10 @@ const AgentResourceRow = memo(function AgentResourceRow({
                 onCopySkill,
                 onDeleteLocalSkill,
                 onDeleteLocalMcp,
+                onEditLocalMcp,
                 onOpenSkillEntryFile,
                 onOpenSkillFolder,
                 onOpenMcpConfigFile,
-                onOpenMcpConfigFolder,
                 onSetLocalSkillEnabled,
                 onInstallMarketplaceItem,
                 t
@@ -393,7 +389,9 @@ function buildDisplayResource(
 
   if (!isLocalSkill) {
     const mcpResource =
-      isLocalResource && resource.kind === "mcp" ? (resource as McpResource & { origin: "local" }) : null;
+      isLocalResource && resource.kind === "mcp"
+        ? (resource as McpResource & { origin: "local" })
+        : null;
     return {
       resource,
       formattedMarketplaceInstalls,
@@ -402,7 +400,9 @@ function buildDisplayResource(
       isLocalSkill,
       originLabel,
       agentBadgeLabel:
-        showOriginBadge && isAllAgentsView && "agentName" in resource ? resource.agentName : undefined,
+        showOriginBadge && isAllAgentsView && "agentName" in resource
+          ? resource.agentName
+          : undefined,
       isDisabled: false,
       configPath: mcpResource?.configPath ?? "",
     };
@@ -459,11 +459,11 @@ export function AgentResourceList({
   onCopySkill,
   onDeleteLocalSkill,
   onDeleteLocalMcp,
+  onEditLocalMcp,
   onDragStart,
   onOpenSkillEntryFile,
   onOpenSkillFolder,
   onOpenMcpConfigFile,
-  onOpenMcpConfigFolder,
   onSelectResource,
   onSetLocalSkillEnabled,
   onToggleChecked,
@@ -531,11 +531,11 @@ export function AgentResourceList({
             onCopySkill={onCopySkill}
             onDeleteLocalSkill={onDeleteLocalSkill}
             onDeleteLocalMcp={onDeleteLocalMcp}
+            onEditLocalMcp={onEditLocalMcp}
             onDragStart={onDragStart}
             onOpenSkillEntryFile={onOpenSkillEntryFile}
             onOpenSkillFolder={onOpenSkillFolder}
             onOpenMcpConfigFile={onOpenMcpConfigFile}
-            onOpenMcpConfigFolder={onOpenMcpConfigFolder}
             onSelectResource={onSelectResource}
             onSetLocalSkillEnabled={onSetLocalSkillEnabled}
             onToggleChecked={onToggleChecked}
@@ -580,11 +580,11 @@ export function AgentResourceList({
               onCopySkill={onCopySkill}
               onDeleteLocalSkill={onDeleteLocalSkill}
               onDeleteLocalMcp={onDeleteLocalMcp}
+              onEditLocalMcp={onEditLocalMcp}
               onDragStart={onDragStart}
               onOpenSkillEntryFile={onOpenSkillEntryFile}
               onOpenSkillFolder={onOpenSkillFolder}
               onOpenMcpConfigFile={onOpenMcpConfigFile}
-              onOpenMcpConfigFolder={onOpenMcpConfigFolder}
               onSelectResource={onSelectResource}
               onSetLocalSkillEnabled={onSetLocalSkillEnabled}
               onToggleChecked={onToggleChecked}

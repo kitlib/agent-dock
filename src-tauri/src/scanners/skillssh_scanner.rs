@@ -128,7 +128,10 @@ fn build_http_client() -> Result<reqwest::blocking::Client, String> {
 
 fn build_skillssh_headers() -> Result<HeaderMap, String> {
     let mut headers = HeaderMap::new();
-    headers.insert(ACCEPT, HeaderValue::from_static("application/json, text/plain, */*"));
+    headers.insert(
+        ACCEPT,
+        HeaderValue::from_static("application/json, text/plain, */*"),
+    );
     headers.insert(REFERER, HeaderValue::from_static("https://skills.sh/"));
     Ok(headers)
 }
@@ -848,7 +851,10 @@ fn parse_total_skills_value(value: &Value) -> Option<u64> {
         .or_else(|| value.get("count").and_then(value_to_u64))
 }
 
-fn parse_skill_list_response(response: &Value, page: usize) -> Result<SkillsShSkillListRecord, String> {
+fn parse_skill_list_response(
+    response: &Value,
+    page: usize,
+) -> Result<SkillsShSkillListRecord, String> {
     if let Some(array) = response.get("skills").and_then(Value::as_array) {
         let items = parse_skills_array(array);
         let total_skills = parse_total_skills_value(response).or_else(|| Some(items.len() as u64));
@@ -856,7 +862,11 @@ fn parse_skill_list_response(response: &Value, page: usize) -> Result<SkillsShSk
             has_more: response
                 .get("hasMore")
                 .and_then(Value::as_bool)
-                .unwrap_or_else(|| total_skills.map(|total| total as usize > (page + 1) * MARKETPLACE_PAGE_SIZE).unwrap_or(false)),
+                .unwrap_or_else(|| {
+                    total_skills
+                        .map(|total| total as usize > (page + 1) * MARKETPLACE_PAGE_SIZE)
+                        .unwrap_or(false)
+                }),
             items,
             total_skills,
             page,
@@ -903,11 +913,7 @@ fn slice_page_items(
     offset: usize,
     page_size: usize,
 ) -> Vec<SkillsShSkillRecord> {
-    items.iter()
-        .skip(offset)
-        .take(page_size)
-        .cloned()
-        .collect()
+    items.iter().skip(offset).take(page_size).cloned().collect()
 }
 
 fn parse_total_skills_text(value: &str) -> Option<u64> {

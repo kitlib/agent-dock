@@ -17,7 +17,12 @@ import {
 import { Toaster } from "@/components/ui/sonner";
 import { ResizableHandle, ResizablePanel, ResizablePanelGroup } from "@/components/ui/resizable";
 import { setLocalSkillEnabled } from "@/features/agents/api";
-import type { AgentDiscoveryItem, LocalDiscoveryItem } from "@/features/agents/types";
+import type {
+  AgentDiscoveryItem,
+  EditableLocalMcp,
+  LocalDiscoveryItem,
+  McpResource,
+} from "@/features/agents/types";
 import { supportsAgentMcp } from "@/features/agents/agent-meta";
 import { getLocalSkillToggleTarget } from "@/features/home/local-skill-toggle";
 import {
@@ -25,7 +30,9 @@ import {
   previewSkillsshMarketplaceInstall,
 } from "@/features/marketplace/api";
 import { CopySkillDialog } from "@/features/home/components/copy-skill-dialog";
+import { EditMcpDialog } from "@/features/home/components/edit-mcp-dialog";
 import { ImportMcpDialog } from "@/features/home/components/import-mcp-dialog";
+import { McpInspectorDialog } from "@/features/home/components/mcp-inspector-dialog";
 import { MarketplaceInstallAgentDialog } from "@/features/home/components/marketplace-install-agent-dialog";
 import type {
   MarketplaceDiscoveryItem,
@@ -88,12 +95,14 @@ export default function HomePage() {
     updateMarketplaceInstallState,
     onDeleteLocalSkill,
     onDeleteLocalMcp,
+    onGetLocalMcpEditData,
     onImportLocalMcpJson,
     onOpenSkillEntryFile,
     onOpenSkillFolder,
     onOpenMcpConfigFile,
     onOpenMcpConfigFolder,
     onPreviewCopy,
+    onUpdateLocalMcp,
     onExecuteCopy,
     refreshSkills,
     managedAgentsForView,
@@ -123,6 +132,12 @@ export default function HomePage() {
   const [pendingMarketplaceInstallSelection, setPendingMarketplaceInstallSelection] =
     useState<MarketplaceDiscoveryItem | null>(null);
   const [isImportMcpDialogOpen, setIsImportMcpDialogOpen] = useState(false);
+  const [isEditMcpDialogOpen, setIsEditMcpDialogOpen] = useState(false);
+  const [isLoadingEditMcp, setIsLoadingEditMcp] = useState(false);
+  const [pendingEditMcpResource, setPendingEditMcpResource] = useState<McpResource | null>(null);
+  const [pendingEditMcpValue, setPendingEditMcpValue] = useState<EditableLocalMcp | null>(null);
+  const [isInspectorDialogOpen, setIsInspectorDialogOpen] = useState(false);
+  const [pendingInspectorResource, setPendingInspectorResource] = useState<McpResource | null>(null);
   const [pendingInstallRequest, setPendingInstallRequest] =
     useState<PendingMarketplaceInstallRequest | null>(null);
   const [pendingInstallPreview, setPendingInstallPreview] =
@@ -211,10 +226,7 @@ export default function HomePage() {
     }
   }
 
-  async function handleImportLocalMcp(
-    jsonPayload: string,
-    conflictStrategy: "overwrite" | "skip"
-  ) {
+  async function handleImportLocalMcp(jsonPayload: string, conflictStrategy: "overwrite" | "skip") {
     if (!selectedAgent) {
       throw new Error(t("prototype.feedback.importMcpSelectAgent"));
     }
@@ -243,6 +255,77 @@ export default function HomePage() {
     } catch (error) {
       const message =
         error instanceof Error ? error.message : t("prototype.feedback.importMcpFailed");
+      toast.error(message);
+      throw error;
+    }
+  }
+
+  async function handleOpenEditLocalMcp(resource: AgentDiscoveryItem): Promise<void> {
+    if (
+      resource.origin !== "local" ||
+      resource.kind !== "mcp" ||
+      !resource.agentType ||
+      !resource.configPath
+    ) {
+      return;
+    }
+
+    try {
+      setIsLoadingEditMcp(true);
+      const editValue = await onGetLocalMcpEditData(
+        resource.agentType,
+        resource.configPath,
+        resource.name,
+        resource.scope ?? "user",
+        resource.projectPath
+      );
+      setPendingEditMcpResource(resource);
+      setPendingEditMcpValue(editValue);
+      setIsEditMcpDialogOpen(true);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : t("prototype.feedback.loadMcpEditFailed");
+      toast.error(message);
+    } finally {
+      setIsLoadingEditMcp(false);
+    }
+  }
+
+  async function handleInspectMcp(resource: AgentDiscoveryItem): Promise<void> {
+    if (
+      resource.origin !== "local" ||
+      resource.kind !== "mcp" ||
+      !resource.agentType ||
+      !resource.configPath
+    ) {
+      return;
+    }
+
+    setPendingInspectorResource(resource as McpResource);
+    setIsInspectorDialogOpen(true);
+  }
+
+  async function handleUpdateLocalMcp(nextServer: EditableLocalMcp): Promise<void> {
+    if (!pendingEditMcpResource?.agentType || !pendingEditMcpResource.configPath) {
+      throw new Error(t("prototype.feedback.loadMcpEditFailed"));
+    }
+
+    try {
+      await onUpdateLocalMcp(
+        pendingEditMcpResource.agentType,
+        pendingEditMcpResource.configPath,
+        pendingEditMcpResource.name,
+        pendingEditMcpResource.scope ?? "user",
+        nextServer,
+        pendingEditMcpResource.projectPath
+      );
+      refreshMcps();
+      toast.success(t("prototype.feedback.updateMcpSuccess"));
+      setPendingEditMcpResource(null);
+      setPendingEditMcpValue(null);
+    } catch (error) {
+      const message =
+        error instanceof Error ? error.message : t("prototype.feedback.updateMcpFailed");
       toast.error(message);
       throw error;
     }
@@ -505,6 +588,31 @@ export default function HomePage() {
         onImport={handleImportLocalMcp}
         t={t}
       />
+      <EditMcpDialog
+        open={isEditMcpDialogOpen}
+        onOpenChange={(open) => {
+          setIsEditMcpDialogOpen(open);
+          if (!open) {
+            setPendingEditMcpResource(null);
+            setPendingEditMcpValue(null);
+          }
+        }}
+        targetResource={pendingEditMcpResource}
+        initialValue={isLoadingEditMcp ? null : pendingEditMcpValue}
+        onSubmit={handleUpdateLocalMcp}
+        t={t}
+      />
+      <McpInspectorDialog
+        open={isInspectorDialogOpen}
+        onOpenChange={(open) => {
+          setIsInspectorDialogOpen(open);
+          if (!open) {
+            setPendingInspectorResource(null);
+          }
+        }}
+        resource={pendingInspectorResource}
+        t={t}
+      />
       <Dialog
         open={pendingInstallRequest != null && pendingInstallPreview?.hasConflict === true}
         onOpenChange={(open) => {
@@ -628,6 +736,7 @@ export default function HomePage() {
                   onCopySkills={openCopyDialog}
                   onDeleteLocalSkill={handleDeleteLocalSkill}
                   onDeleteLocalMcp={handleDeleteLocalMcp}
+                  onEditLocalMcp={(resource) => void handleOpenEditLocalMcp(resource)}
                   onImportMcp={() => setIsImportMcpDialogOpen(true)}
                   onToggleCheckedSkills={handleToggleCheckedSkills}
                   onDragStart={handleDragStart}
@@ -666,6 +775,8 @@ export default function HomePage() {
                   isAllAgentsView={selectedScope === "all"}
                   onDeleteLocalSkill={handleDeleteLocalSkill}
                   onDeleteLocalMcp={handleDeleteLocalMcp}
+                  onEditLocalMcp={(resource) => void handleOpenEditLocalMcp(resource)}
+                  onInspectMcp={(resource) => void handleInspectMcp(resource)}
                   onOpenSkillEntryFile={onOpenSkillEntryFile}
                   onOpenSkillFolder={onOpenSkillFolder}
                   onOpenMcpConfigFile={onOpenMcpConfigFile}

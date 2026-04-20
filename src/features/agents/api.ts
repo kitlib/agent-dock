@@ -1,27 +1,92 @@
 import { invoke } from "@tauri-apps/api/core";
 import { checkLocalMarketplaceSkillUpdate } from "@/features/marketplace/api";
 import type {
+  CopyLocalSkillsResult,
   CreateAgentResult,
   DeleteAgentResult,
+  EditableLocalMcp,
   ImportAgentsResult,
+  ImportLocalMcpResult,
+  LocalMcpImportConflictStrategy,
+  LocalSkillConflictResolution,
+  LocalSkillCopySource,
+  LocalSkillCopyTargetAgent,
   ManagedAgent,
   ManualAgentDraft,
+  McpResource,
+  McpScanTarget,
+  McpServerCapabilities,
+  PreviewLocalSkillCopyResult,
   RemoveAgentResult,
   ResolvedAgentView,
   ScanTarget,
   ScannedAgentCandidate,
   SkillResource,
   SkillScanTarget,
-  McpResource,
-  McpScanTarget,
-  ImportLocalMcpResult,
-  LocalMcpImportConflictStrategy,
-  LocalSkillCopySource,
-  LocalSkillCopyTargetAgent,
-  PreviewLocalSkillCopyResult,
-  LocalSkillConflictResolution,
-  CopyLocalSkillsResult,
+  UpdateLocalMcpInput,
+  UpdateLocalMcpResult,
 } from "./types";
+
+function formatSkillScanTargets(scanTargets: SkillScanTarget[]) {
+  return scanTargets.map((target) => ({
+    agentId: target.agentId,
+    agentType: target.agentType,
+    rootPath: target.rootPath,
+    displayName: target.displayName,
+    source: target.source,
+  }));
+}
+
+function formatSkillLog(skill: SkillResource) {
+  return {
+    id: skill.id,
+    name: skill.name,
+    ownerAgentId: skill.ownerAgentId ?? null,
+    agentType: skill.agentType ?? null,
+    agentName: skill.agentName ?? null,
+    skillPath: skill.skillPath ?? null,
+  };
+}
+
+type UpdateLocalMcpPayload = {
+  nextServerName: string;
+  transport: UpdateLocalMcpInput["transport"];
+  command: UpdateLocalMcpInput["command"];
+  args: UpdateLocalMcpInput["args"];
+  env: UpdateLocalMcpInput["env"];
+  url: UpdateLocalMcpInput["url"];
+  headers: UpdateLocalMcpInput["headers"];
+};
+
+function buildLocalMcpPayload(nextServer: UpdateLocalMcpInput): UpdateLocalMcpPayload {
+  return {
+    nextServerName: nextServer.serverName,
+    transport: nextServer.transport,
+    command: nextServer.command,
+    args: nextServer.args,
+    env: nextServer.env,
+    url: nextServer.url,
+    headers: nextServer.headers,
+  };
+}
+
+function formatMcpScanTargets(scanTargets: McpScanTarget[]) {
+  return scanTargets.map((target) => ({
+    agentId: target.agentId,
+    rootPath: target.rootPath,
+  }));
+}
+
+function formatMcpLog(mcp: McpResource) {
+  return {
+    id: mcp.id,
+    name: mcp.name,
+    ownerAgentId: mcp.ownerAgentId ?? null,
+    transport: mcp.transport,
+    command: mcp.command?.slice(0, 50) + (mcp.command?.length > 50 ? "..." : "") ?? null,
+    url: mcp.url ?? null,
+  };
+}
 
 export async function listManagedAgents() {
   return invoke<ManagedAgent[]>("list_managed_agents");
@@ -61,27 +126,14 @@ export async function removeManagedAgent(managedAgentId: string, scanTargets: Sc
 
 export async function listLocalSkills(scanTargets: SkillScanTarget[]) {
   console.log("[skills] list_local_skills request", {
-    scanTargets: scanTargets.map((target) => ({
-      agentId: target.agentId,
-      agentType: target.agentType,
-      rootPath: target.rootPath,
-      displayName: target.displayName,
-      source: target.source,
-    })),
+    scanTargets: formatSkillScanTargets(scanTargets),
   });
 
   const skills = await invoke<SkillResource[]>("list_local_skills", { scanTargets });
 
   console.log("[skills] list_local_skills response", {
     count: skills.length,
-    skills: skills.map((skill) => ({
-      id: skill.id,
-      name: skill.name,
-      ownerAgentId: skill.ownerAgentId ?? null,
-      agentType: skill.agentType ?? null,
-      agentName: skill.agentName ?? null,
-      skillPath: skill.skillPath ?? null,
-    })),
+    skills: skills.map(formatSkillLog),
   });
 
   return skills;
@@ -90,30 +142,41 @@ export async function listLocalSkills(scanTargets: SkillScanTarget[]) {
 export async function getLocalSkillDetail(scanTargets: SkillScanTarget[], skillId: string) {
   console.log("[skills] get_local_skill_detail request", {
     skillId,
-    scanTargets: scanTargets.map((target) => ({
-      agentId: target.agentId,
-      agentType: target.agentType,
-      rootPath: target.rootPath,
-      displayName: target.displayName,
-      source: target.source,
-    })),
+    scanTargets: formatSkillScanTargets(scanTargets),
   });
 
   const detail = await invoke<SkillResource>("get_local_skill_detail", { scanTargets, skillId });
 
-  console.log("[skills] get_local_skill_detail response", {
-    skillId: detail.id,
-    ownerAgentId: detail.ownerAgentId ?? null,
-    agentType: detail.agentType ?? null,
-    agentName: detail.agentName ?? null,
-    skillPath: detail.skillPath ?? null,
-  });
+  console.log("[skills] get_local_skill_detail response", formatSkillLog(detail));
 
   return detail;
 }
 
 export async function listLocalMcps(scanTargets: McpScanTarget[]) {
-  return invoke<McpResource[]>("list_local_mcps", { scanTargets });
+  console.log("[mcp] list_local_mcps request", {
+    scanTargets: formatMcpScanTargets(scanTargets),
+  });
+
+  try {
+    const mcps = await invoke<McpResource[]>("list_local_mcps", { scanTargets });
+
+    console.log("[mcp] list_local_mcps response", {
+      count: mcps.length,
+      mcps: mcps.map(formatMcpLog),
+    });
+
+    return mcps;
+  } catch (error) {
+    console.error("[mcp] list_local_mcps failed", {
+      scanTargets: formatMcpScanTargets(scanTargets),
+      error: error instanceof Error ? {
+        message: error.message,
+        stack: error.stack,
+        name: error.name,
+      } : error,
+    });
+    throw error;
+  }
 }
 
 export async function openMcpConfigFolder(configPath: string) {
@@ -122,6 +185,40 @@ export async function openMcpConfigFolder(configPath: string) {
 
 export async function openMcpConfigFile(configPath: string) {
   return invoke<void>("open_mcp_config_file", { configPath });
+}
+
+export async function getLocalMcpEditData(
+  agentType: string,
+  configPath: string,
+  serverName: string,
+  scope: string,
+  projectPath?: string | null
+) {
+  return invoke<EditableLocalMcp>("get_local_mcp_edit_data", {
+    agentType,
+    configPath,
+    serverName,
+    scope,
+    projectPath,
+  });
+}
+
+export async function updateLocalMcp(
+  agentType: string,
+  configPath: string,
+  serverName: string,
+  scope: string,
+  nextServer: UpdateLocalMcpInput,
+  projectPath?: string | null
+) {
+  return invoke<UpdateLocalMcpResult>("update_local_mcp", {
+    agentType,
+    configPath,
+    serverName,
+    scope,
+    projectPath,
+    ...buildLocalMcpPayload(nextServer),
+  });
 }
 
 export async function deleteLocalMcp(agentType: string, configPath: string, serverName: string) {
@@ -193,4 +290,69 @@ export async function copyLocalSkills(
 
 export async function checkMarketplaceSkillUpdate(skillPath: string, entryFilePath: string) {
   return checkLocalMarketplaceSkillUpdate(skillPath, entryFilePath);
+}
+
+export async function inspectMcpServer(config: EditableLocalMcp) {
+  console.log("[MCP] Inspect server request:", {
+    name: config.serverName,
+    transport: config.transport,
+    command: config.command ? `${config.command} ${config.args?.join(" ") || ""}` : null,
+    url: config.url,
+    hasEnv: config.env && Object.keys(config.env).length > 0,
+    hasHeaders: config.headers && Object.keys(config.headers).length > 0
+  });
+
+  try {
+    const result = await invoke<McpServerCapabilities>("inspect_mcp_server", { config });
+    console.log("[MCP] Inspect server response:", {
+      name: config.serverName,
+      tools: result.tools?.length || 0,
+      toolNames: result.tools?.map(t => t.name) || []
+    });
+    return result;
+  } catch (error) {
+    console.error("[MCP] Inspect server failed:", {
+      name: config.serverName,
+      error: error instanceof Error ? {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      } : error,
+      config
+    });
+    throw error;
+  }
+}
+
+export async function stopMcpInspector(pid: number) {
+  console.log("[MCP] Stop inspector request:", { pid });
+
+  try {
+    await invoke<void>("stop_mcp_inspector", { pid });
+    console.log("[MCP] Stop inspector success:", { pid });
+  } catch (error) {
+    console.error("[MCP] Stop inspector failed:", {
+      pid,
+      error: error instanceof Error ? {
+        message: error.message,
+        stack: error.stack,
+        name: error.name
+      } : error
+    });
+    throw error;
+  }
+}
+
+export async function callMcpTool(
+  config: EditableLocalMcp,
+  toolName: string,
+  parameters: Record<string, unknown>
+) {
+  return invoke<unknown>("call_mcp_tool", {
+    request: {
+      config,
+      toolName,
+      parameters,
+    },
+  });
 }

@@ -97,9 +97,7 @@ function getSelectedResourceSourceValue(
   return selectedResource.sourceLabel ?? null;
 }
 
-function getLocalMarketplaceUrl(
-  selectedResource: AgentDiscoveryItem | null
-): string | null {
+function getLocalMarketplaceUrl(selectedResource: AgentDiscoveryItem | null): string | null {
   if (
     !selectedResource ||
     selectedResource.origin !== "local" ||
@@ -115,9 +113,7 @@ function getLocalMarketplaceUrl(
   return `https://skills.sh/${selectedResource.marketplaceSource}/${selectedResource.marketplaceRemoteId}`;
 }
 
-function getMarketplaceRepositoryUrl(
-  selectedResource: AgentDiscoveryItem | null
-): string | null {
+function getMarketplaceRepositoryUrl(selectedResource: AgentDiscoveryItem | null): string | null {
   if (
     !selectedResource ||
     selectedResource.origin !== "marketplace" ||
@@ -143,11 +139,9 @@ type AgentDetailPanelProps = {
     entryFilePath: string,
     skillId?: string
   ) => Promise<void>;
-  onDeleteLocalMcp?: (
-    agentType: string,
-    configPath: string,
-    serverName: string
-  ) => Promise<void>;
+  onDeleteLocalMcp?: (agentType: string, configPath: string, serverName: string) => Promise<void>;
+  onEditLocalMcp?: (resource: AgentDiscoveryItem) => void;
+  onInspectMcp?: (mcp: LocalDiscoveryItem & { kind: "mcp"; origin: "local" }) => void;
   onOpenSkillEntryFile?: (skillPath: string, entryFilePath: string) => Promise<void>;
   onOpenSkillFolder: (skillPath: string) => void;
   onOpenMcpConfigFile?: (configPath: string) => Promise<void>;
@@ -187,6 +181,7 @@ export function AgentDetailPanel({
   isLocalMarketplaceDetailLoading = false,
   onDeleteLocalSkill,
   onDeleteLocalMcp,
+  onEditLocalMcp,
   onOpenSkillEntryFile,
   onOpenSkillFolder,
   onOpenMcpConfigFile,
@@ -195,6 +190,7 @@ export function AgentDetailPanel({
   onSetLocalSkillEnabled,
   onInstallMarketplaceItem,
   onUpdateLocalMarketplaceSkill,
+  onInspectMcp,
   selectedAgent,
   selectedResource,
   t,
@@ -342,15 +338,6 @@ export function AgentDetailPanel({
                 {t("prototype.actions.open")}
               </Button>
             ) : null}
-            {localMcp?.configPath && onOpenMcpConfigFolder ? (
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => onOpenMcpConfigFolder(localMcp.configPath!)}
-              >
-                {t("prototype.actions.open")}
-              </Button>
-            ) : null}
             {isLocalSkill && onOpenSkillEntryFile ? (
               <Button
                 variant="outline"
@@ -369,6 +356,16 @@ export function AgentDetailPanel({
                 size="sm"
                 onClick={() => void onOpenMcpConfigFile(localMcp.configPath!)}
               >
+                {t("prototype.actions.openFile")}
+              </Button>
+            ) : null}
+            {localMcp?.configPath && onInspectMcp ? (
+              <Button variant="outline" size="sm" onClick={() => onInspectMcp?.(localMcp)}>
+                {t("prototype.actions.inspect")}
+              </Button>
+            ) : null}
+            {localMcp?.configPath && onOpenMcpConfigFile ? (
+              <Button variant="outline" size="sm" onClick={() => onEditLocalMcp?.(localMcp)}>
                 {t("prototype.actions.edit")}
               </Button>
             ) : null}
@@ -456,7 +453,7 @@ export function AgentDetailPanel({
                 />
               )
             ) : null}
-            {selectedResource.origin === "local" ? (
+            {selectedResource.origin === "local" && selectedResource.kind !== "mcp" ? (
               <InlineMetaBadge
                 label={t("prototype.detail.updatedAt")}
                 value={selectedResource.updatedAt}
