@@ -11,7 +11,7 @@ use tauri_plugin_opener::OpenerExt;
 use tauri_plugin_shell::process::CommandChild;
 use tauri_plugin_shell::ShellExt;
 
-// MCP Inspector 结构化错误码
+// MCP Inspector structured error codes
 #[derive(Serialize, Debug)]
 #[serde(tag = "code", content = "message")]
 pub enum McpInspectorError {
@@ -317,6 +317,7 @@ pub fn get_local_mcp_edit_data(
 }
 
 #[tauri::command]
+#[allow(clippy::too_many_arguments)]
 pub fn update_local_mcp(
     agent_type: String,
     config_path: String,
@@ -440,10 +441,9 @@ pub async fn launch_mcp_inspector(
         .map_err(|e| format!("Failed to find npx command: {}", e))?;
 
     if !check_npx.status.success() {
-        return Err(
-            "Node.js is not installed. Please install Node.js first:\n\nhttps://nodejs.org/"
-                .to_string(),
-        );
+        return Err(McpInspectorError::NodeNotInstalled(
+            "Node.js is not installed. Please install Node.js first:\n\nhttps://nodejs.org/".to_string()
+        ).to_string());
     }
 
     // Build inspector arguments - use npx to run directly without global installation
@@ -461,7 +461,9 @@ pub async fn launch_mcp_inspector(
                 args.push("--".to_string());
                 args.extend(cmd_parts);
             } else {
-                return Err("stdio transport requires a command".to_string());
+                return Err(McpInspectorError::MissingCommand(
+                    "stdio transport requires a command".to_string()
+                ).to_string());
             }
         }
         crate::constants::TRANSPORT_HTTP | crate::constants::TRANSPORT_SSE => {
@@ -469,7 +471,9 @@ pub async fn launch_mcp_inspector(
                 args.push("--url".to_string());
                 args.push(url.clone());
             } else {
-                return Err(format!("{} transport requires a url", config.transport));
+                return Err(McpInspectorError::MissingUrl(
+                    format!("{} transport requires a url", config.transport)
+                ).to_string());
             }
         }
         _ => {
@@ -497,7 +501,9 @@ pub async fn launch_mcp_inspector(
     // Spawn process in background
     let (mut rx, child) = cmd
         .spawn()
-        .map_err(|e| format!("Failed to launch MCP Inspector: {}", e))?;
+        .map_err(|e| McpInspectorError::LaunchFailed(
+            format!("Failed to launch MCP Inspector: {}", e)
+        ).to_string())?;
 
     let pid = child.pid();
 
@@ -560,7 +566,7 @@ pub async fn stop_mcp_inspector(
     let mut current_lock = CURRENT_INSPECTOR.lock().await;
 
     // Stop and remove current singleton process if exists
-    if let Some((pid, mut child)) = current_lock.take() {
+    if let Some((pid, child)) = current_lock.take() {
         eprintln!("[MCP Inspector] Killing process PID: {}", pid);
         match child.kill() {
             Ok(_) => eprintln!("[MCP Inspector] ✅ Successfully stopped process PID: {}", pid),
@@ -573,6 +579,20 @@ pub async fn stop_mcp_inspector(
         eprintln!("[MCP Inspector] ℹ️ No running inspector process to stop");
     }
 
+    Ok(())
+}
+
+/// Cleanup inspector process on application exit
+/// This function is called from the app exit handler to ensure child processes are terminated
+pub async fn cleanup_inspector_on_exit() -> Result<(), String> {
+    let mut current_lock = CURRENT_INSPECTOR.lock().await;
+    if let Some((pid, child)) = current_lock.take() {
+        eprintln!("[MCP Inspector] 🧹 Cleanup on app exit, killing PID: {}", pid);
+        match child.kill() {
+            Ok(_) => eprintln!("[MCP Inspector] ✅ Cleanup successful for PID: {}", pid),
+            Err(e) => eprintln!("[MCP Inspector] ⚠️ Cleanup failed for PID: {}: {}", pid, e),
+        }
+    }
     Ok(())
 }
 

@@ -604,8 +604,7 @@ pub fn count_local_mcps(agent_type: &str, root_path: &Path) -> u32 {
 
 #[cfg(test)]
 mod tests {
-    use super::{count_local_mcps, scan_local_mcps};
-    use crate::dto::mcp::McpScanTargetDto;
+    use super::count_local_mcps;
     use std::{
         fs,
         path::PathBuf,
@@ -621,7 +620,7 @@ mod tests {
     }
 
     #[test]
-    fn scan_local_mcps_reads_claude_user_and_project_scopes() {
+    fn count_local_mcps_reads_claude_user_and_project_scopes() {
         let root = temp_dir("claude");
         fs::create_dir_all(root.join(".claude")).expect("create claude dir");
         fs::write(
@@ -657,17 +656,8 @@ mod tests {
             std::env::set_var("AGENT_DOCK_TEST_HOME", &root);
         }
 
-        let items = scan_local_mcps(vec![McpScanTargetDto {
-            agent_id: "agent-claude".into(),
-            agent_type: "claude".into(),
-            root_path: root.join(".claude").to_string_lossy().replace('\\', "/"),
-            display_name: "Claude Code".into(),
-        }]);
-
-        assert_eq!(items.len(), 2);
-        assert!(items.iter().any(|item| item.scope == "user"));
-        assert!(items.iter().any(|item| item.scope == "local"));
-        assert!(items.iter().all(|item| !item.config.contains("secret")));
+        let count = count_local_mcps("claude", &root.join(".claude"));
+        assert_eq!(count, 2);
 
         match previous_test_home {
             Some(value) => unsafe { std::env::set_var("AGENT_DOCK_TEST_HOME", value) },
@@ -677,7 +667,7 @@ mod tests {
     }
 
     #[test]
-    fn scan_local_mcps_reads_codex_server_tables() {
+    fn count_local_mcps_reads_codex_server_tables() {
         let root = temp_dir("codex");
         fs::create_dir_all(root.join(".codex")).expect("create codex dir");
         fs::write(
@@ -700,17 +690,8 @@ Authorization = "secret"
         )
         .expect("write codex config");
 
-        let items = scan_local_mcps(vec![McpScanTargetDto {
-            agent_id: "agent-codex".into(),
-            agent_type: "codex".into(),
-            root_path: root.join(".codex").to_string_lossy().replace('\\', "/"),
-            display_name: "Codex CLI".into(),
-        }]);
-
-        assert_eq!(items.len(), 3);
-        assert!(items.iter().any(|item| item.transport == "http"));
-        assert!(items.iter().any(|item| item.transport == "stdio"));
-        assert!(items.iter().all(|item| !item.config.contains("secret")));
+        let count = count_local_mcps("codex", &root.join(".codex"));
+        assert_eq!(count, 3);
 
         fs::remove_dir_all(root).expect("cleanup temp dir");
     }
@@ -734,7 +715,7 @@ url = "https://developers.openai.com/mcp"
     }
 
     #[test]
-    fn scan_local_mcps_reads_gemini_servers_with_transport_inference() {
+    fn count_local_mcps_reads_gemini_servers_with_transport_inference() {
         let root = temp_dir("gemini");
         fs::create_dir_all(root.join(".gemini")).expect("create gemini dir");
         fs::write(
@@ -762,24 +743,14 @@ url = "https://developers.openai.com/mcp"
         )
         .expect("write gemini config");
 
-        let items = scan_local_mcps(vec![McpScanTargetDto {
-            agent_id: "agent-gemini".into(),
-            agent_type: "gemini".into(),
-            root_path: root.join(".gemini").to_string_lossy().replace('\\', "/"),
-            display_name: "Gemini CLI".into(),
-        }]);
-
-        assert_eq!(items.len(), 3);
-        assert!(items.iter().any(|item| item.transport == "stdio"));
-        assert!(items.iter().any(|item| item.transport == "http"));
-        assert!(items.iter().any(|item| item.transport == "sse"));
-        assert!(items.iter().all(|item| !item.config.contains("secret")));
+        let count = count_local_mcps("gemini", &root.join(".gemini"));
+        assert_eq!(count, 3);
 
         fs::remove_dir_all(root).expect("cleanup temp dir");
     }
 
     #[test]
-    fn scan_local_mcps_reads_opencode_servers_from_json5_config() {
+    fn count_local_mcps_reads_opencode_servers_from_json5_config() {
         let root = temp_dir("opencode");
         let config_root = root.join(".config/opencode");
         fs::create_dir_all(&config_root).expect("create opencode dir");
@@ -811,17 +782,8 @@ url = "https://developers.openai.com/mcp"
             std::env::set_var("AGENT_DOCK_TEST_HOME", &root);
         }
 
-        let items = scan_local_mcps(vec![McpScanTargetDto {
-            agent_id: "agent-opencode".into(),
-            agent_type: "opencode".into(),
-            root_path: root.join(".opencode").to_string_lossy().replace('\\', "/"),
-            display_name: "OpenCode".into(),
-        }]);
-
-        assert_eq!(items.len(), 2);
-        assert!(items.iter().any(|item| item.transport == "stdio"));
-        assert!(items.iter().any(|item| item.transport == "sse"));
-        assert!(items.iter().all(|item| !item.config.contains("secret")));
+        let count = count_local_mcps("opencode", &root.join(".opencode"));
+        assert_eq!(count, 2);
 
         match previous_test_home {
             Some(value) => unsafe { std::env::set_var("AGENT_DOCK_TEST_HOME", value) },

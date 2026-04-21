@@ -137,7 +137,9 @@ export default function HomePage() {
   const [pendingEditMcpResource, setPendingEditMcpResource] = useState<McpResource | null>(null);
   const [pendingEditMcpValue, setPendingEditMcpValue] = useState<EditableLocalMcp | null>(null);
   const [isInspectorDialogOpen, setIsInspectorDialogOpen] = useState(false);
-  const [pendingInspectorResource, setPendingInspectorResource] = useState<McpResource | null>(null);
+  const [pendingInspectorResource, setPendingInspectorResource] = useState<McpResource | null>(
+    null
+  );
   const [pendingInstallRequest, setPendingInstallRequest] =
     useState<PendingMarketplaceInstallRequest | null>(null);
   const [pendingInstallPreview, setPendingInstallPreview] =

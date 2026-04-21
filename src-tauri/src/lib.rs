@@ -33,6 +33,20 @@ pub fn run() {
         .plugin(tauri_plugin_global_shortcut::Builder::new().build())
         .plugin(tauri_plugin_shell::init())
         .plugin(plugins::system_tray::init())
+        .setup(|app| {
+            // Register cleanup on main window close
+            if let Some(window) = app.get_webview_window("main") {
+                window.on_window_event(move |event| {
+                    if let tauri::WindowEvent::CloseRequested { .. } = event {
+                        // Cleanup inspector process before exit
+                        tauri::async_runtime::block_on(async {
+                            let _ = commands::mcp::cleanup_inspector_on_exit().await;
+                        });
+                    }
+                });
+            }
+            Ok(())
+        })
         .invoke_handler(tauri::generate_handler![
             update_tray_menu,
             commands::agents::list_managed_agents,

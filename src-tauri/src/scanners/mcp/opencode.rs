@@ -207,54 +207,8 @@ impl McpConfigHandler for OpenCodeHandler {
             return Err(format!("OpenCode MCP server not found: {old_name}"));
         }
 
-        // 构建OpenCode格式配置
-        let mut value = Map::new();
-        match server.transport.as_str() {
-            TRANSPORT_STDIO => {
-                value.insert(FIELD_TYPE.into(), Value::String("local".into()));
-                let mut command = Vec::new();
-                if let Some(entry) = &server.command {
-                    command.push(Value::String(entry.clone()));
-                }
-                command.extend(server.args.iter().cloned().map(Value::String));
-                value.insert(FIELD_COMMAND.into(), Value::Array(command));
-                if !server.env.is_empty() {
-                    value.insert(
-                        "environment".into(),
-                        Value::Object(
-                            server
-                                .env
-                                .iter()
-                                .map(|(key, value)| (key.clone(), Value::String(value.clone())))
-                                .collect(),
-                        ),
-                    );
-                }
-            }
-            TRANSPORT_SSE | TRANSPORT_HTTP => {
-                value.insert(FIELD_TYPE.into(), Value::String("remote".into()));
-                if let Some(url) = &server.url {
-                    value.insert(FIELD_URL.into(), Value::String(url.clone()));
-                }
-                if !server.headers.is_empty() {
-                    value.insert(
-                        FIELD_HEADERS.into(),
-                        Value::Object(
-                            server
-                                .headers
-                                .iter()
-                                .map(|(key, value)| (key.clone(), Value::String(value.clone())))
-                                .collect(),
-                        ),
-                    );
-                }
-            }
-            other => {
-                return Err(format!(
-                    "OpenCode edit does not support transport '{other}'."
-                ))
-            }
-        }
+        // Build OpenCode format config
+        let value = build_opencode_server_value(server)?;
 
         servers.insert(new_name.to_string(), Value::Object(value));
         write_json_value(config_path, &root)?;
@@ -310,54 +264,7 @@ impl McpConfigHandler for OpenCodeHandler {
                 continue;
             }
 
-            let mut value = Map::new();
-            match server.transport.as_str() {
-                TRANSPORT_STDIO => {
-                    value.insert(FIELD_TYPE.into(), Value::String("local".into()));
-                    let mut command = Vec::new();
-                    if let Some(entry) = &server.command {
-                        command.push(Value::String(entry.clone()));
-                    }
-                    command.extend(server.args.iter().cloned().map(Value::String));
-                    value.insert(FIELD_COMMAND.into(), Value::Array(command));
-                    if !server.env.is_empty() {
-                        value.insert(
-                            "environment".into(),
-                            Value::Object(
-                                server
-                                    .env
-                                    .iter()
-                                    .map(|(key, value)| (key.clone(), Value::String(value.clone())))
-                                    .collect(),
-                            ),
-                        );
-                    }
-                }
-                TRANSPORT_SSE | TRANSPORT_HTTP => {
-                    value.insert(FIELD_TYPE.into(), Value::String("remote".into()));
-                    if let Some(url) = &server.url {
-                        value.insert(FIELD_URL.into(), Value::String(url.clone()));
-                    }
-                    if !server.headers.is_empty() {
-                        value.insert(
-                            FIELD_HEADERS.into(),
-                            Value::Object(
-                                server
-                                    .headers
-                                    .iter()
-                                    .map(|(key, value)| (key.clone(), Value::String(value.clone())))
-                                    .collect(),
-                            ),
-                        );
-                    }
-                }
-                _ => {
-                    return Err(format!(
-                        "OpenCode import does not support transport '{}'."
-                        , server.transport
-                    ))
-                }
-            }
+            let value = build_opencode_server_value(server)?;
 
             existing_servers.insert(server_name.clone(), Value::Object(value));
             imported_names.push(server_name.clone());
@@ -372,6 +279,58 @@ impl McpConfigHandler for OpenCodeHandler {
             skipped_names,
         })
     }
+}
+
+// 辅助工具：将 ImportedMcpServer 转换为 OpenCode 格式的 JSON Value
+fn build_opencode_server_value(server: &ImportedMcpServer) -> Result<Map<String, Value>, String> {
+    let mut value = Map::new();
+    match server.transport.as_str() {
+        TRANSPORT_STDIO => {
+            value.insert(FIELD_TYPE.into(), Value::String("local".into()));
+            let mut command = Vec::new();
+            if let Some(entry) = &server.command {
+                command.push(Value::String(entry.clone()));
+            }
+            command.extend(server.args.iter().cloned().map(Value::String));
+            value.insert(FIELD_COMMAND.into(), Value::Array(command));
+            if !server.env.is_empty() {
+                value.insert(
+                    "environment".into(),
+                    Value::Object(
+                        server
+                            .env
+                            .iter()
+                            .map(|(key, value)| (key.clone(), Value::String(value.clone())))
+                            .collect(),
+                    ),
+                );
+            }
+        }
+        TRANSPORT_SSE | TRANSPORT_HTTP => {
+            value.insert(FIELD_TYPE.into(), Value::String("remote".into()));
+            if let Some(url) = &server.url {
+                value.insert(FIELD_URL.into(), Value::String(url.clone()));
+            }
+            if !server.headers.is_empty() {
+                value.insert(
+                    FIELD_HEADERS.into(),
+                    Value::Object(
+                        server
+                            .headers
+                            .iter()
+                            .map(|(key, value)| (key.clone(), Value::String(value.clone())))
+                            .collect(),
+                    ),
+                );
+            }
+        }
+        other => {
+            return Err(format!(
+                "OpenCode does not support transport '{other}'."
+            ))
+        }
+    }
+    Ok(value)
 }
 
 // 辅助工具：读取JSON5配置

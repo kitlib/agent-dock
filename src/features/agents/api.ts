@@ -169,11 +169,14 @@ export async function listLocalMcps(scanTargets: McpScanTarget[]) {
   } catch (error) {
     console.error("[mcp] list_local_mcps failed", {
       scanTargets: formatMcpScanTargets(scanTargets),
-      error: error instanceof Error ? {
-        message: error.message,
-        stack: error.stack,
-        name: error.name,
-      } : error,
+      error:
+        error instanceof Error
+          ? {
+              message: error.message,
+              stack: error.stack,
+              name: error.name,
+            }
+          : error,
     });
     throw error;
   }
@@ -299,7 +302,7 @@ export async function inspectMcpServer(config: EditableLocalMcp) {
     command: config.command ? `${config.command} ${config.args?.join(" ") || ""}` : null,
     url: config.url,
     hasEnv: config.env && Object.keys(config.env).length > 0,
-    hasHeaders: config.headers && Object.keys(config.headers).length > 0
+    hasHeaders: config.headers && Object.keys(config.headers).length > 0,
   });
 
   try {
@@ -307,18 +310,21 @@ export async function inspectMcpServer(config: EditableLocalMcp) {
     console.log("[MCP] Inspect server response:", {
       name: config.serverName,
       tools: result.tools?.length || 0,
-      toolNames: result.tools?.map(t => t.name) || []
+      toolNames: result.tools?.map((t) => t.name) || [],
     });
     return result;
   } catch (error) {
     console.error("[MCP] Inspect server failed:", {
       name: config.serverName,
-      error: error instanceof Error ? {
-        message: error.message,
-        stack: error.stack,
-        name: error.name
-      } : error,
-      config
+      error:
+        error instanceof Error
+          ? {
+              message: error.message,
+              stack: error.stack,
+              name: error.name,
+            }
+          : error,
+      config,
     });
     throw error;
   }
@@ -332,11 +338,14 @@ export async function stopMcpInspector() {
     console.log("[MCP] Stop inspector success");
   } catch (error) {
     console.error("[MCP] Stop inspector failed:", {
-      error: error instanceof Error ? {
-        message: error.message,
-        stack: error.stack,
-        name: error.name
-      } : error
+      error:
+        error instanceof Error
+          ? {
+              message: error.message,
+              stack: error.stack,
+              name: error.name,
+            }
+          : error,
     });
     throw error;
   }
