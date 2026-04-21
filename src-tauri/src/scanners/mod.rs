@@ -1,4 +1,5 @@
 pub mod agent_type_scanner;
+pub mod mcp;
 pub mod mcp_scanner;
 pub mod skill_markdown;
 pub mod skill_scanner;

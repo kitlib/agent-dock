@@ -216,6 +216,8 @@
       "accessUrl": "Access URL",
       "openButton": "Open Debug Page",
       "stopAndClose": "Stop and Close",
+      "terminalOutput": "Terminal Output",
+      "waitingForOutput": "Waiting for command output...",
       "errors": {
         "launchFailed": "Failed to launch MCP Inspector, please check your configuration",
         "missingCommand": "MCP configuration is missing the start command, please check your settings",

@@ -1,9 +1,11 @@
 mod commands;
+mod constants;
 mod dto;
 mod persistence;
 mod plugins;
 mod scanners;
 mod services;
+mod utils;
 
 use tauri::Manager;
 

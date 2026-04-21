@@ -83,7 +83,7 @@ function formatMcpLog(mcp: McpResource) {
     name: mcp.name,
     ownerAgentId: mcp.ownerAgentId ?? null,
     transport: mcp.transport,
-    command: mcp.command?.slice(0, 50) + (mcp.command?.length > 50 ? "..." : "") ?? null,
+    command: mcp.command ? mcp.command.slice(0, 50) + (mcp.command.length > 50 ? "..." : "") : null,
     url: mcp.url ?? null,
   };
 }
@@ -324,15 +324,14 @@ export async function inspectMcpServer(config: EditableLocalMcp) {
   }
 }
 
-export async function stopMcpInspector(pid: number) {
-  console.log("[MCP] Stop inspector request:", { pid });
+export async function stopMcpInspector() {
+  console.log("[MCP] Stop inspector request");
 
   try {
-    await invoke<void>("stop_mcp_inspector", { pid });
-    console.log("[MCP] Stop inspector success:", { pid });
+    await invoke<void>("stop_mcp_inspector");
+    console.log("[MCP] Stop inspector success");
   } catch (error) {
     console.error("[MCP] Stop inspector failed:", {
-      pid,
       error: error instanceof Error ? {
         message: error.message,
         stack: error.stack,

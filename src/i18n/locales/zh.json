@@ -172,6 +172,8 @@
       "accessUrl": "访问地址",
       "openButton": "打开调试页面",
       "stopAndClose": "关闭",
+      "terminalOutput": "终端输出",
+      "waitingForOutput": "等待命令输出...",
       "errors": {
         "launchFailed": "启动MCP Inspector失败，请检查配置是否正确",
         "missingCommand": "MCP配置缺失启动命令，请检查配置",

@@ -1,5 +1,4 @@
 use std::{
-    collections::BTreeMap,
     env, fs,
     path::{Path, PathBuf},
 };
@@ -585,25 +584,6 @@ fn scan_opencode_servers(target: &McpScanTargetDto) -> Vec<LocalMcpServerDto> {
     items
 }
 
-pub fn scan_local_mcps(scan_targets: Vec<McpScanTargetDto>) -> Vec<LocalMcpServerDto> {
-    let mut grouped = BTreeMap::<String, LocalMcpServerDto>::new();
-
-    for target in scan_targets {
-        let items = match target.agent_type.as_str() {
-            "claude" => scan_claude_servers(&target),
-            "codex" => scan_codex_servers(&target),
-            "gemini" => scan_gemini_servers(&target),
-            "opencode" => scan_opencode_servers(&target),
-            _ => Vec::new(),
-        };
-
-        for item in items {
-            grouped.insert(item.id.clone(), item);
-        }
-    }
-
-    grouped.into_values().collect()
-}
 
 pub fn count_local_mcps(agent_type: &str, root_path: &Path) -> u32 {
     let target = McpScanTargetDto {
