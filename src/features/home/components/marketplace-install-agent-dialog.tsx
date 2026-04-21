@@ -102,7 +102,7 @@ export function MarketplaceInstallAgentDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Download className="h-5 w-5" />
@@ -113,7 +113,8 @@ export function MarketplaceInstallAgentDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid max-h-[220px] grid-cols-1 gap-2 overflow-auto sm:grid-cols-2">
+        <div className="space-y-4 overflow-y-auto flex-1">
+          <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
           {targetAgents.map((agent) => {
             const isSelected = selectedAgentId === agent.id;
 
@@ -143,13 +144,13 @@ export function MarketplaceInstallAgentDialog({
               </button>
             );
           })}
-        </div>
+          </div>
 
-        {targetAgents.length === 0 ? (
-          <div className="text-muted-foreground text-sm">{t("prototype.emptyList")}</div>
-        ) : null}
+          {targetAgents.length === 0 ? (
+            <div className="text-muted-foreground text-sm">{t("prototype.emptyList")}</div>
+          ) : null}
 
-        <div className="space-y-2">
+          <div className="space-y-2">
           <div className="text-sm font-medium">{t("prototype.marketplace.installMethodLabel")}</div>
           <RadioGroup
             value={installMethod}
@@ -181,6 +182,7 @@ export function MarketplaceInstallAgentDialog({
               );
             })}
           </RadioGroup>
+          </div>
         </div>
 
         <DialogFooter>

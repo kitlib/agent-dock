@@ -164,7 +164,7 @@ export function EditMcpDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>{t("prototype.editMcp.title")}</DialogTitle>
           <DialogDescription>
@@ -174,7 +174,7 @@ export function EditMcpDialog({
             })}
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4">
+        <div className="space-y-4 overflow-y-auto flex-1">
           <div className="grid gap-4 md:grid-cols-2">
             <div className="space-y-2">
               <div className="text-sm font-medium">{t("prototype.editMcp.fields.serverName")}</div>

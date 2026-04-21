@@ -252,7 +252,7 @@ export function CopySkillDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-w-md max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2">
             <Copy className="h-5 w-5" />
@@ -263,7 +263,7 @@ export function CopySkillDialog({
           </DialogDescription>
         </DialogHeader>
 
-        <div className="space-y-4">
+        <div className="space-y-4 overflow-y-auto flex-1">
           <div className="grid max-h-[220px] grid-cols-1 gap-2 overflow-auto sm:grid-cols-2">
             {filteredTargetAgents.map((agent) => {
               const isSelected = selectedAgentIds.includes(agent.id);

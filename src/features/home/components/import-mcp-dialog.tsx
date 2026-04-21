@@ -165,7 +165,7 @@ export function ImportMcpDialog({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-w-3xl">
+      <DialogContent className="max-w-3xl max-h-[90vh] flex flex-col">
         <DialogHeader>
           <DialogTitle>{t("prototype.importMcp.title")}</DialogTitle>
           <DialogDescription>
@@ -174,7 +174,7 @@ export function ImportMcpDialog({
             })}
           </DialogDescription>
         </DialogHeader>
-        <div className="space-y-4">
+        <div className="space-y-4 overflow-y-auto flex-1">
           <div className="space-y-2">
             <div className="text-sm font-medium">{t("prototype.importMcp.inputLabel")}</div>
             <textarea

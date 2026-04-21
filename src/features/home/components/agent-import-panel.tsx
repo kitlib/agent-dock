@@ -248,12 +248,12 @@ export function AgentImportPanel({
       <div className="grid min-h-0 flex-1 overflow-hidden">
         <section className="min-h-0 rounded-lg border">
           <Dialog open={isManualDialogOpen} onOpenChange={handleManualDialogChange}>
-            <DialogContent className="sm:max-w-xl">
+            <DialogContent className="sm:max-w-xl max-h-[90vh] flex flex-col">
               <DialogHeader>
                 <DialogTitle>{t("prototype.actions.manualAdd")}</DialogTitle>
               </DialogHeader>
 
-              <div className="grid grid-cols-2 gap-2.5">
+              <div className="grid grid-cols-2 gap-2.5 overflow-y-auto flex-1">
                 <label className="col-span-2 flex flex-col gap-1.5 text-sm">
                   <span>{t("prototype.detail.selectAgentType")}</span>
                   <Select
