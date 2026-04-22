@@ -33,10 +33,12 @@ graph TD
 
     Backend --> Commands[commands/ Tauri command surface]
     Backend --> Dto[dto/ Shared command payloads]
-    Backend --> Scanners[scanners/ Local discovery scanners]
-    Backend --> Services[services/ Domain orchestration]
-    Backend --> Persistence[persistence/ Local managed state]
-    Backend --> Plugins[plugins/ Tauri plugins and tray]
+    Backend --> Domain[domain/ Business logic]
+    Backend --> Repositories[repositories/ Interfaces]
+    Backend --> Infrastructure[infrastructure/ Persistence]
+    Backend --> Services[services/ Orchestration]
+    Backend --> Scanners[scanners/ Discovery]
+    Backend --> Plugins[plugins/ Tauri plugins]
 ```
 
 已生成 Mermaid 结构图，便于快速理解根级结构与当前重点模块关系。

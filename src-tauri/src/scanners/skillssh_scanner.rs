@@ -1,3 +1,4 @@
+use std::str::FromStr;
 use std::{collections::HashSet, path::Path, time::Duration};
 
 use reqwest::header::{HeaderMap, HeaderValue, ACCEPT, REFERER};
@@ -5,7 +6,7 @@ use reqwest::StatusCode;
 use serde::{Deserialize, Serialize};
 use serde_json::Value;
 
-use crate::persistence::marketplace_cache_store;
+use crate::infrastructure::persistence::marketplace_cache_store;
 
 const SKILL_DETAIL_CACHE_TTL_SECS: u64 = 60 * 60 * 24;
 const MARKETPLACE_PAGE_SIZE: usize = 200;
@@ -97,15 +98,19 @@ struct ResolvedSkillLocation {
     tree: Vec<GitHubTreeEntry>,
 }
 
-impl LeaderboardType {
-    pub fn from_str(value: &str) -> Self {
+impl FromStr for LeaderboardType {
+    type Err = ();
+
+    fn from_str(value: &str) -> Result<Self, Self::Err> {
         match value {
-            "trending" => Self::Trending,
-            "hot" => Self::Hot,
-            _ => Self::AllTime,
+            "trending" => Ok(Self::Trending),
+            "hot" => Ok(Self::Hot),
+            _ => Ok(Self::AllTime),
         }
     }
+}
 
+impl LeaderboardType {
     fn api_path(self) -> &'static str {
         match self {
             Self::AllTime => "all-time",
@@ -857,7 +862,7 @@ fn parse_skill_list_response(
 ) -> Result<SkillsShSkillListRecord, String> {
     if let Some(array) = response.get("skills").and_then(Value::as_array) {
         let items = parse_skills_array(array);
-        let total_skills = parse_total_skills_value(response).or_else(|| Some(items.len() as u64));
+        let total_skills = parse_total_skills_value(response).or(Some(items.len() as u64));
         return Ok(SkillsShSkillListRecord {
             has_more: response
                 .get("hasMore")
@@ -875,7 +880,7 @@ fn parse_skill_list_response(
 
     if let Some(array) = response.get("items").and_then(Value::as_array) {
         let items = parse_skills_array(array);
-        let total_skills = parse_total_skills_value(response).or_else(|| Some(items.len() as u64));
+        let total_skills = parse_total_skills_value(response).or(Some(items.len() as u64));
         return Ok(SkillsShSkillListRecord {
             has_more: response
                 .get("hasMore")

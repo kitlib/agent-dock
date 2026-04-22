@@ -21,7 +21,7 @@ impl FromStr for McpImportConflictStrategy {
     }
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct McpScanTargetDto {
     pub agent_id: String,
@@ -30,7 +30,7 @@ pub struct McpScanTargetDto {
     pub display_name: String,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LocalMcpServerDto {
     pub id: String,
@@ -55,7 +55,7 @@ pub struct LocalMcpServerDto {
     pub errors: Vec<String>,
 }
 
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct EditableLocalMcpDto {
     pub server_name: String,
@@ -68,7 +68,7 @@ pub struct EditableLocalMcpDto {
 }
 
 /// Imported MCP server DTO
-#[derive(Clone, Serialize, Deserialize)]
+#[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ImportedMcpServer {
     pub transport: String,

@@ -1,48 +1,20 @@
 use std::{
-    env, fs,
-    path::{Path, PathBuf},
+    fs,
+    path::Path,
 };
 
 use chrono::{DateTime, Utc};
 use serde_json::{Map, Value};
 
 use crate::dto::mcp::{LocalMcpServerDto, McpScanTargetDto};
+use crate::infrastructure::utils::path::{normalize_path, resolve_agent_root, user_home_dir};
 
 const CLAUDE_CONFIG_FILE: &str = ".claude.json";
 const CODEX_CONFIG_FILE: &str = "config.toml";
 const GEMINI_CONFIG_FILE: &str = "settings.json";
 const OPENCODE_CONFIG_PATH: [&str; 3] = [".config", "opencode", "opencode.json"];
 
-fn normalize_path(path: &Path) -> String {
-    path.to_string_lossy().replace('\\', "/")
-}
-
-fn user_home_dir() -> PathBuf {
-    if let Ok(home) = env::var("AGENT_DOCK_TEST_HOME") {
-        let trimmed = home.trim();
-        if !trimmed.is_empty() {
-            return PathBuf::from(trimmed);
-        }
-    }
-
-    dirs::home_dir().unwrap_or_else(|| PathBuf::from("."))
-}
-
-fn resolve_agent_root(root_path: &str) -> PathBuf {
-    if let Some(relative_path) = root_path
-        .strip_prefix("~/")
-        .or_else(|| root_path.strip_prefix("~\\"))
-    {
-        return user_home_dir().join(relative_path);
-    }
-
-    let path = PathBuf::from(root_path);
-    if path.is_absolute() {
-        return path;
-    }
-
-    user_home_dir().join(path)
-}
+// Removed duplicate implementations - now using infrastructure::utils
 
 fn updated_at(path: &Path) -> String {
     fs::metadata(path)
@@ -75,34 +47,33 @@ fn transport_from_config(
     url: Option<&str>,
 ) -> String {
     if let Some(transport) = explicit_type.filter(|value| !value.trim().is_empty()) {
-        return transport.to_string();
-    }
-    if command.is_some() {
-        return "stdio".into();
-    }
-    if let Some(endpoint) = url {
+        transport.to_string()
+    } else if command.is_some() {
+        "stdio".into()
+    } else if let Some(endpoint) = url {
         if endpoint.starts_with("http://") || endpoint.starts_with("https://") {
-            return "http".into();
+            "http".into()
+        } else {
+            "remote".into()
         }
-        return "remote".into();
+    } else {
+        "unknown".into()
     }
-    "unknown".into()
 }
 
 fn short_summary(transport: &str, endpoint: &str, scope: &str) -> String {
-    match transport {
-        "stdio" => format!("Configured as a {scope} stdio MCP server."),
-        "http" | "sse" => format!("Configured as a {scope} remote MCP server."),
-        _ => {
-            if endpoint.is_empty() {
-                format!("Configured as a {scope} MCP server.")
-            } else {
-                format!("Configured as a {scope} MCP server via {transport}.")
-            }
-        }
+    if transport == "stdio" {
+        format!("Configured as a {scope} stdio MCP server.")
+    } else if matches!(transport, "http" | "sse") {
+        format!("Configured as a {scope} remote MCP server.")
+    } else if endpoint.is_empty() {
+        format!("Configured as a {scope} MCP server.")
+    } else {
+        format!("Configured as a {scope} MCP server via {transport}.")
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 fn markdown_document(
     name: &str,
     scope: &str,
@@ -192,6 +163,7 @@ fn masked_toml_config(server: &toml::value::Table) -> String {
     toml::to_string_pretty(&masked).unwrap_or_else(|_| String::new())
 }
 
+#[allow(clippy::too_many_arguments)]
 fn build_local_mcp(
     target: &McpScanTargetDto,
     server_name: &str,
@@ -446,6 +418,7 @@ fn scan_gemini_servers(target: &McpScanTargetDto) -> Vec<LocalMcpServerDto> {
         let command = server.get("command").and_then(Value::as_str);
         let http_url = server.get("httpUrl").and_then(Value::as_str);
         let url = server.get("url").and_then(Value::as_str);
+
         let transport = if http_url.is_some() {
             "http".to_string()
         } else if explicit_type.is_some() {
@@ -651,17 +624,17 @@ mod tests {
 }"#,
         )
         .expect("write claude config");
-        let previous_test_home = std::env::var_os("AGENT_DOCK_TEST_HOME");
+        let previous_test_home = std::env::var_os("USERPROFILE");
         unsafe {
-            std::env::set_var("AGENT_DOCK_TEST_HOME", &root);
+            std::env::set_var("USERPROFILE", &root);
         }
 
         let count = count_local_mcps("claude", &root.join(".claude"));
         assert_eq!(count, 2);
 
         match previous_test_home {
-            Some(value) => unsafe { std::env::set_var("AGENT_DOCK_TEST_HOME", value) },
-            None => unsafe { std::env::remove_var("AGENT_DOCK_TEST_HOME") },
+            Some(value) => unsafe { std::env::set_var("USERPROFILE", value) },
+            None => unsafe { std::env::remove_var("USERPROFILE") },
         }
         fs::remove_dir_all(root).expect("cleanup temp dir");
     }
@@ -777,17 +750,17 @@ url = "https://developers.openai.com/mcp"
 }"#,
         )
         .expect("write opencode config");
-        let previous_test_home = std::env::var_os("AGENT_DOCK_TEST_HOME");
+        let previous_test_home = std::env::var_os("USERPROFILE");
         unsafe {
-            std::env::set_var("AGENT_DOCK_TEST_HOME", &root);
+            std::env::set_var("USERPROFILE", &root);
         }
 
         let count = count_local_mcps("opencode", &root.join(".opencode"));
         assert_eq!(count, 2);
 
         match previous_test_home {
-            Some(value) => unsafe { std::env::set_var("AGENT_DOCK_TEST_HOME", value) },
-            None => unsafe { std::env::remove_var("AGENT_DOCK_TEST_HOME") },
+            Some(value) => unsafe { std::env::set_var("USERPROFILE", value) },
+            None => unsafe { std::env::remove_var("USERPROFILE") },
         }
         fs::remove_dir_all(root).expect("cleanup temp dir");
     }

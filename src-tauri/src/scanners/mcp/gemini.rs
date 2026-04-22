@@ -1,12 +1,19 @@
 //! Gemini MCP配置处理实现
-use std::path::Path;
 use std::collections::BTreeMap;
-use serde_json::{Value, Map};
-use crate::dto::mcp::{McpScanTargetDto, LocalMcpServerDto, EditableLocalMcpDto, ImportedMcpServer, ImportLocalMcpResultDto, UpdateLocalMcpResultDto};
+use std::path::Path;
+
+use serde_json::{Map, Value};
+
 use crate::constants::*;
-use crate::utils::path::{ensure_parent_directory, atomic_write, normalize_path, resolve_agent_root};
-use super::{McpConfigHandler, common::*};
-use crate::dto::mcp::McpImportConflictStrategy;
+use crate::dto::mcp::{
+    EditableLocalMcpDto, ImportLocalMcpResultDto, ImportedMcpServer, LocalMcpServerDto,
+    McpImportConflictStrategy, McpScanTargetDto, UpdateLocalMcpResultDto,
+};
+use crate::infrastructure::utils::fs::ensure_parent_dir;
+use crate::infrastructure::utils::path::{atomic_write, normalize_path, resolve_agent_root};
+
+use super::common::*;
+use super::McpConfigHandler;
 
 pub struct GeminiHandler;
 
@@ -115,26 +122,25 @@ impl McpConfigHandler for GeminiHandler {
             obj.iter().filter_map(|(k, v)| v.as_str().map(|val| (k.clone(), val.to_string()))).collect()
         }).unwrap_or_default();
 
-        let transport = match explicit_type.unwrap_or_default() {
-            "" => {
-                if command.is_some() {
-                    TRANSPORT_STDIO.to_string()
-                } else if final_url.is_some() {
-                    TRANSPORT_HTTP.to_string()
-                } else {
+        let transport = if let Some(t) = explicit_type.filter(|s| !s.is_empty()) {
+            match t {
+                TRANSPORT_STDIO | "local" => TRANSPORT_STDIO.to_string(),
+                TRANSPORT_HTTP => TRANSPORT_HTTP.to_string(),
+                TRANSPORT_SSE | TRANSPORT_REMOTE => TRANSPORT_SSE.to_string(),
+                other => {
                     return Err(format!(
-                        "MCP server '{server_name}' must include either 'command' or 'url'."
-                    ));
+                        "MCP server '{server_name}' has unsupported type '{other}'."
+                    ))
                 }
             }
-            TRANSPORT_STDIO | "local" => TRANSPORT_STDIO.to_string(),
-            TRANSPORT_HTTP => TRANSPORT_HTTP.to_string(),
-            TRANSPORT_SSE | TRANSPORT_REMOTE => TRANSPORT_SSE.to_string(),
-            other => {
-                return Err(format!(
-                    "MCP server '{server_name}' has unsupported type '{other}'."
-                ))
-            }
+        } else if command.is_some() {
+            TRANSPORT_STDIO.to_string()
+        } else if final_url.is_some() {
+            TRANSPORT_HTTP.to_string()
+        } else {
+            return Err(format!(
+                "MCP server '{server_name}' must include either 'command' or 'url'."
+            ));
         };
 
         Ok(EditableLocalMcpDto {
@@ -149,7 +155,7 @@ impl McpConfigHandler for GeminiHandler {
     }
 
     fn write_server(&self, config_path: &Path, old_name: &str, new_name: &str, server: &ImportedMcpServer, _scope: &str, _project_path: Option<&str>) -> Result<UpdateLocalMcpResultDto, String> {
-        ensure_parent_directory(config_path)?;
+        ensure_parent_dir(config_path).map_err(|e| e.to_string())?;
         let mut root = read_json_root_or_empty(config_path)?;
         let Some(root_object) = root.as_object_mut() else {
             return Err("Gemini MCP config root must be an object.".into());
@@ -225,7 +231,7 @@ impl McpConfigHandler for GeminiHandler {
 
     fn delete_server(&self, config_path: &Path, server_name: &str, scope: &str, project_path: Option<&str>) -> Result<(), String> {
         // Gemini and Claude use same JSON format, reuse logic
-        ensure_parent_directory(config_path)?;
+        ensure_parent_dir(config_path).map_err(|e| e.to_string())?;
         let mut root = read_json_root_or_empty(config_path)?;
 
         let servers = match scope {
@@ -307,7 +313,7 @@ impl McpConfigHandler for GeminiHandler {
 
     fn import_servers(&self, config_path: &Path, servers: &BTreeMap<String, ImportedMcpServer>, conflict_strategy: McpImportConflictStrategy) -> Result<ImportLocalMcpResultDto, String> {
         // Gemini和Claude导入逻辑一致，复用
-        ensure_parent_directory(config_path)?;
+        ensure_parent_dir(config_path).map_err(|e| e.to_string())?;
         let mut root = read_json_root_or_empty(config_path)?;
         let Some(root_object) = root.as_object_mut() else {
             return Err("Gemini MCP config root must be an object.".into());

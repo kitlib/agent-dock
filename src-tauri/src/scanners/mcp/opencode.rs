@@ -4,7 +4,8 @@ use std::collections::BTreeMap;
 use serde_json::{Value, Map};
 use crate::dto::mcp::{McpScanTargetDto, LocalMcpServerDto, EditableLocalMcpDto, ImportedMcpServer, ImportLocalMcpResultDto, UpdateLocalMcpResultDto};
 use crate::constants::*;
-use crate::utils::path::{ensure_parent_directory, atomic_write, user_home_dir, normalize_path};
+use crate::infrastructure::utils::path::{atomic_write, normalize_path, user_home_dir};
+use crate::infrastructure::utils::fs::ensure_parent_dir;
 use super::{McpConfigHandler, common::*};
 use crate::dto::mcp::McpImportConflictStrategy;
 
@@ -186,7 +187,7 @@ impl McpConfigHandler for OpenCodeHandler {
     }
 
     fn write_server(&self, config_path: &Path, old_name: &str, new_name: &str, server: &ImportedMcpServer, _scope: &str, _project_path: Option<&str>) -> Result<UpdateLocalMcpResultDto, String> {
-        ensure_parent_directory(config_path)?;
+        ensure_parent_dir(config_path).map_err(|e| e.to_string())?;
         let mut root = read_json5_root_or_empty(config_path)?;
         let Some(root_object) = root.as_object_mut() else {
             return Err("OpenCode config root must be an object.".into());
@@ -221,7 +222,7 @@ impl McpConfigHandler for OpenCodeHandler {
 
     fn delete_server(&self, config_path: &Path, server_name: &str, _scope: &str, _project_path: Option<&str>) -> Result<(), String> {
         // Original delete_opencode_mcp_server logic
-        ensure_parent_directory(config_path)?;
+        ensure_parent_dir(config_path).map_err(|e| e.to_string())?;
         let mut root = read_json5_root_or_empty(config_path)?;
         let Some(mcp) = root.get_mut("mcp").and_then(Value::as_object_mut) else {
             return Err("OpenCode config does not contain mcp.".into());
@@ -242,7 +243,7 @@ impl McpConfigHandler for OpenCodeHandler {
 
     fn import_servers(&self, config_path: &Path, servers: &BTreeMap<String, ImportedMcpServer>, conflict_strategy: McpImportConflictStrategy) -> Result<ImportLocalMcpResultDto, String> {
         // 原有import_opencode_mcp_servers逻辑
-        ensure_parent_directory(config_path)?;
+        ensure_parent_dir(config_path).map_err(|e| e.to_string())?;
         let mut root = read_json5_root_or_empty(config_path)?;
         let Some(root_object) = root.as_object_mut() else {
             return Err("OpenCode config root must be an object.".into());

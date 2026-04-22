@@ -19,79 +19,61 @@ The backend owns Tauri runtime wiring, desktop plugins, local file-system discov
 | Module | Path | Responsibility |
 | --- | --- | --- |
 | Commands | `src/commands/` | Thin Tauri command handlers exposed to the frontend |
-| DTOs | `src/dto/` | Serializable request/response types shared across commands and services |
-| Scanners | `src/scanners/` | Local disk scanning for agent types and skills |
-| Services | `src/services/` | Orchestration of discovery and detail lookup |
-| Persistence | `src/persistence/` | Managed agent storage and local durable state |
-| Plugins | `src/plugins/` | System tray and other runtime plugin integration |
+| DTOs | `src/dto/` | Serializable request/response types |
+| Domain | `src/domain/` | Business logic, entities, and domain errors |
+| Repositories | `src/repositories/` | Data access abstractions and repository errors |
+| Infrastructure | `src/infrastructure/` | Concrete implementations (persistence, filesystem, clients) |
+| Services | `src/services/` | Domain orchestration and service logic |
+| Scanners | `src/scanners/` | Local discovery scanners |
+| Plugins | `src/plugins/` | Tauri plugins and tray integration |
 
 ## Current Backend Focus
 
-1. Agent discovery and managed agent resolution.
+1. Agent discovery and managed agent resolution using the 5-layer architecture.
 2. Skill discovery under managed agent roots.
-3. Tauri command exposure for agent and skill operations.
-4. Desktop shell integrations such as tray behavior, updater gating, and single-instance handling.
+3. Dependency injection and repository-based persistence.
+4. Error hierarchy implementation across layers.
 
 ## Important Files
 
 - `src/lib.rs` — plugin setup and command registration
-- `src/commands/agents.rs` — agent command handlers
-- `src/commands/skills.rs` — skill command handlers
-- `src/services/agent_discovery_service.rs` — resolved agent orchestration
-- `src/services/skill_discovery_service.rs` — local skill summary/detail orchestration
-- `src/scanners/agent_type_scanner.rs` — agent type scan logic
-- `src/scanners/skill_scanner.rs` — skill metadata discovery from local folders
-- `src/persistence/managed_agents_store.rs` — durable managed-agent storage
+- `src/domain/mod.rs` — core domain models and error types
+- `src/repositories/mod.rs` — repository trait definitions
+- `src/infrastructure/mod.rs` — concrete repository implementations
+- `src/services/mod.rs` — orchestration services
+- `src/commands/mod.rs` — tauri commands
 
 ## Command Flow Pattern
 
 ### Add or extend a command family
 
-1. Define serializable types in `src/dto/`.
-2. Implement scanner or persistence helpers as needed.
-3. Add orchestration in `src/services/`.
-4. Expose thin `#[tauri::command]` wrappers in `src/commands/`.
-5. Export the module from the relevant `mod.rs` files.
-6. Register commands in `src/lib.rs`.
-7. Keep command names aligned with frontend `invoke()` usage.
+1. Define domain models in `src/domain/`.
+2. Define repository traits in `src/repositories/`.
+3. Implement infrastructure in `src/infrastructure/`.
+4. Add orchestration in `src/services/`.
+5. Expose thin `#[tauri::command]` wrappers in `src/commands/`.
+6. Update `mod.rs` exports and register commands in `src/lib.rs`.
 
-### Current registered command groups
+## Backend Architecture (5-Layer)
 
-- Core demo/system: `greet`, `update_tray_menu`
-- Agent management: `list_managed_agents`, `list_resolved_agents`, `scan_agents`, `import_agents`, `remove_managed_agent`, `delete_agent`, `create_agent`, `refresh_agent_discovery`
-- Skill discovery: `list_local_skills`, `get_local_skill_detail`
+- **Commands**: Entry point for frontend calls. Minimal logic.
+- **Services**: Orchestrates domain logic and repositories.
+- **Domain**: Pure business logic and entities. No infrastructure dependencies.
+- **Repositories**: Interfaces for data access.
+- **Infrastructure**: Low-level details (FS, DB, external APIs).
 
-## Dependency Notes
+## Error Handling
 
-Key backend crates currently include:
-
-- `tauri` with `tray-icon`
-- `tauri-plugin-opener`
-- `tauri-plugin-global-shortcut`
-- `tauri-plugin-single-instance`
-- `tauri-plugin-updater`
-- `serde`, `serde_json`, `serde_yaml`
-- `chrono`
-
-`serde_yaml` and `chrono` indicate local metadata parsing and timestamp handling in discovery flows, so keep DTOs and parsers consistent when extending scanner behavior.
-
-## Development Commands
-
-```bash
-pnpm tauri dev
-pnpm tauri build
-cargo test --manifest-path src-tauri/Cargo.toml
-cargo check --manifest-path src-tauri/Cargo.toml
-```
+- `DomainError`: Logic-related errors.
+- `RepositoryError`: Data access errors.
+- `ServiceError`: Orchestration errors (wraps others).
+- `Command Result`: Commands return `Result<T, E>` where E is serializable.
 
 ## Backend Conventions
 
-- Keep `commands/` thin and free of business logic.
-- Put scan-time file-system traversal in `scanners/`.
-- Put multi-step orchestration and shaping in `services/`.
-- Put local durable state reads/writes in `persistence/`.
-- Update `mod.rs` exports whenever adding a new backend module.
-- Register every new frontend-facing command in `src/lib.rs` immediately.
+- Use constructor-based dependency injection for services and repositories.
+- Keep `domain` free of `serde` if possible (except for DTOs).
+- Register every new command in `src/lib.rs`.
 - Keep comments, logs, and user-facing strings in English.
 
 ## Safety and Scope

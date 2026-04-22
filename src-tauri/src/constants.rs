@@ -1,4 +1,5 @@
 //! Global constants
+use std::fmt;
 use std::str::FromStr;
 
 /// Supported agent types
@@ -24,14 +25,15 @@ impl FromStr for AgentType {
     }
 }
 
-impl ToString for AgentType {
-    fn to_string(&self) -> String {
-        match self {
-            Self::Claude => "claude".to_string(),
-            Self::Codex => "codex".to_string(),
-            Self::Gemini => "gemini".to_string(),
-            Self::OpenCode => "opencode".to_string(),
-        }
+impl fmt::Display for AgentType {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        let s = match self {
+            Self::Claude => "claude",
+            Self::Codex => "codex",
+            Self::Gemini => "gemini",
+            Self::OpenCode => "opencode",
+        };
+        write!(f, "{}", s)
     }
 }
 

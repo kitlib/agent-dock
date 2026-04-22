@@ -1,10 +1,11 @@
 //! MCP处理公共辅助函数
 use std::path::Path;
+
 use serde_json::Value;
-use toml;
-use crate::dto::mcp::{LocalMcpServerDto, McpScanTargetDto};
+
 use crate::constants::*;
-use crate::utils::path::normalize_path;
+use crate::dto::mcp::{LocalMcpServerDto, McpScanTargetDto};
+use crate::infrastructure::utils::path::normalize_path;
 
 pub fn transport_from_config(
     explicit_type: Option<&str>,
@@ -40,6 +41,7 @@ pub fn short_summary(transport: &str, endpoint: &str, scope: &str) -> String {
     }
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn markdown_document(
     name: &str,
     scope: &str,
@@ -129,6 +131,7 @@ pub fn masked_toml_config(server: &toml::value::Table) -> String {
     toml::to_string_pretty(&masked).unwrap_or_else(|_| String::new())
 }
 
+#[allow(clippy::too_many_arguments)]
 pub fn build_local_mcp(
     target: &McpScanTargetDto,
     server_name: &str,
@@ -204,4 +207,3 @@ fn updated_at(path: &Path) -> String {
         .map(|datetime| datetime.format("%Y-%m-%d").to_string())
         .unwrap_or_else(|| chrono::Utc::now().format("%Y-%m-%d").to_string())
 }
-

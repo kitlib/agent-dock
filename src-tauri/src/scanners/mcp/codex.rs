@@ -1,12 +1,17 @@
 //! Codex MCP配置处理实现
-use std::path::Path;
 use std::collections::BTreeMap;
-use toml;
-use crate::dto::mcp::{McpScanTargetDto, LocalMcpServerDto, EditableLocalMcpDto, ImportedMcpServer, ImportLocalMcpResultDto, UpdateLocalMcpResultDto};
+use std::path::Path;
+
 use crate::constants::*;
-use crate::utils::path::{ensure_parent_directory, atomic_write, normalize_path, resolve_agent_root};
-use super::{McpConfigHandler, common::*};
-use crate::dto::mcp::McpImportConflictStrategy;
+use crate::dto::mcp::{
+    EditableLocalMcpDto, ImportLocalMcpResultDto, ImportedMcpServer, LocalMcpServerDto,
+    McpImportConflictStrategy, McpScanTargetDto, UpdateLocalMcpResultDto,
+};
+use crate::infrastructure::utils::fs::ensure_parent_dir;
+use crate::infrastructure::utils::path::{atomic_write, normalize_path, resolve_agent_root};
+
+use super::common::*;
+use super::McpConfigHandler;
 
 pub struct CodexHandler;
 
@@ -141,7 +146,7 @@ impl McpConfigHandler for CodexHandler {
     }
 
     fn write_server(&self, config_path: &Path, old_name: &str, new_name: &str, server: &ImportedMcpServer, _scope: &str, _project_path: Option<&str>) -> Result<UpdateLocalMcpResultDto, String> {
-        ensure_parent_directory(config_path)?;
+        ensure_parent_dir(config_path).map_err(|e| e.to_string())?;
         let mut root = read_toml_root_or_empty(config_path)?;
         let Some(root_table) = root.as_table_mut() else {
             return Err("Codex config root must be a table.".into());
@@ -265,7 +270,7 @@ impl McpConfigHandler for CodexHandler {
     }
 
     fn import_servers(&self, config_path: &Path, servers: &BTreeMap<String, ImportedMcpServer>, conflict_strategy: McpImportConflictStrategy) -> Result<ImportLocalMcpResultDto, String> {
-        ensure_parent_directory(config_path)?;
+        ensure_parent_dir(config_path).map_err(|e| e.to_string())?;
         let mut root = read_toml_root_or_empty(config_path)?;
         let Some(root_table) = root.as_table_mut() else {
             return Err("Codex config root must be a table.".into());

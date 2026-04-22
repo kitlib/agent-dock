@@ -1,6 +1,6 @@
 use std::{
     collections::BTreeMap,
-    env, fs,
+    fs,
     path::{Path, PathBuf},
 };
 
@@ -8,6 +8,7 @@ use chrono::{DateTime, Utc};
 use serde_json::Value;
 
 use crate::dto::skills::{LocalSkillDetailDto, LocalSkillSummaryDto, SkillScanTargetDto};
+use crate::infrastructure::utils::path::{normalize_path, resolve_agent_root};
 use crate::scanners::skill_markdown::{
     resolved_description, split_frontmatter, summary_from_markdown,
 };
@@ -21,10 +22,6 @@ const DISABLED_SUFFIX: &str = ".disabled";
 pub struct ParsedSkill {
     pub summary: LocalSkillSummaryDto,
     pub detail: LocalSkillDetailDto,
-}
-
-fn normalize_path(path: &Path) -> String {
-    path.to_string_lossy().replace('\\', "/")
 }
 
 fn entry_file_name(path: &Path) -> Option<String> {
@@ -81,29 +78,6 @@ fn updated_at(path: &Path) -> String {
         .map(DateTime::<Utc>::from)
         .map(|datetime| datetime.format("%Y-%m-%d").to_string())
         .unwrap_or_else(|| Utc::now().format("%Y-%m-%d").to_string())
-}
-
-fn user_home_dir() -> PathBuf {
-    env::var_os("USERPROFILE")
-        .or_else(|| env::var_os("HOME"))
-        .map(PathBuf::from)
-        .unwrap_or_else(|| PathBuf::from("."))
-}
-
-fn resolve_scan_root(root_path: &str) -> PathBuf {
-    if let Some(relative_path) = root_path
-        .strip_prefix("~/")
-        .or_else(|| root_path.strip_prefix("~\\"))
-    {
-        return user_home_dir().join(relative_path);
-    }
-
-    let path = PathBuf::from(root_path);
-    if path.is_absolute() {
-        return path;
-    }
-
-    user_home_dir().join(path)
 }
 
 fn command_name(scan_root: &Path, entry_file: &Path) -> Option<String> {
@@ -311,7 +285,7 @@ pub fn scan_skills(scan_targets: Vec<SkillScanTargetDto>) -> Vec<ParsedSkill> {
     let mut parsed_skills = Vec::new();
 
     for scan_target in scan_targets {
-        let scan_root = resolve_scan_root(&scan_target.root_path);
+        let scan_root = resolve_agent_root(&scan_target.root_path);
         if !scan_root.exists() || !scan_root.is_dir() {
             continue;
         }
@@ -368,10 +342,11 @@ pub fn scan_skills(scan_targets: Vec<SkillScanTargetDto>) -> Vec<ParsedSkill> {
 #[cfg(test)]
 mod tests {
     use super::{
-        normalize_path, resolve_scan_root, scan_skills, COMMANDS_SOURCE, DISABLED_SKILL_ENTRY_FILE,
+        scan_skills, COMMANDS_SOURCE, DISABLED_SKILL_ENTRY_FILE,
         SKILL_ENTRY_FILE,
     };
     use crate::dto::skills::SkillScanTargetDto;
+    use crate::infrastructure::utils::path::{normalize_path, resolve_agent_root};
     use std::{
         env, fs,
         path::{Path, PathBuf},
@@ -405,7 +380,9 @@ mod tests {
 
     impl UserHomeEnvGuard {
         fn set(home: &Path) -> Self {
-            let lock = user_home_lock().lock().expect("lock user home env");
+            let lock = user_home_lock()
+                .lock()
+                .unwrap_or_else(|poisoned| poisoned.into_inner());
             let previous_userprofile = env::var_os("USERPROFILE");
             let previous_home = env::var_os("HOME");
             env::set_var("USERPROFILE", home);
@@ -466,28 +443,28 @@ mod tests {
 
     #[test]
     fn resolve_scan_root_uses_user_home_for_relative_paths() {
-        let home = env::var_os("USERPROFILE")
-            .or_else(|| env::var_os("HOME"))
-            .map(PathBuf::from)
-            .unwrap_or_else(|| PathBuf::from("."));
+        let test_home = temp_dir("resolve-relative-home");
+        let _guard = UserHomeEnvGuard::set(&test_home);
 
         assert_eq!(
-            resolve_scan_root(".claude/skills"),
-            home.join(".claude/skills")
+            resolve_agent_root(".claude/skills"),
+            test_home.join(".claude/skills")
         );
+
+        fs::remove_dir_all(&test_home).ok();
     }
 
     #[test]
     fn resolve_scan_root_expands_tilde_prefixed_paths() {
-        let home = env::var_os("USERPROFILE")
-            .or_else(|| env::var_os("HOME"))
-            .map(PathBuf::from)
-            .unwrap_or_else(|| PathBuf::from("."));
+        let test_home = temp_dir("resolve-tilde-home");
+        let _guard = UserHomeEnvGuard::set(&test_home);
 
         assert_eq!(
-            resolve_scan_root("~/.claude/skills"),
-            home.join(".claude/skills")
+            resolve_agent_root("~/.claude/skills"),
+            test_home.join(".claude/skills")
         );
+
+        fs::remove_dir_all(&test_home).ok();
     }
 
     #[test]

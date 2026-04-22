@@ -1,9 +1,10 @@
 use std::{
-    env, fs,
+    fs,
     path::{Path, PathBuf},
 };
 
 use crate::dto::agents::{AgentResourceCountsDto, DiscoveredAgentDto, ScanTargetDto};
+use crate::infrastructure::utils::path::user_home_dir;
 use crate::scanners::mcp_scanner;
 
 #[derive(Clone)]
@@ -24,16 +25,7 @@ pub fn scan_targets_from_dto(scan_targets: Vec<ScanTargetDto>) -> Vec<AgentScanT
         .collect()
 }
 
-fn current_dir() -> PathBuf {
-    env::current_dir().unwrap_or_else(|_| PathBuf::from("."))
-}
-
-fn user_home_dir() -> PathBuf {
-    env::var_os("USERPROFILE")
-        .or_else(|| env::var_os("HOME"))
-        .map(PathBuf::from)
-        .unwrap_or_else(current_dir)
-}
+// Removed: now using infrastructure::utils::path::user_home_dir()
 
 fn display_path(relative_path: &Path) -> String {
     PathBuf::from("~")
@@ -119,12 +111,7 @@ fn count_command_markdown_files(commands_root: &Path) -> u32 {
         let path = entry.path();
         if path.is_dir() {
             count += count_command_markdown_files(&path);
-            continue;
-        }
-
-        let is_markdown_file = path.is_file()
-            && path.extension().and_then(|extension| extension.to_str()) == Some("md");
-        if is_markdown_file {
+        } else if path.extension().and_then(|ext| ext.to_str()) == Some("md") {
             count += 1;
         }
     }
@@ -134,15 +121,16 @@ fn count_command_markdown_files(commands_root: &Path) -> u32 {
 
 fn agent_resource_counts(agent: &str, absolute_root: &Path) -> AgentResourceCountsDto {
     let skill = build_skill_scan_root(agent, absolute_root)
-        .map(|skills_root| count_skill_directories(&skills_root))
+        .map(|root| count_skill_directories(&root))
         .unwrap_or(0);
     let command = build_commands_scan_root(agent, absolute_root)
-        .map(|commands_root| count_command_markdown_files(&commands_root))
+        .map(|root| count_command_markdown_files(&root))
         .unwrap_or(0);
     let mcp = mcp_scanner::count_local_mcps(agent, absolute_root);
-    let subagent = match agent {
-        "cursor" | "claude" | "antigravity" => 1,
-        _ => 0,
+    let subagent = if matches!(agent, "cursor" | "claude" | "antigravity") {
+        1
+    } else {
+        0
     };
 
     AgentResourceCountsDto {
@@ -154,25 +142,29 @@ fn agent_resource_counts(agent: &str, absolute_root: &Path) -> AgentResourceCoun
 }
 
 fn detect_status(target: &AgentScanTarget, absolute_root: &Path) -> (String, Option<String>) {
-    if target.agent_type == "antigravity" {
-        let workflows_path = absolute_root.join("workflows");
-        if workflows_path.exists() {
-            let unreadable_workflow = fs::read_dir(&workflows_path)
-                .ok()
-                .into_iter()
-                .flat_map(|entries| entries.filter_map(Result::ok))
-                .any(|entry| fs::read_to_string(entry.path()).is_err());
-
-            if unreadable_workflow {
-                return (
-                    "unreadable".into(),
-                    Some("AgentDock could not read one workflow file.".into()),
-                );
-            }
-        }
+    if target.agent_type != "antigravity" {
+        return ("discovered".into(), None);
     }
 
-    ("discovered".into(), None)
+    let workflows_path = absolute_root.join("workflows");
+    if !workflows_path.exists() {
+        return ("discovered".into(), None);
+    }
+
+    let has_unreadable = fs::read_dir(&workflows_path)
+        .ok()
+        .into_iter()
+        .flat_map(|entries| entries.filter_map(Result::ok))
+        .any(|entry| fs::read_to_string(entry.path()).is_err());
+
+    if has_unreadable {
+        (
+            "unreadable".into(),
+            Some("AgentDock could not read one workflow file.".into()),
+        )
+    } else {
+        ("discovered".into(), None)
+    }
 }
 
 pub fn scan_discovered_agents(scan_targets: Vec<ScanTargetDto>) -> Vec<DiscoveredAgentDto> {
@@ -275,12 +267,30 @@ mod tests {
             .expect("write skill markdown");
         fs::write(invalid_skill.join("README.md"), "not a skill").expect("write non skill file");
 
+        let previous_userprofile = std::env::var_os("USERPROFILE");
+        let previous_home = std::env::var_os("HOME");
+
+        unsafe {
+            std::env::set_var("USERPROFILE", &root);
+            std::env::set_var("HOME", &root);
+        }
+
         let counts = agent_resource_counts("claude", &root);
         assert_eq!(counts.skill, 1);
         assert_eq!(counts.command, 0);
         assert_eq!(counts.mcp, 0);
         assert_eq!(counts.subagent, 1);
 
+        unsafe {
+            match previous_userprofile {
+                Some(value) => std::env::set_var("USERPROFILE", value),
+                None => std::env::remove_var("USERPROFILE"),
+            }
+            match previous_home {
+                Some(value) => std::env::set_var("HOME", value),
+                None => std::env::remove_var("HOME"),
+            }
+        }
         fs::remove_dir_all(&root).expect("cleanup temp dir");
     }
 
